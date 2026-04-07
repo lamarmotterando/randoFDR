@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carte des Randonnées — La Marmotte</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<link rel="stylesheet" href="css/carteRandos.css">
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🥾 Carte des Randonnées — La Marmotte</h1>
+  <a href="index.html" onclick="location.href='index.html';return false;">← Retour app</a>
+</div>
+
+<div id="map"></div>
+
+<div id="geocode-bar">
+  <span id="geocode-msg">⏳ Géocodage en cours…</span>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+</div>
+
+<div class="stats-panel">
+  <strong>📍 Randonnées La Marmotte</strong>
+  <div class="stat-line"><span>Total</span><span id="stat-total">—</span></div>
+  <div class="stat-line"><span>✅ Localisées</span><span id="stat-ok">—</span></div>
+  <div class="stat-line"><span>⏳ Géocodées auto</span><span id="stat-geocoded">—</span></div>
+  <div class="stat-line"><span>❌ Non trouvées</span><span id="stat-nok">—</span></div>
+  <div class="legend">
+    <div class="legend-item"><div class="dot dot-blue"></div> Coords connues</div>
+    <div class="legend-item"><div class="dot dot-green"></div> Géocodé automatiquement</div>
+    <div class="legend-item"><div class="dot dot-red"></div> Non localisé</div>
+  </div>
+</div>
+
+<!-- Données en variable globale -->
+<script src="data/randosCoords.js"></script>
+<!-- Libs Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<!-- Logique carte (script classique, pas de module) -->
+<script src="js/carteRandos.js"></script>
+
+</body>
+</html>
+

@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlanningFDR — La Marmotte</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ember: #7c2d00; --flame: #c1440e; --amber: #f49d37;
+    --cream: #fff8ee; --sand: #f5ead8; --stone: #8a7560; --ink: #2c1a0e;
+  }
+  body { font-family: 'Outfit', sans-serif; background: var(--sand); color: var(--ink); min-height: 100vh; }
+
+  .topbar {
+    background: linear-gradient(135deg, #1a3a5c, #2d6a9f, #4a9fd4);
+    padding: 14px 20px;
+    box-shadow: 0 3px 12px rgba(26,58,92,0.3);
+  }
+  .topbar h1 { font-size: 17px; font-weight: 700; color: white; }
+  .topbar p  { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 2px; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+
+  .section-titre {
+    font-size: 15px; font-weight: 700; color: #1a3a5c;
+    margin: 20px 0 10px; display: flex; align-items: center; gap: 8px;
+    cursor: pointer; user-select: none;
+  }
+  .section-titre::after { content: ""; flex: 1; height: 1.5px; background: #cce0f5; }
+  .section-titre .toggle-icon { font-size: 12px; color: #4a9fd4; transition: transform .2s; }
+  .section-titre.plié .toggle-icon { transform: rotate(-90deg); }
+  .section-body { overflow: hidden; transition: max-height .3s ease; }
+  .section-body.plié { max-height: 0 !important; }
+
+  /* ── LIGNES ── */
+  .fiche-row {
+    display: flex; align-items: center; gap: 10px;
+    background: white; border: 1.5px solid #e8d8c4;
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 6px;
+    cursor: pointer; transition: box-shadow .15s, border-color .15s;
+  }
+  .fiche-row:hover { box-shadow: 0 3px 12px rgba(26,58,92,0.1); border-color: #4a9fd4; }
+  .fiche-row.annulee { background: #fff8f8; border-color: #f5c6cb; opacity: .8; }
+
+  .fiche-date  { font-size: 12px; font-weight: 700; color: #1a3a5c; white-space: nowrap; min-width: 90px; }
+  .fiche-nom   { font-size: 14px; font-weight: 700; color: var(--ink); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fiche-nom.barre { text-decoration: line-through; color: var(--stone); }
+  .fiche-anim  { font-size: 12px; color: var(--stone); white-space: nowrap; }
+  .fiche-stats { font-size: 11px; color: var(--stone); white-space: nowrap; display: flex; gap: 8px; }
+
+  .badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .badge-pub  { background: #d4edda; color: #155724; border: 1px solid #b8dfc9; }
+  .badge-ann  { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+  .badge-mod  { background: #fff3cd; color: #856404; border: 1px solid #ffe08a; }
+
+  .ibp-n1 { color: #155724; } .ibp-n2 { color: #004085; }
+  .ibp-n3 { color: #856404; } .ibp-n4 { color: #721c24; }
+  .ibp-n5 { color: #343a40; }
+
+  .empty { text-align: center; padding: 40px; color: var(--stone); font-style: italic; }
+
+  /* ── MODALES ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(26,58,92,0.55);
+    z-index: 9999; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: white; border-radius: 16px; padding: 24px;
+    max-width: 600px; width: 100%; max-height: 88vh; overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.25); font-family: 'Outfit', sans-serif;
+  }
+  .modal-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 16px; gap: 10px;
+  }
+  .modal-titre { font-size: 16px; font-weight: 700; color: #1a3a5c; }
+  .modal-close {
+    background: var(--sand); border: 1.5px solid #e8d8c4; border-radius: 8px;
+    padding: 6px 12px; font-family: 'Outfit', sans-serif; font-size: 13px;
+    font-weight: 600; cursor: pointer; color: var(--ink); flex-shrink: 0;
+  }
+  .modal-profil { width: 100%; border-radius: 8px; margin-bottom: 14px; }
+  .modal-resume {
+    font-size: 13px; color: var(--ink); white-space: pre-wrap; line-height: 1.6;
+    background: var(--cream); border-radius: 8px; padding: 14px;
+    border: 1px solid #e8d8c4; margin-bottom: 14px;
+  }
+  .btn-modifier-detail {
+    width: 100%; padding: 11px; border: none; border-radius: 8px;
+    background: linear-gradient(135deg, #1a3a5c, #2d6a9f);
+    color: white; font-family: 'Outfit', sans-serif; font-size: 14px;
+    font-weight: 700; cursor: pointer; transition: opacity .15s;
+  }
+  .btn-modifier-detail:hover { opacity: .88; }
+  .btn-resync {
+    width: 100%; padding: 10px; border: 1.5px solid #cce0f5; border-radius: 8px;
+    background: white; color: #2d6a9f; margin-top: 8px;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-resync:hover { background: #e6f1fb; }
+  .btn-resync:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-create-cal {
+    padding: 10px; border: 1.5px solid #b8dfc9; border-radius: 8px;
+    background: white; color: #155724;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-create-cal:hover { background: #d4edda; }
+  .btn-create-cal:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── FORMULAIRE MODIFICATION ── */
+  .form-modif { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+  .form-modif label { font-size: 12px; font-weight: 600; color: var(--stone); margin-bottom: 3px; display: block; }
+  .form-modif input, .form-modif textarea, .form-modif select {
+    width: 100%; padding: 9px 12px; border: 1.5px solid #e8d8c4;
+    border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 13px; color: var(--ink);
+  }
+  .form-modif input:focus, .form-modif textarea:focus, .form-modif select:focus {
+    outline: none; border-color: #2d6a9f;
+  }
+  .form-modif textarea { min-height: 75px; resize: vertical; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn-save {
+    width: 100%; padding: 12px; border: none; border-radius: 8px;
+    background: linear-gradient(135deg, #1a3a5c, #2d6a9f);
+    color: white; font-family: 'Outfit', sans-serif; font-size: 15px;
+    font-weight: 700; cursor: pointer; margin-top: 4px;
+  }
+  .btn-save:hover { opacity: .9; }
+  .btn-delete {
+    padding: 12px; border: none; border-radius: 8px;
+    background: #f8d7da; color: #721c24;
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+    cursor: pointer; margin-top: 0; transition: all .15s;
+  }
+  .btn-delete:hover { background: #e53e3e; color: white; }
+  .err-msg { font-size: 13px; color: #c53030; text-align: center; margin-top: 4px; display: none; }
+
+  /* ── MOT DE PASSE ── */
+  .mdp-box { text-align: center; }
+  .mdp-box input {
+    width: 100%; padding: 10px 14px; border: 1.5px solid #e8d8c4;
+    border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 14px;
+    margin-bottom: 8px;
+  }
+  .mdp-box input:focus { outline: none; border-color: #2d6a9f; }
+
+  @media (max-width: 600px) {
+    .fiche-stats { display: none; }
+    .fiche-anim  { display: none; }
+    .form-row    { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🥾 Planning Randonnées — La Marmotte</h1>
+  <p>Cliquez sur une randonnée pour voir le détail</p>
+</div>
+
+<div class="container">
+  <div class="section-titre" onclick="toggleSection('avenir')">
+    📅 Randonnées à venir <span class="toggle-icon" id="icon-avenir">▼</span>
+  </div>
+  <div class="section-body" id="body-avenir">
+    <div id="listeAvenir"><div class="empty">⏳ Chargement…</div></div>
+  </div>
+
+  <div class="section-titre plié" onclick="toggleSection('passees')">
+    📋 Randonnées passées <span class="toggle-icon" id="icon-passees">▼</span>
+  </div>
+  <div class="section-body plié" id="body-passees" style="max-height:0">
+    <div id="listePassees"><div class="empty">⏳ Chargement…</div></div>
+  </div>
+</div>
+
+<!-- ══ Modal détail + bouton Modifier ══ -->
+<div class="modal-overlay" id="modalDetail">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-titre" id="modalDetailTitre"></div>
+      <button class="modal-close" onclick="fermerDetail()">✕ Fermer</button>
+    </div>
+    <img id="modalDetailProfil" src="" alt="Profil" class="modal-profil" style="display:none">
+    <pre class="modal-resume" id="modalDetailResume"></pre>
+    <button class="btn-modifier-detail" onclick="demanderMdp()">✏️ Modifier cette randonnée</button>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn-resync" style="flex:1" onclick="resyncCalendar()">🔄 Resync Calendar</button>
+      <button class="btn-create-cal" style="flex:1" onclick="creerCalendar()">➕ Créer dans Calendar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal mot de passe ══ -->
+<div class="modal-overlay" id="modalMdp">
+  <div class="modal-box" style="max-width:360px">
+    <div class="mdp-box">
+      <div style="font-size:38px;margin-bottom:10px">🔐</div>
+      <div style="font-size:16px;font-weight:700;color:#1a3a5c;margin-bottom:6px">Accès modification</div>
+      <div style="font-size:13px;color:var(--stone);margin-bottom:20px">Entrez votre nom pour accéder à la modification</div>
+      <input id="mdpInput" type="text" placeholder="">
+      <div class="err-msg" id="mdpErr">Nom incorrect — seul l'animateur peut modifier cette fiche.</div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button onclick="fermerMdp()" style="flex:1;padding:11px;background:var(--sand);border:1.5px solid #e8d8c4;border-radius:8px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer">Annuler</button>
+        <button onclick="validerMdp()" style="flex:1;padding:11px;background:linear-gradient(135deg,#1a3a5c,#2d6a9f);color:white;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer">Accéder →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal modification ══ -->
+<div class="modal-overlay" id="modalModif">
+  <div class="modal-box" style="max-width:560px;max-height:80vh;overflow-y:auto;">
+    <div class="modal-head">
+      <div class="modal-titre">✏️ Modifier la randonnée</div>
+      <button class="modal-close" onclick="fermerModif()">✕ Fermer</button>
+    </div>
+    <div class="form-modif">
+      <input type="hidden" id="modifId">
+      <div class="form-row">
+        <div><label>Nom de la randonnée</label><input id="modifNom" type="text"></div>
+        <div><label>Date</label><input id="modifDate" type="date"></div>
+      </div>
+      <div class="form-row">
+        <div><label>Parking covoiturage</label><input id="modifParkingCovoit" type="text"></div>
+        <div><label>Heure de RV</label><input id="modifHeureRV" type="time"></div>
+      </div>
+      <div><label>Parking départ randonnée</label><input id="modifParkingDepart" type="text"></div>
+      <div class="form-row">
+        <div><label>Distance (km)</label><input id="modifDistance" type="number" min="0" step="0.1"></div>
+        <div><label>Dénivelé + (m)</label><input id="modifDenivele" type="number" min="0"></div>
+      </div>
+      <div class="form-row">
+        <div><label>Durée</label><input id="modifDuree" type="text" placeholder="ex: 5h30"></div>
+        <div>
+          <label>Statut</label>
+          <select id="modifStatut">
+            <option value="publiée">✅ Publiée</option>
+            <option value="modifiée">✏️ Modifiée</option>
+            <option value="annulée">❌ Annulée</option>
+          </select>
+        </div>
+      </div>
+      <div><label>Remarques</label><textarea id="modifRemarques" placeholder="Décrivez les modifications…"></textarea></div>
+      <div class="err-msg" id="modifErr">Erreur lors de la sauvegarde. Réessayez.</div>
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button class="btn-save" style="flex:2" onclick="sauvegarderModif()">💾 Enregistrer</button>
+        <button class="btn-delete" style="flex:1" onclick="supprimerFiche()">❌ Annuler</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+
+let fiches = [];
+let idEnCours = null;
+
+/* ══ SYNC GOOGLE CALENDAR via Edge Function ══ */
+async function syncCalendar(action, ficheData) {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/dynamic-handler`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "apikey":        SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`
+        },
+        body: JSON.stringify({ action, fiche: ficheData })
+      }
+    );
+    const data = await res.json();
+    console.log("[Calendar sync]", action, data.success ? "✅" : "⚠️");
+    return data.success;
+  } catch(e) {
+    console.warn("[Calendar sync] Erreur:", e.message);
+    return false;
+  }
+}
+
+/* ══ IBP ══ */
+function ibpInfo(v) {
+  const n = parseFloat(v);
+  if (!v || isNaN(n)) return "";
+  if (n <= 25)  return `<span class="ibp-n1">🟢</span>`;
+  if (n <= 50)  return `<span class="ibp-n2">🔵</span>`;
+  if (n <= 75)  return `<span class="ibp-n3">🟡</span>`;
+  if (n <= 100) return `<span class="ibp-n4">🔴</span>`;
+  return `<span class="ibp-n5">⚫</span>`;
+}
+
+/* ══ RENDU LIGNE ══ */
+function renderLigne(f) {
+  const dateAff = f.date_rando
+    ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" })
+    : "—";
+  const statut = f.statut || "publiée";
+  const badgeHtml = statut === "annulée"
+    ? `<span class="badge badge-ann">❌ Annulée</span>`
+    : statut === "modifiée"
+    ? `<span class="badge badge-mod">✏️ Modifiée</span>`
+    : `<span class="badge badge-pub">✅ Publiée</span>`;
+  const rowClass = statut === "annulée" ? "fiche-row annulee" : "fiche-row";
+  const nomClass = statut === "annulée" ? "fiche-nom barre"  : "fiche-nom";
+  const nom = f.nom_rando || "—";
+  const stats = [
+    f.distance ? `📏 ${f.distance} km` : "",
+    f.denivele ? `⛰ ${f.denivele} m`  : "",
+    f.duree    ? `⏱ ${f.duree}`        : "",
+    f.ibp      ? `IBP ${f.ibp} ${ibpInfo(f.ibp)}` : "",
+  ].filter(Boolean).join("  ·  ");
+
+  return `
+  <div class="${rowClass}" onclick="voirDetail(${f.id})">
+    <div class="fiche-date">${dateAff}</div>
+    ${badgeHtml}
+    <div class="${nomClass}" title="${nom}">${nom}</div>
+    <div class="fiche-anim">👤 ${f.animateur || "—"}${f.heure_rv ? " · " + f.heure_rv : ""}</div>
+    ${stats ? `<div class="fiche-stats">${stats}</div>` : ""}
+  </div>`;
+}
+
+/* ══ TOGGLE SECTIONS ══ */
+function toggleSection(id) {
+  const body  = document.getElementById("body-" + id);
+  const titre = body.previousElementSibling;
+  const plié  = body.classList.toggle("plié");
+  titre.classList.toggle("plié", plié);
+  if (!plié) {
+    body.style.maxHeight = body.scrollHeight + "px";
+    setTimeout(() => body.style.maxHeight = "none", 320);
+  } else {
+    body.style.maxHeight = body.scrollHeight + "px";
+    requestAnimationFrame(() => body.style.maxHeight = "0");
+  }
+}
+
+/* ══ CHARGEMENT ══ */
+async function charger() {
+  try {
+    const aujourd = new Date().toISOString().split("T")[0];
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,heure_rv,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque&order=date_rando.asc`,
+      { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
+    );
+    fiches = await res.json();
+    const avenir  = fiches.filter(f => f.date_rando && f.date_rando >= aujourd);
+    const passees = fiches.filter(f => !f.date_rando || f.date_rando < aujourd).reverse();
+
+    document.getElementById("listeAvenir").innerHTML =
+      avenir.length  ? avenir.map(renderLigne).join("")  : '<div class="empty">Aucune randonnée prévue.</div>';
+    document.getElementById("listePassees").innerHTML =
+      passees.length ? passees.map(renderLigne).join("") : '<div class="empty">Aucune randonnée passée.</div>';
+
+    const bodyAvenir = document.getElementById("body-avenir");
+    bodyAvenir.style.maxHeight = bodyAvenir.scrollHeight + "px";
+    setTimeout(() => bodyAvenir.style.maxHeight = "none", 320);
+  } catch(e) {
+    document.getElementById("listeAvenir").innerHTML = '<div class="empty">⚠️ Erreur de chargement.</div>';
+  }
+}
+
+/* ══ RENDU LOCAL — sans rechargement réseau ══ */
+function renderLocal() {
+  const aujourd = new Date().toISOString().split("T")[0];
+  const avenir  = fiches.filter(f => f.date_rando && f.date_rando >= aujourd);
+  const passees = fiches.filter(f => !f.date_rando || f.date_rando < aujourd).reverse();
+
+  document.getElementById("listeAvenir").innerHTML =
+    avenir.length  ? avenir.map(renderLigne).join("")  : '<div class="empty">Aucune randonnée prévue.</div>';
+  document.getElementById("listePassees").innerHTML =
+    passees.length ? passees.map(renderLigne).join("") : '<div class="empty">Aucune randonnée passée.</div>';
+
+  const bodyAvenir = document.getElementById("body-avenir");
+  bodyAvenir.style.maxHeight = bodyAvenir.scrollHeight + "px";
+  setTimeout(() => bodyAvenir.style.maxHeight = "none", 320);
+}
+
+/* ══ MODAL DÉTAIL ══ */
+function voirDetail(id) {
+  const f = fiches.find(x => x.id === id);
+  if (!f) return;
+  idEnCours = id;
+
+  document.getElementById("modalDetailTitre").textContent =
+    (f.nom_rando || "—") + (f.date_rando
+      ? " — " + new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR")
+      : "");
+
+  const profil = document.getElementById("modalDetailProfil");
+  if (f.profil_png) { profil.src = f.profil_png; profil.style.display = "block"; }
+  else              { profil.style.display = "none"; }
+
+  const ibpNiveau = !f.ibp ? "" :
+    f.ibp <= 25  ? "🟢 N1 — Facile" :
+    f.ibp <= 50  ? "🔵 N2 — Assez Facile" :
+    f.ibp <= 75  ? "🟡 N3 — Peu Difficile" :
+    f.ibp <= 100 ? "🔴 N4 — Assez Difficile" : "⚫ N5 — Difficile";
+
+  const lignes = [
+    f.statut === "annulée" ? "❌ RANDONNÉE ANNULÉE" : f.statut === "modifiée" ? "✏️ RANDONNÉE MODIFIÉE" : "",
+    "═══════════════════════════════════",
+    `📅 Date        : ${f.date_rando ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", {weekday:"long",day:"2-digit",month:"long",year:"numeric"}) : "—"}`,
+    `👤 Animateur   : ${f.animateur || "—"}`,
+    `⏰ RV          : ${f.heure_rv || "—"}`,
+    "───────────────────────────────────",
+    `🅿️ Covoiturage : ${f.parking_covoit || "—"}`,
+    `🏁 Parking     : ${f.parking_depart || "—"}`,
+    f.gps ? `📍 GPS         : ${f.gps}` : "",
+    f.gps ? `🗺 Maps        : https://www.google.com/maps?q=${f.gps}` : "",
+    "───────────────────────────────────",
+    `📏 Distance    : ${f.distance ? f.distance + " km" : "—"}`,
+    `⛰  Dénivelé   : ${f.denivele ? f.denivele + " m" : "—"}`,
+    `⏱  Durée      : ${f.duree || "—"}`,
+    f.ibp ? `📊 IBP         : ${f.ibp}  ${ibpNiveau}` : "",
+    `🎯 Effort ${f.effort||"—"}/5 · Tech. ${f.technicite||"—"}/5 · Risque ${f.risque||"—"}/5`,
+    f.couts ? "───────────────────────────────────" : "",
+    f.couts ? `💶 Coûts       : ${f.couts}` : "",
+    f.remarques ? "───────────────────────────────────" : "",
+    f.remarques ? `📌 Remarques   : ${f.remarques}` : "",
+    "═══════════════════════════════════",
+  ].filter(l => l !== "").join("\n");
+
+  document.getElementById("modalDetailResume").textContent = lignes;
+  document.getElementById("modalDetail").classList.add("open");
+}
+
+function fermerDetail() {
+  document.getElementById("modalDetail").classList.remove("open");
+}
+document.getElementById("modalDetail").addEventListener("click", function(e) {
+  if (e.target === this) fermerDetail();
+});
+
+/* ══ MOT DE PASSE ══ */
+function demanderMdp() {
+  document.getElementById("mdpInput").value = "";
+  document.getElementById("mdpErr").style.display = "none";
+  document.getElementById("modalDetail").classList.remove("open");
+  document.getElementById("modalMdp").classList.add("open");
+  setTimeout(() => document.getElementById("mdpInput").focus(), 150);
+}
+
+function fermerMdp() {
+  document.getElementById("modalMdp").classList.remove("open");
+  /* Rouvrir le détail */
+  if (idEnCours) document.getElementById("modalDetail").classList.add("open");
+}
+
+function validerMdp() {
+  const f = fiches.find(x => x.id === idEnCours);
+  if (!f) return;
+  const saisi   = document.getElementById("mdpInput").value.trim().toLowerCase();
+  const attendu = (f.animateur || "").trim().toLowerCase();
+  /* Insensible à la casse, correspondance partielle */
+  const ok = saisi.length > 0 && (attendu.includes(saisi) || saisi.includes(attendu));
+  if (!ok) {
+    document.getElementById("mdpErr").style.display = "block";
+    document.getElementById("mdpInput").value = "";
+    document.getElementById("mdpInput").focus();
+    return;
+  }
+  fermerMdp();
+  document.getElementById("modalDetail").classList.remove("open");
+  ouvrirModif(idEnCours);
+}
+
+document.getElementById("mdpInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") validerMdp();
+});
+document.getElementById("modalMdp").addEventListener("click", function(e) {
+  if (e.target === this) fermerMdp();
+});
+
+/* ══ FORMULAIRE MODIFICATION ══ */
+function ouvrirModif(id) {
+  const f = fiches.find(x => x.id === id);
+  if (!f) return;
+
+  document.getElementById("modifId").value            = f.id;
+  console.log("[ouvrirModif] id=", f.id, "type=", typeof f.id, "modifId.value=", document.getElementById("modifId").value);
+  document.getElementById("modifNom").value           = f.nom_rando      || "";
+  document.getElementById("modifDate").value          = f.date_rando     || "";
+  document.getElementById("modifParkingCovoit").value = f.parking_covoit || "";
+  document.getElementById("modifHeureRV").value       = f.heure_rv       || "";
+  document.getElementById("modifParkingDepart").value = f.parking_depart || "";
+  document.getElementById("modifDistance").value      = f.distance       || "";
+  document.getElementById("modifDenivele").value      = f.denivele       || "";
+  document.getElementById("modifDuree").value         = f.duree          || "";
+  /* Pré-sélectionner "modifiée" si statut actuel = "publiée" */
+  const statutInit = (f.statut === "publiée") ? "modifiée" : (f.statut || "publiée");
+  document.getElementById("modifStatut").value        = statutInit;
+  document.getElementById("modifRemarques").value     = f.remarques      || "";
+  document.getElementById("modifErr").style.display   = "none";
+
+  document.getElementById("modalModif").classList.add("open");
+}
+
+function fermerModif() {
+  document.getElementById("modalModif").classList.remove("open");
+}
+document.getElementById("modalModif").addEventListener("click", function(e) {
+  if (e.target === this) fermerModif();
+});
+
+/* ══ CRÉER UN ÉVÉNEMENT CALENDAR (si inexistant) ══ */
+async function creerCalendar() {
+  const f = fiches.find(x => x.id === idEnCours);
+  if (!f) return;
+
+  const btn = document.querySelector(".btn-create-cal");
+  if (btn) { btn.disabled = true; btn.textContent = "⏳ Création…"; }
+
+  try {
+    /* On appelle dynamic-handler avec action calendarCreate
+       = même payload que calendarUpdate mais force la création */
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/dynamic-handler`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "apikey":        SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`
+        },
+        body: JSON.stringify({
+          action: "calendarCreate",
+          fiche: {
+            dateRando:     f.date_rando,
+            nomRando:      f.nom_rando      || "",
+            animateur:     f.animateur      || "",
+            heureRV:       f.heure_rv       || "",
+            parking:       f.parking_covoit || "",
+            parkingDepart: f.parking_depart || "",
+            gps:           f.gps            || "",
+            distance:      f.distance       || "",
+            denivele:      f.denivele       || "",
+            duree:         f.duree          || "",
+            ibp:           f.ibp            || "",
+            effort:        f.effort         || "",
+            technicite:    f.technicite     || "",
+            risque:        f.risque         || "",
+            couts:         f.couts          || "",
+          }
+        })
+      }
+    );
+    const data = await res.json();
+    const ok = data.success;
+    console.log("[CreateCal]", ok ? "✅" : "⚠️", data);
+
+    if (btn) {
+      btn.textContent = ok ? "✅ Événement créé !" : "⚠️ Erreur création";
+      btn.style.borderColor = ok ? "#b8dfc9" : "#f5c6cb";
+      btn.style.color       = ok ? "#155724" : "#721c24";
+      btn.style.background  = ok ? "#d4edda" : "#f8d7da";
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = "➕ Créer dans Calendar";
+        btn.style.cssText = "";
+      }, 3000);
+    }
+  } catch(e) {
+    console.error("[CreateCal] erreur:", e.message);
+    if (btn) { btn.disabled = false; btn.textContent = "➕ Créer dans Calendar"; }
+  }
+}
+
+/* ══ RESYNC GOOGLE CALENDAR ══ */
+async function resyncCalendar() {
+  const f = fiches.find(x => x.id === idEnCours);
+  if (!f) return;
+
+  const btn = document.querySelector(".btn-resync");
+  if (btn) { btn.disabled = true; btn.textContent = "⏳ Synchronisation…"; }
+
+  try {
+    const ok = await syncCalendar("calendarUpdate", {
+      dateRando:     f.date_rando,
+      dateRandoOld:  f.date_rando,
+      nomRando:      f.nom_rando      || "",
+      animateur:     f.animateur      || "",
+      heureRV:       f.heure_rv       || "",
+      parking:       f.parking_covoit || "",
+      parkingDepart: f.parking_depart || "",
+      gps:           f.gps            || "",
+      distance:      f.distance       || "",
+      denivele:      f.denivele       || "",
+      duree:         f.duree          || "",
+      ibp:           f.ibp            || "",
+      effort:        f.effort         || "",
+      technicite:    f.technicite     || "",
+      risque:        f.risque         || "",
+      couts:         f.couts          || "",
+    });
+
+    if (btn) {
+      btn.textContent = ok ? "✅ Calendar synchronisé !" : "⚠️ Événement non trouvé";
+      btn.style.borderColor = ok ? "#b8dfc9" : "#f5c6cb";
+      btn.style.color       = ok ? "#155724" : "#721c24";
+      btn.style.background  = ok ? "#d4edda" : "#f8d7da";
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = "🔄 Resync Calendar";
+        btn.style.cssText = "";
+      }, 3000);
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = "🔄 Resync Calendar"; }
+    console.error("[Resync] erreur:", e.message);
+  }
+}
+
+async function sauvegarderModif() {
+  /* Priorité à idEnCours (fiable) plutôt qu'au champ caché */
+  const id = idEnCours || Number(document.getElementById("modifId").value);
+  if (!id) { console.error("[Modif] id manquant — idEnCours:", idEnCours, "modifId:", document.getElementById("modifId").value); return; }
+  console.log("[Modif] id utilisé:", id);
+
+  const patch = {
+    nom_rando:      document.getElementById("modifNom").value.trim()           || null,
+    date_rando:     document.getElementById("modifDate").value                 || null,
+    parking_covoit: document.getElementById("modifParkingCovoit").value.trim() || null,
+    heure_rv:       document.getElementById("modifHeureRV").value              || null,
+    parking_depart: document.getElementById("modifParkingDepart").value.trim() || null,
+    distance:       parseFloat(document.getElementById("modifDistance").value) || null,
+    denivele:       parseInt(document.getElementById("modifDenivele").value)   || null,
+    duree:          document.getElementById("modifDuree").value.trim()         || null,
+    statut:         document.getElementById("modifStatut").value,
+    remarques:      document.getElementById("modifRemarques").value.trim()     || null,
+  };
+
+  /* Sélecteur ciblé sur le modal de modification */
+  const btn = document.querySelector("#modalModif .btn-save");
+  if (btn) { btn.disabled = true; btn.textContent = "⏳ Enregistrement…"; }
+
+  document.getElementById("modifErr").style.display = "none";
+  console.log("[Modif] PATCH id=", id, patch);
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type":  "application/json",
+        "apikey":        SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Prefer":        "return=minimal"
+      },
+      body: JSON.stringify(patch)
+    });
+
+    console.log("[Modif] réponse HTTP:", res.status, res.ok);
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error("[Modif] erreur Supabase:", txt);
+      throw new Error("HTTP " + res.status + " — " + txt);
+    }
+
+    /* Mettre à jour localement */
+    const f = fiches.find(x => x.id === id);
+    if (f) Object.assign(f, patch);
+
+    /* Sync Google Calendar (best-effort) */
+    const ficheActuelle = fiches.find(x => x.id === id) || {};
+    syncCalendar("calendarUpdate", {
+      dateRando:    patch.date_rando     || ficheActuelle.date_rando,
+      dateRandoOld: ficheActuelle.date_rando || patch.date_rando,
+      nomRando:     patch.nom_rando      || ficheActuelle.nom_rando,
+      animateur:    patch.animateur      || ficheActuelle.animateur,
+      heureRV:      patch.heure_rv       || ficheActuelle.heure_rv      || "",
+      parking:      patch.parking_covoit || ficheActuelle.parking_covoit || "",
+      parkingDepart:patch.parking_depart || ficheActuelle.parking_depart || "",
+      gps:          ficheActuelle.gps    || "",
+      distance:     patch.distance       || ficheActuelle.distance       || "",
+      denivele:     patch.denivele       || ficheActuelle.denivele       || "",
+      duree:        patch.duree          || ficheActuelle.duree          || "",
+      ibp:          ficheActuelle.ibp    || "",
+      effort:       ficheActuelle.effort || "",
+      technicite:   patch.technicite     || ficheActuelle.technicite     || "",
+      risque:       patch.risque         || ficheActuelle.risque         || "",
+      couts:        ficheActuelle.couts  || "",
+    });
+
+    fermerModif();
+    renderLocal(); /* mise à jour locale sans appel réseau */
+
+  } catch(e) {
+    console.error("[Modif] exception:", e.message);
+    const errEl = document.getElementById("modifErr");
+    errEl.textContent = "Erreur : " + e.message;
+    errEl.style.display = "block";
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "💾 Enregistrer les modifications"; }
+  }
+}
+
+/* ══ ANNULER UNE FICHE (statut → annulée, ligne visible barrée) ══ */
+async function supprimerFiche() {
+  const id = idEnCours || Number(document.getElementById("modifId").value);
+  if (!id) return;
+
+  const nom = document.getElementById("modifNom").value || "cette randonnée";
+  if (!confirm(`Annuler la randonnée "${nom}" ?\nElle restera visible barrée dans le planning.`)) return;
+
+  const btn = document.querySelector("#modalModif .btn-delete");
+  if (btn) { btn.disabled = true; btn.textContent = "⏳ Annulation…"; }
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type":  "application/json",
+        "apikey":        SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Prefer":        "return=minimal"
+      },
+      body: JSON.stringify({ statut: "annulée" })
+    });
+
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    /* Mettre à jour localement */
+    const f = fiches.find(x => x.id === id);
+    if (f) f.statut = "annulée";
+
+    /* Sync Google Calendar — marquer comme annulée dans la description */
+    if (f) {
+      syncCalendar("calendarUpdate", {
+        dateRando:  f.date_rando,
+        dateRandoOld: f.date_rando,
+        nomRando:   `❌ ANNULÉE — ${f.nom_rando}`,
+        animateur:  f.animateur || "",
+        ibp:        f.ibp || "",
+      });
+    }
+
+    fermerModif();
+    renderLocal();
+
+  } catch(e) {
+    console.error("[Annuler] exception:", e.message);
+    const errEl = document.getElementById("modifErr");
+    errEl.textContent = "Erreur : " + e.message;
+    errEl.style.display = "block";
+    if (btn) { btn.disabled = false; btn.textContent = "🗑 Annuler"; }
+  }
+}
+
+charger();
+</script>
+</body>
+</html>

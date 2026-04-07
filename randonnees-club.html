@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Randonnées du club — La Marmotte</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ember: #7c2d00; --flame: #c1440e; --amber: #f49d37;
+  --cream: #fff8ee; --sand: #f5ead8; --stone: #8a7560; --ink: #2c1a0e;
+  --blue: #1a3a5c; --blue-mid: #2d6a9f; --blue-light: #4a9fd4;
+}
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--sand);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.topbar {
+  background: linear-gradient(135deg, var(--ember), var(--flame), var(--amber));
+  padding: 14px 20px;
+  box-shadow: 0 3px 12px rgba(193,68,14,0.3);
+}
+.topbar h1 { font-size: 18px; font-weight: 700; color: white; }
+.topbar p  { font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 2px; }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
+
+/* ── FILTRES ── */
+.filters {
+  background: white; border-radius: 12px;
+  padding: 18px 20px; margin-bottom: 18px;
+  box-shadow: 0 2px 10px rgba(44,26,14,0.08);
+  border: 1.5px solid #e8d8c4;
+}
+.filters-titre {
+  font-size: 13px; font-weight: 700; color: var(--stone);
+  text-transform: uppercase; letter-spacing: .05em;
+  margin-bottom: 12px;
+}
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+.filters-grid input {
+  padding: 8px 12px;
+  border: 1.5px solid #e8d8c4;
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--cream);
+  transition: border-color .15s;
+}
+.filters-grid input:focus {
+  outline: none; border-color: var(--blue-light);
+}
+.btn-reset {
+  padding: 8px 16px;
+  background: var(--sand);
+  border: 1.5px solid #e8d8c4;
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px; font-weight: 600;
+  color: var(--stone); cursor: pointer;
+}
+.btn-reset:hover { border-color: var(--flame); color: var(--flame); }
+
+/* ── STATS + RADAR ── */
+.stats-wrap {
+  display: flex; align-items: center; gap: 20px;
+  margin-top: 14px; flex-wrap: wrap;
+}
+.stats-text {
+  font-size: 13px; font-weight: 600; color: var(--blue);
+  flex: 1; min-width: 200px;
+}
+.radar-wrap {
+  width: 220px; height: 160px; flex-shrink: 0;
+}
+
+/* ── TABLE ── */
+.table-wrap {
+  background: white; border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(44,26,14,0.08);
+  border: 1.5px solid #e8d8c4;
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  background: linear-gradient(135deg, var(--ember), var(--flame));
+  color: white; padding: 10px 12px;
+  text-align: left; font-weight: 700;
+  cursor: pointer; user-select: none;
+  white-space: nowrap;
+}
+thead th:hover { background: var(--ember); }
+thead th .sort-icon { font-size: 10px; margin-left: 4px; opacity: .7; }
+tbody tr { cursor: pointer; transition: background .1s; }
+tbody tr:hover { background: #fff3e8; }
+tbody tr:last-child td { border-bottom: none; }
+td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle; }
+.td-nom { font-weight: 600; color: var(--ink); max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.td-date { white-space: nowrap; color: var(--blue); font-weight: 600; }
+.td-anim { color: var(--stone); white-space: nowrap; }
+.td-num  { text-align: right; color: var(--ink); }
+
+/* ── IBP PASTILLES ── */
+.ibp-pill {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+}
+.ibp-n1 { background: #d4edda; color: #155724; }
+.ibp-n2 { background: #cce5ff; color: #004085; }
+.ibp-n3 { background: #fff3cd; color: #856404; }
+.ibp-n4 { background: #f8d7da; color: #721c24; }
+.ibp-n5 { background: #343a40; color: #ffffff; }
+
+/* ── BADGE STATUT ── */
+.badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
+.badge-pub  { background: #d4edda; color: #155724; border: 1px solid #b8dfc9; }
+.badge-ann  { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+.badge-mod  { background: #fff3cd; color: #856404; border: 1px solid #ffe08a; }
+.tr-ann td  { opacity: .6; }
+.td-nom.barre { text-decoration: line-through; color: var(--stone); }
+
+/* ── MODAL DÉTAIL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(44,26,14,0.55);
+  z-index: 9999; align-items: center; justify-content: center; padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: white; border-radius: 16px; padding: 24px;
+  max-width: 580px; width: 100%; max-height: 88vh; overflow-y: auto;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+}
+.modal-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 16px; gap: 10px;
+}
+.modal-titre { font-size: 16px; font-weight: 700; color: var(--blue); }
+.modal-close {
+  background: var(--sand); border: 1.5px solid #e8d8c4;
+  border-radius: 8px; padding: 6px 12px;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; color: var(--ink); flex-shrink: 0;
+}
+.modal-profil { width: 100%; border-radius: 8px; margin-bottom: 14px; }
+
+/* ── SECTIONS DÉTAIL ── */
+.detail-section {
+  margin-bottom: 14px;
+  border: 1.5px solid #e8d8c4;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.detail-section-titre {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: white;
+  background: linear-gradient(135deg, var(--ember), var(--flame));
+  padding: 6px 12px;
+}
+.detail-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.detail-grid.full { grid-template-columns: 1fr; }
+.detail-item {
+  padding: 8px 12px; border-bottom: 1px solid #f0e8dc;
+}
+.detail-item:last-child { border-bottom: none; }
+.detail-item.span2 { grid-column: 1 / -1; }
+.detail-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--stone); margin-bottom: 2px;
+}
+.detail-value {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  word-break: break-word;
+}
+.detail-value a { color: var(--blue-mid); text-decoration: none; }
+.detail-value a:hover { text-decoration: underline; }
+.detail-value.remarques {
+  font-size: 13px; font-weight: 400; white-space: pre-wrap; line-height: 1.5;
+}
+
+.empty { text-align: center; padding: 40px; color: var(--stone); font-style: italic; }
+
+@media (max-width: 600px) {
+  .col-anim, .col-stats { display: none; }
+  .filters-grid { grid-template-columns: 1fr 1fr; }
+  .radar-wrap { width: 160px; height: 120px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🥾 Randonnées du club — La Marmotte</h1>
+  <p id="topbarSub">Chargement…</p>
+</div>
+
+<div class="container">
+
+  <!-- FILTRES -->
+  <div class="filters">
+    <div class="filters-titre">🔍 Filtres</div>
+    <div class="filters-grid">
+      <input type="date"   id="fDate"      placeholder="Date">
+      <input type="text"   id="fNom"       placeholder="Nom randonnée">
+      <input type="text"   id="fAnimateur" placeholder="Animateur">
+      <input type="number" id="fIbpMax"    placeholder="IBP max" min="0">
+      <input type="number" id="fKmMax"     placeholder="Km max"  min="0" step="0.1">
+      <input type="number" id="fDenMax"    placeholder="Dénivelé max" min="0">
+      <button class="btn-reset" onclick="resetFiltres()">✕ Réinitialiser</button>
+    </div>
+    <div class="stats-wrap">
+      <div class="stats-text" id="statsText">—</div>
+      <div class="radar-wrap"><canvas id="radarCanvas"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="trier('date_rando')">Date <span class="sort-icon" id="sort-date_rando"></span></th>
+          <th onclick="trier('nom_rando')">Randonnée <span class="sort-icon" id="sort-nom_rando"></span></th>
+          <th onclick="trier('ibp')">IBP <span class="sort-icon" id="sort-ibp"></span></th>
+          <th onclick="trier('distance')" class="col-stats">Km <span class="sort-icon" id="sort-distance"></span></th>
+          <th onclick="trier('denivele')" class="col-stats">D+ <span class="sort-icon" id="sort-denivele"></span></th>
+          <th onclick="trier('animateur')" class="col-anim">Animateur <span class="sort-icon" id="sort-animateur"></span></th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="7" class="empty">⏳ Chargement…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL DÉTAIL -->
+<div class="modal-overlay" id="modalDetail">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-titre" id="modalTitre"></div>
+      <button class="modal-close" onclick="fermerDetail()">✕ Fermer</button>
+    </div>
+    <div id="modalContenu"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+
+let toutes  = [];
+let filtrées = [];
+let colTri  = "date_rando";
+let sensTri = -1; // plus récent en premier par défaut
+let radarChart = null;
+let idEnCours = null;
+
+/* ══ CHARGEMENT ══ */
+async function charger() {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque,lieu&order=date_rando.desc`,
+      { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
+    );
+    toutes = await res.json();
+    document.getElementById("topbarSub").textContent =
+      `${toutes.length} randonnées archivées`;
+    filtrer();
+  } catch(e) {
+    document.getElementById("tableBody").innerHTML =
+      `<tr><td colspan="7" class="empty">⚠️ Erreur de chargement : ${e.message}</td></tr>`;
+  }
+}
+
+/* ══ FILTRES ══ */
+document.querySelectorAll(".filters-grid input").forEach(i => i.addEventListener("input", filtrer));
+
+function resetFiltres() {
+  document.getElementById("fDate").value      = "";
+  document.getElementById("fNom").value       = "";
+  document.getElementById("fAnimateur").value = "";
+  document.getElementById("fIbpMax").value    = "";
+  document.getElementById("fKmMax").value     = "";
+  document.getElementById("fDenMax").value    = "";
+  filtrer();
+}
+
+function filtrer() {
+  const date = document.getElementById("fDate").value;
+  const nom  = document.getElementById("fNom").value.toLowerCase().trim();
+  const anim = document.getElementById("fAnimateur").value.toLowerCase().trim();
+  const ibp  = parseFloat(document.getElementById("fIbpMax").value) || null;
+  const km   = parseFloat(document.getElementById("fKmMax").value)  || null;
+  const den  = parseFloat(document.getElementById("fDenMax").value) || null;
+
+  filtrées = toutes.filter(r =>
+    (!date || r.date_rando === date) &&
+    (!nom  || (r.nom_rando  || "").toLowerCase().includes(nom)) &&
+    (!anim || (r.animateur  || "").toLowerCase().includes(anim)) &&
+    (!ibp  || (r.ibp  !== null && r.ibp  <= ibp)) &&
+    (!km   || (r.distance !== null && r.distance <= km)) &&
+    (!den  || (r.denivele !== null && r.denivele <= den))
+  );
+
+  trierEtAfficher();
+}
+
+/* ══ TRI ══ */
+function trier(col) {
+  if (colTri === col) { sensTri *= -1; }
+  else { colTri = col; sensTri = 1; }
+  trierEtAfficher();
+}
+
+function trierEtAfficher() {
+  filtrées.sort((a, b) => {
+    let vA = a[colTri] ?? "";
+    let vB = b[colTri] ?? "";
+    if (colTri === "date_rando") return (new Date(vA) - new Date(vB)) * sensTri;
+    if (!isNaN(vA) && !isNaN(vB) && vA !== "" && vB !== "") return (vA - vB) * sensTri;
+    return vA.toString().localeCompare(vB.toString()) * sensTri;
+  });
+
+  /* Mettre à jour les icônes de tri */
+  document.querySelectorAll(".sort-icon").forEach(el => el.textContent = "");
+  const icon = document.getElementById("sort-" + colTri);
+  if (icon) icon.textContent = sensTri === 1 ? "▲" : "▼";
+
+  afficher();
+}
+
+/* ══ IBP ══ */
+function ibpPill(v) {
+  const n = parseFloat(v);
+  if (!v || isNaN(n)) return "—";
+  if (n <= 25)  return `<span class="ibp-pill ibp-n1">🟢 ${n}</span>`;
+  if (n <= 50)  return `<span class="ibp-pill ibp-n2">🔵 ${n}</span>`;
+  if (n <= 75)  return `<span class="ibp-pill ibp-n3">🟡 ${n}</span>`;
+  if (n <= 100) return `<span class="ibp-pill ibp-n4">🔴 ${n}</span>`;
+  return              `<span class="ibp-pill ibp-n5">⚫ ${n}</span>`;
+}
+
+function ibpLabel(v) {
+  const n = parseFloat(v);
+  if (!v || isNaN(n)) return "";
+  if (n <= 25)  return "🟢 N1 — Facile";
+  if (n <= 50)  return "🔵 N2 — Assez Facile";
+  if (n <= 75)  return "🟡 N3 — Peu Difficile";
+  if (n <= 100) return "🔴 N4 — Assez Difficile";
+  return              "⚫ N5 — Difficile";
+}
+
+/* ══ AFFICHAGE TABLE ══ */
+function afficher() {
+  const tbody = document.getElementById("tableBody");
+
+  if (!filtrées.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Aucune randonnée ne correspond aux filtres.</td></tr>`;
+    majStats();
+    return;
+  }
+
+  tbody.innerHTML = filtrées.map(f => {
+    const dateAff = f.date_rando
+      ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", { day:"2-digit", month:"2-digit", year:"numeric" })
+      : "—";
+    const statut = f.statut || "publiée";
+    const badgeHtml = statut === "annulée"
+      ? `<span class="badge badge-ann">❌ Annulée</span>`
+      : statut === "modifiée"
+      ? `<span class="badge badge-mod">✏️ Modifiée</span>`
+      : `<span class="badge badge-pub">✅ Publiée</span>`;
+    const trClass  = statut === "annulée" ? "tr-ann" : "";
+    const nomClass = statut === "annulée" ? "td-nom barre" : "td-nom";
+
+    return `
+    <tr class="${trClass}" onclick="voirDetail(${f.id})">
+      <td class="td-date">${dateAff}</td>
+      <td class="${nomClass}" title="${f.nom_rando || ''}">${f.nom_rando || "—"}</td>
+      <td>${ibpPill(f.ibp)}</td>
+      <td class="td-num col-stats">${f.distance ? f.distance + " km" : "—"}</td>
+      <td class="td-num col-stats">${f.denivele  ? f.denivele  + " m" : "—"}</td>
+      <td class="td-anim col-anim">👤 ${f.animateur || "—"}</td>
+      <td>${badgeHtml}</td>
+    </tr>`;
+  }).join("");
+
+  majStats();
+}
+
+/* ══ STATS + RADAR ══ */
+function majStats() {
+  const n = filtrées.length;
+  const animFiltré = document.getElementById("fAnimateur").value.toLowerCase().trim();
+
+  /* Stats globales (toutes les fiches) */
+  let totalKm = 0, totalDen = 0, totalIBP = 0, nbIBP = 0;
+  toutes.forEach(r => {
+    totalKm  += Number(r.distance) || 0;
+    totalDen += Number(r.denivele) || 0;
+    if (Number(r.ibp) > 0) { totalIBP += Number(r.ibp); nbIBP++; }
+  });
+  const moyKm  = toutes.length ? totalKm  / toutes.length : 0;
+  const moyDen = toutes.length ? totalDen / toutes.length : 0;
+  const moyIBP = nbIBP         ? totalIBP / nbIBP         : 0;
+
+  /* Stats animateur filtré */
+  let aKm = 0, aDen = 0, aIBP = 0, aNbIBP = 0, aNb = 0;
+  if (animFiltré) {
+    filtrées.forEach(r => {
+      if ((r.animateur || "").toLowerCase().includes(animFiltré)) {
+        aKm  += Number(r.distance) || 0;
+        aDen += Number(r.denivele) || 0;
+        if (Number(r.ibp) > 0) { aIBP += Number(r.ibp); aNbIBP++; }
+        aNb++;
+      }
+    });
+  }
+
+  document.getElementById("statsText").innerHTML =
+    `📊 <strong>${n}</strong> randonnée(s) affichée(s) sur ${toutes.length}<br>` +
+    `Moy. Distance : <strong>${moyKm.toFixed(1)} km</strong> · ` +
+    `Moy. D+ : <strong>${moyDen.toFixed(0)} m</strong> · ` +
+    `Moy. IBP : <strong>${moyIBP.toFixed(0)}</strong>`;
+
+  /* Radar chart */
+  const ctx = document.getElementById("radarCanvas");
+  if (radarChart) { radarChart.destroy(); radarChart = null; }
+
+  const datasets = [{
+    label: "Club",
+    data: [
+      Math.min((toutes.length / 300) * 100, 100),
+      Math.min((moyKm  / 25)   * 100, 100),
+      Math.min((moyDen / 1200) * 100, 100),
+      Math.min((moyIBP / 80)   * 100, 100),
+    ],
+    backgroundColor: "rgba(193,68,14,0.2)",
+    borderColor: "#c1440e",
+    borderWidth: 2,
+    pointBackgroundColor: "#c1440e",
+  }];
+
+  if (aNb > 0) {
+    const aMoyKm  = aNb    ? aKm  / aNb    : 0;
+    const aMoyDen = aNb    ? aDen / aNb    : 0;
+    const aMoyIBP = aNbIBP ? aIBP / aNbIBP : 0;
+    datasets.push({
+      label: "Animateur",
+      data: [
+        Math.min((aNb      / 300)  * 100, 100),
+        Math.min((aMoyKm   / 25)   * 100, 100),
+        Math.min((aMoyDen  / 1200) * 100, 100),
+        Math.min((aMoyIBP  / 80)   * 100, 100),
+      ],
+      backgroundColor: "rgba(26,58,92,0.2)",
+      borderColor: "#1a3a5c",
+      borderWidth: 2,
+      pointBackgroundColor: "#1a3a5c",
+    });
+  }
+
+  radarChart = new Chart(ctx, {
+    type: "radar",
+    data: {
+      labels: ["Activité", "Distance", "Dénivelé", "Difficulté"],
+      datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "top", labels: { boxWidth: 10, font: { size: 10 } } } },
+      scales: { r: { min: 0, max: 100, ticks: { display: false }, pointLabels: { font: { size: 10 } } } },
+    },
+  });
+}
+
+/* ══ MODAL DÉTAIL ══ */
+function voirDetail(id) {
+  const f = toutes.find(x => x.id === id);
+  if (!f) return;
+  idEnCours = id;
+
+  const statut = f.statut || "publiée";
+  const badgeTitre = statut === "annulée"
+    ? ' <span class="badge badge-ann" style="vertical-align:middle">❌ Annulée</span>'
+    : statut === "modifiée"
+    ? ' <span class="badge badge-mod" style="vertical-align:middle">✏️ Modifiée</span>'
+    : '';
+
+  const dateAff = f.date_rando
+    ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" })
+    : "—";
+
+  const mapsUrl = f.gps ? `https://www.google.com/maps?q=${f.gps}` : null;
+
+  document.getElementById("modalTitre").innerHTML =
+    (f.nom_rando || "—") + badgeTitre;
+
+  let html = "";
+
+  /* ── Profil altimétrique ── */
+  if (f.profil_png) {
+    html += `<img src="${f.profil_png}" alt="Profil altitude" class="modal-profil">`;
+  }
+
+  /* ── Général ── */
+  html += `
+  <div class="detail-section">
+    <div class="detail-section-titre">📅 Général</div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">Date</div>
+        <div class="detail-value">${dateAff}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Animateur</div>
+        <div class="detail-value">👤 ${f.animateur || "—"}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Heure RV</div>
+        <div class="detail-value">⏰ ${f.heure_rv || "—"}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Statut</div>
+        <div class="detail-value">${
+          statut === "annulée"  ? '<span class="badge badge-ann">❌ Annulée</span>' :
+          statut === "modifiée" ? '<span class="badge badge-mod">✏️ Modifiée</span>' :
+                                  '<span class="badge badge-pub">✅ Publiée</span>'
+        }</div>
+      </div>
+    </div>
+  </div>`;
+
+  /* ── Logistique ── */
+  html += `
+  <div class="detail-section">
+    <div class="detail-section-titre">🅿️ Logistique</div>
+    <div class="detail-grid">
+      <div class="detail-item span2">
+        <div class="detail-label">Parking covoiturage</div>
+        <div class="detail-value">${f.parking_covoit || "—"}</div>
+      </div>
+      <div class="detail-item span2">
+        <div class="detail-label">Parking départ randonnée</div>
+        <div class="detail-value">${f.parking_depart || "—"}</div>
+      </div>
+      ${f.lieu ? `
+      <div class="detail-item span2">
+        <div class="detail-label">Lieu</div>
+        <div class="detail-value">📍 ${f.lieu}</div>
+      </div>` : ""}
+      ${f.gps ? `
+      <div class="detail-item">
+        <div class="detail-label">GPS</div>
+        <div class="detail-value">${f.gps}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Carte</div>
+        <div class="detail-value"><a href="${mapsUrl}" target="_blank">🗺 Ouvrir Maps</a></div>
+      </div>` : ""}
+    </div>
+  </div>`;
+
+  /* ── Parcours ── */
+  html += `
+  <div class="detail-section">
+    <div class="detail-section-titre">📏 Parcours</div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">Distance</div>
+        <div class="detail-value">${f.distance ? f.distance + " km" : "—"}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Dénivelé +</div>
+        <div class="detail-value">${f.denivele ? f.denivele + " m" : "—"}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Durée</div>
+        <div class="detail-value">⏱ ${f.duree || "—"}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">IBP</div>
+        <div class="detail-value">${f.ibp ? ibpPill(f.ibp) + " " + ibpLabel(f.ibp) : "—"}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Effort</div>
+        <div class="detail-value">${f.effort ? f.effort + " / 5" : "—"}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Technicité</div>
+        <div class="detail-value">${f.technicite ? f.technicite + " / 5" : "—"}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Risque</div>
+        <div class="detail-value">${f.risque ? f.risque + " / 5" : "—"}</div>
+      </div>
+    </div>
+  </div>`;
+
+  /* ── Coûts ── */
+  if (f.couts) {
+    html += `
+  <div class="detail-section">
+    <div class="detail-section-titre">💶 Coûts trajet</div>
+    <div class="detail-grid full">
+      <div class="detail-item">
+        <div class="detail-label">Détail des coûts</div>
+        <div class="detail-value">${f.couts}</div>
+      </div>
+    </div>
+  </div>`;
+  }
+
+  /* ── Remarques ── */
+  if (f.remarques) {
+    html += `
+  <div class="detail-section">
+    <div class="detail-section-titre">📌 Remarques</div>
+    <div class="detail-grid full">
+      <div class="detail-item">
+        <div class="detail-value remarques">${f.remarques}</div>
+      </div>
+    </div>
+  </div>`;
+  }
+
+  document.getElementById("modalContenu").innerHTML = html;
+  document.getElementById("modalDetail").classList.add("open");
+}
+
+function fermerDetail() {
+  document.getElementById("modalDetail").classList.remove("open");
+}
+document.getElementById("modalDetail").addEventListener("click", function(e) {
+  if (e.target === this) fermerDetail();
+});
+
+/* ══ OUVRIR FORMULAIRE FDR ══ */
+function ouvrirModif() {
+  if (!idEnCours) return;
+  const f = toutes.find(x => x.id === idEnCours);
+  if (!f) return;
+
+  const payload = {
+    nomRando:      f.nom_rando      || "",
+    animateur:     f.animateur      || "",
+    parkingCovoit: f.parking_covoit || "",
+    heureRV:       f.heure_rv       || "",
+    distance:      f.distance       || "",
+    denivele:      f.denivele       || "",
+    duree:         f.duree          || "",
+    effort:        f.effort         || "",
+    technicite:    f.technicite     || "",
+    risque:        f.risque         || "",
+    remarques:     f.remarques      || "",
+  };
+
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+
+  /* Ouvre index.html directement sur GitHub Pages dans un nouvel onglet.
+     Contourne le CMS de lamarmottechateaurenard.com qui intercepterait
+     toute navigation vers index.html#fiche=...                          */
+  window.open(
+    "https://dbizcyber.github.io/randoFDR/index.html#fiche=" + encoded,
+    "_blank"
+  );
+  fermerDetail();
+}
+
+charger();
+</script>
+</body>
+</html>

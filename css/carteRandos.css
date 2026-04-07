@@ -1,0 +1,103 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #f5ead8; }
+
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: linear-gradient(135deg, #7c2d00, #c1440e, #f49d37);
+  color: white; padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.topbar h1 {
+  font-size: clamp(14px, 3vw, 18px);
+  font-weight: 700; font-family: Arial, sans-serif;
+}
+
+.topbar a {
+  color: rgba(255,255,255,0.85); text-decoration: none;
+  font-size: 13px; white-space: nowrap;
+  padding: 5px 10px; border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 6px;
+}
+
+.topbar a:hover { background: rgba(255,255,255,0.15); }
+
+#map { position: fixed; top: 52px; left: 0; right: 0; bottom: 0; }
+
+.stats-panel {
+  position: absolute; z-index: 900;
+  bottom: 20px; left: 10px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 10px; padding: 12px 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  font-size: 13px; min-width: 200px;
+}
+
+.stats-panel strong {
+  color: #7c2d00; display: block;
+  margin-bottom: 6px; font-size: 14px;
+}
+
+.stat-line {
+  display: flex; justify-content: space-between;
+  gap: 16px; margin: 3px 0;
+}
+
+.stat-line span:last-child { font-weight: 700; color: #c1440e; }
+
+.legend { margin-top: 8px; padding-top: 8px; border-top: 1px solid #e8d8c4; }
+
+.legend-item {
+  display: flex; align-items: center;
+  gap: 6px; margin: 3px 0; font-size: 12px;
+}
+
+.dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  flex-shrink: 0; border: 2px solid white;
+  box-shadow: 0 0 2px rgba(0,0,0,0.4);
+}
+
+.dot-blue  { background: #1978c8; }
+.dot-green { background: #28a745; }
+.dot-red   { background: #d9534f; }
+
+#geocode-bar {
+  position: absolute; z-index: 950;
+  top: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,0.95);
+  border-radius: 8px; padding: 8px 16px;
+  font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  display: none; text-align: center; min-width: 260px;
+}
+
+.progress-bar {
+  height: 6px; background: #e8d8c4;
+  border-radius: 3px; margin-top: 6px; overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c1440e, #f49d37);
+  border-radius: 3px; width: 0%;
+  transition: width 0.3s ease;
+}
+
+/* ══ ÉTIQUETTES RANDOS ══ */
+.label-rando {
+  background: rgba(255,255,255,0.92);
+  border: 1px solid #c1440e;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #2c1a0e;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  pointer-events: none;
+}
+
+.label-rando::before {
+  display: none; /* supprime la flèche par défaut du tooltip Leaflet */
+}

@@ -1,0 +1,39 @@
+{
+  "name": "Feuille de route - La Marmotte",
+  "short_name": "La Marmotte",
+  "description": "Préparez vos fiches de randonnée avec météo, GPX et covoiturage",
+  "start_url": "/randoFDR/",
+  "scope": "/randoFDR/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5ead8",
+  "theme_color": "#c1440e",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouvelle fiche",
+      "url": "/randoFDR/",
+      "description": "Créer une nouvelle fiche de randonnée"
+    },
+    {
+      "name": "Carte des randos",
+      "url": "/randoFDR/carteRandos.html",
+      "description": "Voir la carte des randonnées"
+    }
+  ],
+  "categories": ["sports", "travel", "utilities"]
+}

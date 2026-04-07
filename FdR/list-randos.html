@@ -1,0 +1,137 @@
+<style>
+body {
+  font-family: Arial;
+  margin: 30px;
+}
+
+/* zone recherche moderne */
+.searchBox {
+  position: relative;
+  max-width: 600px;
+  margin-bottom: 25px;
+}
+
+.searchBox input {
+  width: 100%;
+  padding: 12px 40px 12px 15px;
+  border-radius: 25px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  outline: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: 0.2s;
+}
+
+.searchBox input:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.searchBox span {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  opacity: 0.6;
+}
+
+/* randos */
+pre {
+  white-space: pre-wrap;
+  font-family: Arial;
+  background: #f6f6f6;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.titre {
+  font-weight: bold;
+  cursor: pointer;
+  background: #eee;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 5px;
+  white-space: pre-wrap;
+}
+
+img.profilRando {
+  max-width: 600px;
+  display: none;
+  margin-bottom: 10px;
+  border-radius: 6px;
+}
+</style>
+
+<div class="searchBox">
+  <input id="search" placeholder="Rechercher un village, une rando, un terme spécifique">
+  <span>🔍</span>
+</div>
+
+<div id="liste"></div>
+
+<script>
+const url = "https://whlxbfnmyqdflmxosfse.supabase.co/rest/v1/randos";
+const bucket = "https://whlxbfnmyqdflmxosfse.supabase.co/storage/v1/object/public/Courbe/";
+const key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+
+async function load(q = "") {
+  // on récupère resume + profil
+  let query = url + "?select=resume,profil";
+  if (q) {
+    query += `&resume=ilike.*${q}*`;
+  }
+
+  const res = await fetch(query, {
+    headers: { apikey: key }
+  });
+
+  const data = await res.json();
+  console.log(data);
+
+  const container = document.getElementById("liste");
+  container.innerHTML = "";
+
+  // Vérifie que data est un tableau
+  if (!Array.isArray(data)) return;
+
+  data.forEach(r => {
+    const bloc = document.createElement("div");
+
+    const lignes = r.resume.split("\n");
+
+    const titre = document.createElement("div");
+    titre.className = "titre";
+    titre.textContent = lignes.slice(0,3).join("\n");
+
+    const pre = document.createElement("pre");
+    pre.textContent = r.resume;
+    pre.style.display = "none";
+
+    let img = null;
+if (r.profil) {
+  img = document.createElement("img");
+  img.className = "profilRando";
+  img.src = r.profil;   // <-- juste l'URL du champ, pas de bucket ajouté
+  img.style.display = "none";
+}
+
+    titre.onclick = () => {
+      const ouvert = pre.style.display === "block";
+      pre.style.display = ouvert ? "none" : "block";
+      if (img) img.style.display = ouvert ? "none" : "block";
+    };
+
+    bloc.appendChild(titre);
+    if (img) bloc.appendChild(img);
+    bloc.appendChild(pre);
+
+    container.appendChild(bloc);
+  });
+}
+
+document.getElementById("search").addEventListener("input", e => load(e.target.value));
+
+load();
+</script>

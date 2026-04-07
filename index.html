@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Création de fiches randonnée avec météo, GPX, covoiturage et export PDF">
+<meta name="theme-color" content="#c1440e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="La Marmotte">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Feuille de route - La Marmotte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+<header class="app-header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <span class="logo-icon">🥾</span>
+      <div>
+        <h1 style="font-family:Arial,Helvetica,sans-serif">Feuille de route - La Marmotte</h1>
+        <div class="tagline">Préparez vos randonnées bibi_1503_1155</div>
+      </div>
+    </div>
+    <a href="carteRandos.html" class="btn-carte-header" title="Carte des randonnées">🗺 Carte</a>
+    <button class="btn-reset-header" id="btnReset" title="Réinitialiser le formulaire">🔄 Reset</button>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu">☰</button>
+  </div>
+</header>
+
+<nav class="app-nav" id="appNav">
+  <ul>
+    <li><a href="#infos">📋 Infos</a></li>
+    <li><a href="#meteo">🌤 Météo</a></li>
+    <li><a href="#covoit">🚗 Covoit</a></li>
+    <li><a href="#parking">🅿️ Parking</a></li>
+    <li><a href="#couts">💶 Coûts</a></li>
+    <li><a href="#gpx">🗺 GPX</a></li>
+    <li><a href="#profil">📈 Profil</a></li>
+    <li><a href="#section-remarques">📝 Notes</a></li>
+    <li><a href="#resume">📄 Résumé</a></li>
+    <li><a href="#envoi">✉️ Envoi</a></li>
+  </ul>
+</nav>
+</div>
+
+<main class="app-main">
+
+  <!-- 1. INFORMATIONS GÉNÉRALES -->
+  <section class="card" id="infos">
+    <div class="card-header">
+      <div class="section-icon" style="background:#e8f5e9">📋</div>
+      <h2>Informations générales</h2>
+    </div>
+    <div class="form-group">
+      <label>Rechercher une randonnée</label>
+      <div class="search-rando">
+        <input id="rechercheRando" type="text" placeholder="Tapez quelques lettres…" autocomplete="off">
+        <div id="suggestions"></div>
+      </div>
+      <select id="rando"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nom de la randonnée</label>
+        <input id="nomRando" placeholder="Nom de la randonnée">
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="dateRando">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Animateur·trice</label>
+      <select id="animateur"></select>
+      <input id="nouvelAnimateur" placeholder="Nom animateur" style="display:none;margin-top:8px">
+    </div>
+  </section>
+
+  <!-- 2. COVOITURAGE -->
+  <section class="card" id="covoit">
+    <div class="card-header">
+      <div class="section-icon" style="background:#fff3e0">🚗</div>
+      <h2>Covoiturage</h2>
+    </div>
+    <div class="form-group">
+      <label>Parking covoiturage</label>
+      <select id="parkingCovoiturage"></select>
+      <input id="nouveauParking" placeholder="Saisir le nom du parking" class="input-autre">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Heure de rendez-vous</label>
+        <input type="time" id="heureRV">
+      </div>
+      <div class="form-group">
+        <label>Heure de départ</label>
+        <div style="padding:10px 14px;background:var(--fog);border-radius:var(--radius-sm);font-weight:700;color:var(--forest);min-height:42px">
+          <span id="heureDepart">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Trajet suggéré</label>
+      <textarea id="itineraire" placeholder="Décrivez l'itinéraire de covoiturage…"></textarea>
+    </div>
+  </section>
+
+  <!-- 3. PARKING RANDO -->
+  <section class="card" id="parking">
+    <div class="card-header">
+      <div class="section-icon" style="background:#f3e5f5">🅿️</div>
+      <h2>Parking départ randonnée</h2>
+    </div>
+    <div class="form-group">
+      <label>Rechercher un lieu</label>
+      <input id="lieuRecherche" placeholder="Rechercher un lieu, village, département. Le trajet n'est pas tjrs optimisé, modification Km A/R possible" style="background-image:none;font-size:14px;width:100%">
+      <button id="btnGeocoder" style="margin-top:8px;width:100%">🔍 Localiser</button>
+    </div>
+    <div id="map"></div>
+    <div class="stat-row" style="margin-top:14px">
+      <div class="stat-badge">
+        <div class="stat-label">Distance A/R</div>
+        <div class="stat-value" style="display:flex;align-items:center;gap:4px">
+          <input id="distanceAR" type="number" min="0" step="0.1" value="0"
+            style="width:70px;padding:2px 6px;font-size:inherit;font-weight:700;
+                   color:var(--forest,#2d6a4f);background:transparent;
+                   border:none;border-bottom:1.5px dashed var(--stone,#8a7560);
+                   text-align:right;outline:none;"
+            title="Modifiable manuellement"> km
+        </div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">Adresse</div>
+        <div style="font-size:12px;font-weight:500;color:var(--pine);margin-top:2px"><span id="parkingRandoAdresse">—</span></div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">GPS</div>
+        <div class="stat-value" style="font-size:13px"><span id="latParking">—</span>, <span id="lonParking">—</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. MÉTÉO -->
+  <section class="card" id="meteo">
+    <div class="card-header">
+      <div class="section-icon" style="background:#e3f2fd">🌤</div>
+      <h2>Météo prévue</h2>
+    </div>
+    <div id="meteoRando">
+      <p>☀️ État<br><span id="meteoEtat">—</span></p>
+      <p>🌡 Température<br><span id="meteoTemp">—</span></p>
+      <p>🌧 Pluie<br><span id="meteoPluie">—</span></p>
+      <p>🧭 Vent<br><span id="meteoVent">—</span></p>
+      <p>💨 Rafales<br><span id="meteoRafales">—</span></p>
+    </div>
+  </section>
+
+  <!-- 5. COÛTS -->
+  <section class="card" id="couts">
+    <div class="card-header">
+      <div class="section-icon" style="background:#fce4ec">💶</div>
+      <h2>Coût du trajet</h2>
+    </div>
+    <div class="form-group">
+      <label>Autoroute (€)</label>
+      <input type="number" id="autoroute" value="0" min="0" step="0.5">
+    </div>
+    <div class="cout-grid">
+      <div class="cout-item">
+        <div class="cout-label">Coût km</div>
+        <div class="cout-value"><span id="coutKm">0.00 €</span></div>
+      </div>
+      <div class="cout-item">
+        <div class="cout-label">Total trajet</div>
+        <div class="cout-value"><span id="coutTotal">0.00 €</span></div>
+      </div>
+      <div class="cout-item">
+        <div class="cout-label">Par 4 (covoit)</div>
+        <div class="cout-value"><span id="cout4">0.00 €</span></div>
+      </div>
+      <div class="cout-item">
+        <div class="cout-label">Par 5 (covoit)</div>
+        <div class="cout-value"><span id="cout5">0.00 €</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. GPX -->
+  <section class="card" id="gpx">
+    <div class="card-header">
+      <div class="section-icon" style="background:#e8f5e9">🗺</div>
+      <h2>Analyse GPX</h2>
+    </div>
+    <div class="gpx-drop-zone" id="gpxDropZone">
+      <div class="drop-icon">📂</div>
+      <div class="drop-text">Glissez votre fichier GPX ici</div>
+      <div class="drop-sub">ou cliquez pour sélectionner (.gpx)</div>
+      <input type="file" id="gpxFile" accept=".gpx">
+    </div>
+    <div id="gpx-status"></div>
+
+    <p id="gpx-manuel-hint" style="font-size:12px;color:var(--stone);margin:8px 0 4px;font-style:italic">
+      Sans fichier GPX, saisissez les valeurs manuellement ci-dessous :
+    </p>
+
+    <div class="stat-row">
+      <div class="stat-badge">
+        <div class="stat-label">Distance (km)</div>
+        <div class="stat-value stat-editable">
+          <span id="distanceGPX" class="stat-span">—</span>
+          <input id="distanceGPX_manuel" type="number" min="0" step="0.1"
+            class="stat-input" placeholder="ex: 12.5" style="display:none">
+        </div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">Dénivelé + (m)</div>
+        <div class="stat-value stat-editable">
+          <span id="denivele" class="stat-span">—</span>
+          <input id="denivele_manuel" type="number" min="0" step="1"
+            class="stat-input" placeholder="ex: 450" style="display:none">
+        </div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">Durée marche</div>
+        <div class="stat-value stat-editable">
+          <span id="dureeMarche" class="stat-span">—</span>
+          <input id="dureeMarche_manuel" type="text"
+            class="stat-input" placeholder="ex: 3h30" style="display:none">
+        </div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">IBP</div>
+        <div class="stat-value"><span id="ibp">—</span></div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">Effort (1–5)</div>
+        <div class="stat-value stat-editable">
+          <span id="effort" class="stat-span">—</span>
+          <input id="effort_manuel" type="number" min="1" max="5" step="1"
+            class="stat-input" placeholder="1–5" style="display:none">
+        </div>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:14px">
+      <div class="form-group">
+        <label>Technicité (1–5)</label>
+        <input id="technicite" type="number" min="1" max="5" placeholder="1 à 5">
+        <div id="erreur-technicite" class="erreur-champ" style="display:none">⚠️ Valeur entre 1 et 5 uniquement</div>
+      </div>
+      <div class="form-group">
+        <label>Risque (1–5)</label>
+        <input id="risque" type="number" min="1" max="5" placeholder="1 à 5">
+        <div id="erreur-risque" class="erreur-champ" style="display:none">⚠️ Valeur entre 1 et 5 uniquement</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. PROFIL ALTIMÉTRIQUE -->
+  <section class="card" id="profil">
+    <div class="card-header">
+      <div class="section-icon" style="background:#e8eaf6">📈</div>
+      <h2>Profil altimétrique</h2>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Heure départ marche</label>
+        <input type="time" id="heureDepartMarche">
+      </div>
+      <div class="form-group">
+        <label>Vitesse moyenne (km/h)</label>
+        <input type="number" id="vitesse" value="4" min="1" max="10" step="0.5">
+      </div>
+    </div>
+    <div id="dureeMarcheSim"></div>
+    <div id="heureArriveeSim"></div>
+    <div class="profil-container">
+      <canvas id="profilAltitude"></canvas>
+    </div>
+  </section>
+
+  <!-- 8. REMARQUES -->
+  <section class="card" id="section-remarques">
+    <div class="card-header">
+      <div class="section-icon" style="background:#fff8e1">📝</div>
+      <h2>Remarques</h2>
+    </div>
+    <textarea id="remarques" placeholder="Particularités du parcours, points d'attention, équipements conseillés…" style="min-height:110px"></textarea>
+  </section>
+
+  <!-- 9. RÉSUMÉ -->
+  <section class="card" id="resume">
+    <div class="card-header">
+      <div class="section-icon" style="background:#e0f7fa">📄</div>
+      <h2>Résumé</h2>
+    </div>
+    <div class="btn-row">
+      <button id="btnResume">✨ Générer le résumé</button>
+    </div>
+    <pre id="resumeRando"></pre>
+  </section>
+
+  <!-- 10. EXPORT PDF & ENVOI -->
+  <section class="card" id="envoi">
+    <div class="card-header">
+      <div class="section-icon" style="background:#fce4ec">✉️</div>
+      <h2>Envoi (fichiers txt et profil)</h2>
+    </div>
+    <div class="form-group">
+      <label>Email pour copie</label>
+      <input type="email" id="emailUser" placeholder="votre@email.com">
+    </div>
+    <button type="button" id="btnEnvoyer">✉️ Envoyer</button>
+  </section>
+
+</main>
+
+<script type="module" src="js/app.js"></script>
+
+<script>
+/* Hamburger */
+const navToggle = document.getElementById('navToggle');
+const appNav    = document.getElementById('appNav');
+
+function ajusterPaddingMain() {
+  const topbar = document.getElementById('topbar');
+  const main   = document.querySelector('.app-main');
+  if (topbar && main) main.style.paddingTop = topbar.offsetHeight + 16 + 'px';
+}
+
+navToggle.addEventListener('click', () => {
+  appNav.classList.toggle('open');
+  navToggle.textContent = appNav.classList.contains('open') ? '✕' : '☰';
+  setTimeout(ajusterPaddingMain, 360);
+});
+document.querySelectorAll('.app-nav a').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    appNav.classList.remove('open');
+    navToggle.textContent = '☰';
+    setTimeout(ajusterPaddingMain, 360);
+
+    const targetId = link.getAttribute('href').replace('#', '');
+    const target   = document.getElementById(targetId);
+    if (!target) return;
+
+    const topbarH  = document.getElementById('topbar').offsetHeight;
+    const offsetY  = target.getBoundingClientRect().top + window.scrollY - topbarH - 12;
+    window.scrollTo({ top: offsetY, behavior: 'smooth' });
+  });
+});
+
+window.addEventListener('load',   ajusterPaddingMain);
+window.addEventListener('resize', ajusterPaddingMain);
+ajusterPaddingMain();
+
+/* Drag & drop GPX */
+const dropZone = document.getElementById('gpxDropZone');
+if (dropZone) {
+  ['dragenter','dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.style.borderColor='var(--sage)'; }));
+  ['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.style.borderColor=''; }));
+  dropZone.addEventListener('drop', ev => {
+    const file = ev.dataTransfer.files[0];
+    if (file && file.name.endsWith('.gpx')) {
+      const input = document.getElementById('gpxFile');
+      const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    }
+  });
+}
+
+/* Validation technicité et risque */
+function validerIntervalle(inputId, erreurId) {
+  const input  = document.getElementById(inputId);
+  const erreur = document.getElementById(erreurId);
+  input.addEventListener('input', () => {
+    const val = parseFloat(input.value);
+    if (input.value !== '' && (isNaN(val) || val < 1 || val > 5)) {
+      erreur.style.display = 'block';
+      input.style.borderColor = 'var(--sunset, #e76f51)';
+    } else {
+      erreur.style.display = 'none';
+      input.style.borderColor = '';
+    }
+  });
+}
+validerIntervalle('technicite', 'erreur-technicite');
+validerIntervalle('risque',     'erreur-risque');
+
+/* Enregistrement Service Worker PWA — uniquement sur GitHub Pages */
+if ('serviceWorker' in navigator && location.hostname === 'dbizcyber.github.io') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/randoFDR/sw.js')
+      .then(reg => console.log('[PWA] Service Worker enregistré:', reg.scope))
+      .catch(err => console.warn('[PWA] Erreur SW:', err));
+  });
+}
+
+/* ══ RESET FORMULAIRE (sans rechargement) ══ */
+function resetFormulaire() {
+
+  /* 1. Vider localStorage */
+  localStorage.removeItem('randoFDR_form');
+
+  /* 2. Inputs / selects / textareas */
+  ['rechercheRando','nomRando','dateRando','animateur',
+   'parkingCovoiturage','nouveauParking','heureRV','itineraire',
+   'autoroute','technicite','risque','remarques',
+   'heureDepartMarche','vitesse','emailUser',
+   'distanceGPX_manuel','denivele_manuel','dureeMarche_manuel','effort_manuel',
+   'lieuRecherche'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = id === 'autoroute' ? '0' : id === 'vitesse' ? '4' : '';
+  });
+
+  /* 3. Spans → — */
+  ['meteoEtat','meteoTemp','meteoPluie','meteoVent','meteoRafales',
+   'parkingRandoAdresse','ibp','effort','heureDepart',
+   'distanceGPX','denivele','dureeMarche'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
+  });
+
+  /* 4. Coûts → 0.00 € */
+  ['coutKm','coutTotal','cout4','cout5'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '0.00 €';
+  });
+
+  /* 5. distanceAR (input) → 0 */
+  const distAR = document.getElementById('distanceAR');
+  if (distAR) {
+    if (distAR.tagName === 'INPUT') { distAR.value = '0'; distAR.dataset.manuel = ''; }
+    else distAR.textContent = '0';
+  }
+
+  /* 6. latParking / lonParking */
+  const latEl = document.getElementById('latParking');
+  if (latEl) { latEl.textContent = '—'; latEl.dataset.userSet = ''; }
+  const lonEl = document.getElementById('lonParking');
+  if (lonEl) lonEl.textContent = '—';
+
+  /* 7. Zones texte résumé + simulations */
+  ['resumeRando','dureeMarcheSim','heureArriveeSim','gpx-status'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  });
+
+  /* 8. Masquer nouveauParking */
+  const champAutre = document.getElementById('nouveauParking');
+  if (champAutre) { champAutre.style.display = 'none'; champAutre.value = ''; }
+
+  /* 9. Réinitialiser saisie manuelle GPX */
+  if (window._initGPXManuel) {
+    window._initGPXManuel();
+  } else {
+    ['distanceGPX_manuel','denivele_manuel','dureeMarche_manuel','effort_manuel'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.value = ''; el.style.display = 'block'; }
+    });
+    ['distanceGPX','denivele','dureeMarche','effort'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
+
+  /* 10. Vider GPX + variables globales */
+  const gpxFile = document.getElementById('gpxFile');
+  if (gpxFile) gpxFile.value = '';
+  window.profilExportBase64 = null;
+  window.coordsParking      = '';
+  window.gpxImporte         = false;
+
+  /* 11. Détruire le graphique Chart.js */
+  if (window.chartProfil) { window.chartProfil.destroy(); window.chartProfil = null; }
+
+  /* 12. Réinitialiser la carte Leaflet */
+  if (window._resetCarte) window._resetCarte();
+
+  /* 13. Date du jour */
+  const dateInput = document.getElementById('dateRando');
+  if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+
+  /* 14. Indicateurs visuels */
+  window._majIndicateurs && window._majIndicateurs();
+
+  /* 15. Scroller en haut */
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  console.log('[Reset] Formulaire réinitialisé');
+}
+
+/* Bouton Reset */
+document.getElementById('btnReset')?.addEventListener('click', () => {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(44,26,14,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:white;border-radius:16px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.25);font-family:Outfit,Arial,sans-serif;text-align:center';
+
+  box.innerHTML = `
+    <div style="font-size:36px;margin-bottom:12px">🔄</div>
+    <div style="font-size:17px;font-weight:700;color:#c1440e;margin-bottom:10px">Réinitialiser tout le formulaire ?</div>
+    <div style="font-size:14px;color:#2c1a0e;margin-bottom:24px">Toutes les données saisies seront effacées.</div>
+    <div style="display:flex;gap:10px">
+      <button id="resetAnnuler"   style="flex:1;padding:11px;background:#f5ead8;color:#2c1a0e;border:1.5px solid #e8d8c4;border-radius:8px;font-size:14px;font-weight:600;font-family:Outfit,Arial,sans-serif;cursor:pointer;margin-top:0;box-shadow:none;transform:none">Annuler</button>
+      <button id="resetConfirmer" style="flex:1;padding:11px;background:linear-gradient(135deg,#c1440e,#f49d37);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;font-family:Outfit,Arial,sans-serif;cursor:pointer;margin-top:0;box-shadow:none;transform:none">Oui, effacer</button>
+    </div>
+  `;
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  box.querySelector('#resetAnnuler').addEventListener('click', () => overlay.remove());
+  box.querySelector('#resetConfirmer').addEventListener('click', () => {
+    overlay.remove();
+    resetFormulaire();
+  });
+});
+
+/* ══ RECHERCHE RANDO → NOM RANDO ══ */
+(function() {
+  var inputR = document.getElementById('rechercheRando');
+  var nomR   = document.getElementById('nomRando');
+  if (!inputR || !nomR) return;
+  inputR.addEventListener('input', function() {
+    nomR.value = inputR.value;
+    window._majIndicateurs && window._majIndicateurs();
+  });
+})();
+
+/* ══ DISTANCE A/R MANUELLE → RECALCUL COUTS ══ */
+(function() {
+  var elAR = document.getElementById('distanceAR');
+  if (!elAR) return;
+  elAR.addEventListener('input', function() {
+    elAR.dataset.manuel = '1';
+    if (window._calculCovoiturage) window._calculCovoiturage();
+  });
+  elAR.addEventListener('change', function() {
+    if (!elAR.value || parseFloat(elAR.value) === 0) elAR.dataset.manuel = '';
+  });
+})();
+
+/* Pré-remplissage depuis l'historique (#fiche=...) */
+(function() {
+  const hash = window.location.hash;
+  if (!hash.startsWith("#fiche=")) return;
+  const encoded = hash.replace("#fiche=", "");
+  /* Nettoyer le hash immédiatement */
+  window.history.replaceState({}, "", window.location.pathname);
+  try {
+    // ✅ APRÈS
+const f = JSON.parse(decodeURIComponent(atob(encoded)));
+    window.addEventListener("load", () => setTimeout(() => {
+      const set    = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+      const setTxt = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
+      set("nomRando",           f.nomRando);
+      set("technicite",         f.technicite);
+      set("risque",             f.risque);
+      set("remarques",          f.remarques);
+      set("heureRV",            f.heureRV);
+      const selAnim = document.getElementById("animateur");
+      if (selAnim && f.animateur) {
+        selAnim.value = f.animateur;
+        selAnim.dispatchEvent(new Event("change"));
+      }
+      const selPark = document.getElementById("parkingCovoiturage");
+      if (selPark && f.parkingCovoit) {
+        selPark.value = f.parkingCovoit;
+        selPark.dispatchEvent(new Event("change"));
+      }
+      set("distanceGPX_manuel", f.distance);
+      set("denivele_manuel",    f.denivele);
+      set("dureeMarche_manuel", f.duree);
+      set("effort_manuel",      f.effort);
+      setTxt("distanceGPX", f.distance);
+      setTxt("denivele",    f.denivele);
+      setTxt("dureeMarche", f.duree);
+      setTxt("effort",      f.effort);
+      window._majIndicateurs && window._majIndicateurs();
+    }, 800));
+  } catch(e) { console.warn("Erreur lecture fiche:", e); }
+})();
+
+  /* ══ RÉCEPTION postMessage depuis randonnees-club.html ══
+   À coller dans index.html juste avant la ligne :
+   });   ← celle qui ferme "Active nav au scroll"
+   ================================================== */
+
+window.addEventListener("message", (e) => {
+  if (!e.data || e.data.type !== "chargerFiche") return;
+  const f = e.data.payload;
+  if (!f) return;
+
+  /* Attendre que app.js ait fini son init si nécessaire */
+  const remplir = () => {
+    const set    = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
+
+    set("nomRando",           f.nomRando);
+    set("heureRV",            f.heureRV);
+    set("technicite",         f.technicite);
+    set("risque",             f.risque);
+    set("remarques",          f.remarques);
+
+    const selAnim = document.getElementById("animateur");
+    if (selAnim && f.animateur) {
+      selAnim.value = f.animateur;
+      selAnim.dispatchEvent(new Event("change"));
+    }
+    const selPark = document.getElementById("parkingCovoiturage");
+    if (selPark && f.parkingCovoit) {
+      selPark.value = f.parkingCovoit;
+      selPark.dispatchEvent(new Event("change"));
+    }
+
+    set("distanceGPX_manuel", f.distance);
+    set("denivele_manuel",    f.denivele);
+    set("dureeMarche_manuel", f.duree);
+    set("effort_manuel",      f.effort);
+    setTxt("distanceGPX",     f.distance);
+    setTxt("denivele",        f.denivele);
+    setTxt("dureeMarche",     f.duree);
+    setTxt("effort",          f.effort);
+
+    window._majIndicateurs && window._majIndicateurs();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    console.log("[postMessage] Fiche chargée ✅", f.nomRando);
+  };
+
+  /* Si _majIndicateurs est déjà dispo → remplir immédiatement, sinon attendre 800ms */
+  if (window._majIndicateurs) {
+    remplir();
+  } else {
+    setTimeout(remplir, 800);
+  }
+});
+  
+/* Active nav au scroll */
+const sections = document.querySelectorAll('.card[id]');
+const navLinks  = document.querySelectorAll('.app-nav a');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const a = document.querySelector(`.app-nav a[href="#${e.target.id}"]`);
+      if (a) a.classList.add('active');
+    }
+  });
+}, { threshold:0.3 });
+sections.forEach(s => obs.observe(s));
+</script>
+
+</body>
+</html>

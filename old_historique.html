@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Historique des fiches — La Marmotte</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ember:  #7c2d00;
+    --flame:  #c1440e;
+    --orange: #e8621a;
+    --amber:  #f49d37;
+    --cream:  #fff8ee;
+    --sand:   #f5ead8;
+    --stone:  #8a7560;
+    --ink:    #2c1a0e;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--sand);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .topbar {
+    background: linear-gradient(135deg, var(--ember), var(--flame), var(--orange));
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 3px 12px rgba(124,45,0,0.3);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar h1 { font-size: 16px; font-weight: 700; color: white; }
+  .btn-retour {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    background: rgba(255,255,255,0.18);
+    border: 1.5px solid rgba(255,255,255,0.45);
+    border-radius: 8px;
+    color: white; font-family: 'Outfit', sans-serif;
+    font-size: 13px; font-weight: 600;
+    text-decoration: none; cursor: pointer;
+    transition: background .2s;
+  }
+  .btn-retour:hover { background: rgba(255,255,255,0.30); }
+
+  /* ── CONTENU ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+
+  /* ── BARRE OUTILS ── */
+  .toolbar {
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .toolbar-title {
+    font-size: 20px; font-weight: 700; color: var(--ember);
+    flex: 1;
+  }
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: white; border: 1.5px solid #e8d8c4;
+    border-radius: 8px; padding: 8px 14px;
+    flex: 1; max-width: 280px;
+  }
+  .search-box input {
+    border: none; outline: none; font-family: 'Outfit', sans-serif;
+    font-size: 14px; color: var(--ink); background: transparent; width: 100%;
+  }
+  .stat-badge {
+    background: var(--cream); border: 1.5px solid #e8d8c4;
+    border-radius: 8px; padding: 8px 14px;
+    font-size: 13px; font-weight: 600; color: var(--stone);
+  }
+  .stat-badge span { color: var(--flame); font-weight: 700; }
+
+  /* ── EN-TÊTES TRI ── */
+  .sort-bar {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .sort-btn {
+    padding: 7px 14px;
+    background: white; border: 1.5px solid #e8d8c4;
+    border-radius: 8px; font-family: 'Outfit', sans-serif;
+    font-size: 13px; font-weight: 600; color: var(--stone);
+    cursor: pointer; transition: all .2s;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .sort-btn.active {
+    background: var(--flame); border-color: var(--flame);
+    color: white;
+  }
+  .sort-btn:hover:not(.active) {
+    border-color: var(--amber); color: var(--ember);
+  }
+
+  /* ── CARTES FICHES ── */
+  .fiches-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+
+  .fiche-card {
+    background: white;
+    border-radius: var(--radius);
+    border: 1.5px solid #e8d8c4;
+    overflow: hidden;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .fiche-card:hover {
+    box-shadow: 0 8px 24px rgba(124,45,0,0.12);
+    transform: translateY(-2px);
+  }
+
+  .fiche-header {
+    background: linear-gradient(135deg, var(--ember), var(--flame));
+    padding: 14px 16px;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  }
+  .fiche-date { font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 600; }
+  .fiche-nom  { font-size: 15px; font-weight: 700; color: white; margin-top: 2px; line-height: 1.3; }
+  .fiche-animateur {
+    font-size: 11px; color: rgba(255,255,255,0.75);
+    margin-top: 4px;
+  }
+
+  .fiche-body { padding: 14px 16px; }
+
+  /* ── LISTE FICHES EN LIGNES ── */
+  .fiches-liste {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+
+  .fiche-row {
+    display: flex; align-items: center; gap: 12px;
+    background: white; border: 1.5px solid #e8d8c4;
+    border-radius: 10px; padding: 10px 14px;
+    cursor: pointer; transition: box-shadow .15s, border-color .15s;
+  }
+  .fiche-row:hover {
+    box-shadow: 0 3px 12px rgba(124,45,0,0.1);
+    border-color: var(--amber);
+  }
+  .fiche-row-date {
+    font-size: 12px; font-weight: 700; color: var(--flame);
+    white-space: nowrap; min-width: 88px;
+  }
+  .fiche-row-nom {
+    font-size: 14px; font-weight: 700; color: var(--ink);
+    flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .fiche-row-anim {
+    font-size: 12px; color: var(--stone);
+    white-space: nowrap; min-width: 110px; text-align: right;
+  }
+  .fiche-row-stats {
+    display: flex; gap: 10px;
+    font-size: 11px; color: var(--stone); white-space: nowrap;
+  }
+  .fiche-row-actions {
+    display: flex; gap: 6px; flex-shrink: 0;
+  }
+  .btn-action {
+    padding: 5px 10px; border: none; border-radius: 6px;
+    font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .btn-dupliquer {
+    background: linear-gradient(135deg, var(--flame), var(--amber)); color: white;
+  }
+  .btn-dupliquer:hover { opacity: .85; }
+  .btn-supprimer {
+    background: #fde8e8; color: #c53030; border: 1.5px solid #f5a0a0;
+  }
+  .btn-supprimer:hover { background: #f5a0a0; color: white; }
+
+  /* ── BADGE STATUT ── */
+  .badge-statut {
+    font-size: 10px; font-weight: 700; padding: 3px 8px;
+    border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+  }
+  .badge-publiee  { background: #d4edda; color: #155724; }
+  .badge-annulee  { background: #f8d7da; color: #721c24; }
+  .badge-modifiee { background: #fff3cd; color: #856404; }
+
+  .btn-statut {
+    padding: 5px 10px; border-radius: 6px;
+    font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all .15s; white-space: nowrap; border: none;
+  }
+  .btn-annuler-rando  { background: #fff3cd; color: #856404; border: 1.5px solid #f49d37; }
+  .btn-annuler-rando:hover  { background: #f8d7da; color: #721c24; border-color: #f5a0a0; }
+  .btn-retablir-rando { background: #d4edda; color: #155724; border: 1.5px solid #52b788; }
+  .btn-retablir-rando:hover { background: #52b788; color: white; }
+
+  /* ligne annulée : nom barré + fond rosé */
+  .fiche-row.annulee {
+    background: #fff8f8; border-color: #f5c6cb;
+    opacity: 0.85;
+  }
+  .fiche-row.annulee .fiche-row-nom { text-decoration: line-through; color: var(--stone); }
+
+  /* ── ÉTAT VIDE ── */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--stone); font-size: 15px; }
+  .empty-state .big { font-size: 48px; margin-bottom: 12px; }
+
+  /* ── MODAL CONFIRMATION ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(44,26,14,0.55);
+    z-index: 9999; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: white; border-radius: 16px; padding: 28px 24px;
+    max-width: 380px; width: 100%;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+    text-align: center; font-family: 'Outfit', sans-serif;
+  }
+  .modal-icon  { font-size: 40px; margin-bottom: 12px; }
+  .modal-titre { font-size: 17px; font-weight: 700; color: var(--flame); margin-bottom: 8px; }
+  .modal-msg   { font-size: 14px; color: var(--ink); margin-bottom: 22px; line-height: 1.5; }
+  .modal-btns  { display: flex; gap: 10px; }
+  .modal-btn   {
+    flex: 1; padding: 11px; border-radius: 8px;
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: none;
+  }
+  .modal-btn.annuler   { background: var(--sand); color: var(--ink); border: 1.5px solid #e8d8c4; }
+  .modal-btn.confirmer { background: linear-gradient(135deg, #c53030, #e53e3e); color: white; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ember); color: white;
+    padding: 12px 24px; border-radius: 30px;
+    font-weight: 600; font-size: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 9998;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; }
+  #toast.ok   { background: #276749; }
+  #toast.err  { background: #c53030; }
+
+  @media (max-width: 600px) {
+    .fiche-row-stats { display: none; }
+    .fiche-row-anim  { min-width: 80px; font-size: 11px; }
+    .toolbar-title   { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🥾 Historique des fiches — La Marmotte</h1>
+</div>
+
+<div class="container">
+
+  <div class="toolbar">
+    <div class="toolbar-title">📋 Fiches archivées</div>
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Rechercher une rando, animateur…">
+    </div>
+    <div class="stat-badge">Total : <span id="statTotal">—</span></div>
+  </div>
+
+  <div class="sort-bar">
+    <span style="font-size:13px;font-weight:600;color:var(--stone);align-self:center">Trier par :</span>
+    <button class="sort-btn active" data-col="created_at" data-dir="desc" onclick="setSort('created_at')">📅 Date envoi ↓</button>
+    <button class="sort-btn" data-col="date_rando"  data-dir="asc"  onclick="setSort('date_rando')">🗓 Date rando</button>
+    <button class="sort-btn" data-col="nom_rando"   data-dir="asc"  onclick="setSort('nom_rando')">🏔 Nom</button>
+    <button class="sort-btn" data-col="animateur"   data-dir="asc"  onclick="setSort('animateur')">👤 Animateur</button>
+  </div>
+
+  <div class="fiches-liste" id="fichesGrid">
+    <div class="empty-state"><div class="big">⏳</div>Chargement des fiches…</div>
+  </div>
+
+</div>
+
+<!-- Modal visualisation fiche -->
+<div class="modal-overlay" id="modalVisu">
+  <div class="modal-box" style="max-width:600px;text-align:left;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="modal-titre" style="margin-bottom:0" id="modalVisuTitre">Fiche</div>
+      <button onclick="fermerModalVisu()" style="background:var(--sand);border:1.5px solid #e8d8c4;border-radius:8px;padding:6px 12px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)">✕ Fermer</button>
+    </div>
+    <img id="modalVisuProfil" src="" alt="Profil" style="width:100%;border-radius:8px;margin-bottom:14px;display:none">
+    <pre id="modalVisuResume" style="font-family:'Outfit',sans-serif;font-size:13px;color:var(--ink);white-space:pre-wrap;line-height:1.6;background:var(--cream);border-radius:8px;padding:14px;border:1px solid #e8d8c4"></pre>
+  </div>
+</div>
+
+<!-- Modal confirmation suppression -->
+<div class="modal-overlay" id="modalSupp">
+  <div class="modal-box">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-titre">Supprimer cette fiche ?</div>
+    <div class="modal-msg" id="modalSuppMsg">Cette action est irréversible.</div>
+    <div class="modal-btns">
+      <button class="modal-btn annuler"   onclick="fermerModal()">Annuler</button>
+      <button class="modal-btn confirmer" onclick="confirmerSupp()">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const MOT_DE_PASSE = "marmotte2026";
+const CLE_SUPPR    = "suppr_auth";
+
+/* ══ VÉRIFICATION MDP POUR SUPPRESSION ══ */
+function verifierMdpPuisSupprimer(id, nom) {
+  /* Si déjà authentifié dans cette session */
+  if (sessionStorage.getItem(CLE_SUPPR) === "ok") {
+    demanderSupp(id, nom);
+    return;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "mdp-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(44,26,14,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
+
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:28px 24px;max-width:340px;width:100%;text-align:center;font-family:'Outfit',sans-serif;box-shadow:0 8px 40px rgba(0,0,0,0.3)">
+      <div style="font-size:36px;margin-bottom:10px">🔐</div>
+      <div style="font-size:17px;font-weight:700;color:#c1440e;margin-bottom:6px">Suppression protégée</div>
+      <div style="font-size:13px;color:#8a7560;margin-bottom:18px">Entrez le mot de passe pour supprimer</div>
+      <input id="mdp-supp-input" type="password" placeholder="Mot de passe…"
+        style="width:100%;padding:11px 14px;border:1.5px solid #e8d8c4;border-radius:8px;font-family:'Outfit',sans-serif;font-size:14px;margin-bottom:10px;outline:none">
+      <div id="mdp-supp-err" style="font-size:12px;color:#c53030;margin-bottom:8px;display:none">Mot de passe incorrect</div>
+      <div style="display:flex;gap:8px">
+        <button id="mdp-supp-annuler" style="flex:1;padding:10px;background:#f5ead8;color:#2c1a0e;border:1.5px solid #e8d8c4;border-radius:8px;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer">Annuler</button>
+        <button id="mdp-supp-ok"      style="flex:1;padding:10px;background:linear-gradient(135deg,#c1440e,#f49d37);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer">Confirmer</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById("mdp-supp-input")?.focus(), 100);
+
+  function tenter() {
+    const val = document.getElementById("mdp-supp-input").value;
+    if (val === MOT_DE_PASSE) {
+      sessionStorage.setItem(CLE_SUPPR, "ok");
+      overlay.remove();
+      demanderSupp(id, nom);
+    } else {
+      document.getElementById("mdp-supp-err").style.display = "block";
+      document.getElementById("mdp-supp-input").value = "";
+      document.getElementById("mdp-supp-input").focus();
+    }
+  }
+
+  document.getElementById("mdp-supp-ok").addEventListener("click", tenter);
+  document.getElementById("mdp-supp-annuler").addEventListener("click", () => overlay.remove());
+  document.getElementById("mdp-supp-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") tenter();
+    if (e.key === "Escape") overlay.remove();
+  });
+  overlay.addEventListener("click", e => { if (e.target === overlay) overlay.remove(); });
+}
+</script>
+<script>
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+
+let fiches      = [];
+let fichesFilt  = [];
+let sortCol     = "created_at";
+let sortDir     = "desc";
+let idASupp     = null;
+
+/* ══ CHARGEMENT ══ */
+async function chargerFiches() {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/fiches?select=id,created_at,date_rando,nom_rando,animateur,parking_covoit,heure_rv,parking_depart,gps,distance,denivele,duree,ibp,effort,technicite,risque,couts,remarques,profil_png,statut&order=${sortCol}.${sortDir}`,
+      { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
+    );
+    fiches = await res.json();
+    filtrerEtAfficher();
+  } catch(e) {
+    document.getElementById("fichesGrid").innerHTML =
+      '<div class="empty-state"><div class="big">⚠️</div>Erreur de chargement.</div>';
+  }
+}
+
+/* ══ FILTRE + AFFICHAGE ══ */
+function filtrerEtAfficher() {
+  const q = document.getElementById("searchInput").value.toLowerCase().trim();
+  fichesFilt = q
+    ? fiches.filter(f =>
+        (f.nom_rando   || "").toLowerCase().includes(q) ||
+        (f.animateur   || "").toLowerCase().includes(q) ||
+        (f.date_rando  || "").includes(q)
+      )
+    : [...fiches];
+
+  document.getElementById("statTotal").textContent = fichesFilt.length;
+  afficherFiches();
+}
+
+/* ══ RENDU LIGNES ══ */
+function afficherFiches() {
+  const grid = document.getElementById("fichesGrid");
+
+  if (!fichesFilt.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="big">🏔</div>Aucune fiche trouvée.</div>';
+    return;
+  }
+
+  grid.innerHTML = fichesFilt.map(f => {
+    const dateAff = f.date_rando
+      ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", { day:"2-digit", month:"2-digit", year:"numeric" })
+      : "—";
+
+    const stats = [
+      f.distance  ? `📏 ${f.distance} km` : "",
+      f.denivele  ? `⛰ ${f.denivele} m`  : "",
+      f.duree     ? `⏱ ${f.duree}`        : "",
+      f.ibp       ? `IBP ${f.ibp}`        : "",
+    ].filter(Boolean).join("  ·  ");
+
+    const nom  = (f.nom_rando  || "—");
+    const anim = (f.animateur  || "—");
+    const nomEsc = nom.replace(/'/g, "\\'");
+    const statut = f.statut || "publiée";
+    const badgeClass = statut === "annulée" ? "badge-annulee" : statut === "modifiée" ? "badge-modifiee" : "badge-publiee";
+    const badgeLabel = statut === "annulée" ? "❌ Annulée" : statut === "modifiée" ? "✏️ Modifiée" : "✅ Publiée";
+    const rowClass = statut === "annulée" ? "fiche-row annulee" : "fiche-row";
+    const btnStatut = statut === "annulée"
+      ? `<button class="btn-statut btn-retablir-rando" onclick="changerStatut(${f.id},'publiée')">↩ Rétablir</button>`
+      : `<button class="btn-statut btn-annuler-rando"  onclick="changerStatut(${f.id},'annulée')">⛔ Annuler</button>`;
+
+    return `
+    <div class="${rowClass}" onclick="voirFiche(${f.id})">
+      <div class="fiche-row-date">${dateAff}</div>
+      <span class="badge-statut ${badgeClass}">${badgeLabel}</span>
+      <div class="fiche-row-nom" title="${nom}">${nom}</div>
+      <div class="fiche-row-anim">👤 ${anim}</div>
+      ${stats ? `<div class="fiche-row-stats">${stats}</div>` : ""}
+      <div class="fiche-row-actions" onclick="event.stopPropagation()">
+        ${btnStatut}
+        <button class="btn-action btn-dupliquer" onclick="dupliquerFiche(${f.id})">📋 Réutiliser</button>
+        <button class="btn-action btn-supprimer" onclick="demanderSupp(${f.id}, '${nomEsc}')">🗑</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ══ CHANGER STATUT ══ */
+async function changerStatut(id, nouveauStatut) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type":  "application/json",
+        "apikey":        SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Prefer":        "return=minimal"
+      },
+      body: JSON.stringify({ statut: nouveauStatut })
+    });
+    if (res.ok) {
+      const label = nouveauStatut === "annulée" ? "⛔ Randonnée annulée" : "✅ Randonnée rétablie";
+      showToast(label, nouveauStatut === "annulée" ? "err" : "ok");
+      /* Mettre à jour localement sans recharger */
+      const f = fiches.find(x => x.id === id);
+      if (f) { f.statut = nouveauStatut; filtrerEtAfficher(); }
+    } else {
+      showToast("Erreur lors du changement de statut", "err");
+    }
+  } catch(e) {
+    showToast("Erreur réseau", "err");
+  }
+}
+
+/* ══ TRI ══ */
+function setSort(col) {
+  if (sortCol === col) {
+    sortDir = sortDir === "asc" ? "desc" : "asc";
+  } else {
+    sortCol = col;
+    sortDir = col === "created_at" ? "desc" : "asc";
+  }
+
+  document.querySelectorAll(".sort-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.col === sortCol);
+    if (btn.dataset.col === sortCol) {
+      btn.textContent = btn.textContent.replace(/ [↑↓]$/, "") + " " + (sortDir === "asc" ? "↑" : "↓");
+    }
+  });
+
+  chargerFiches();
+}
+
+/* ══ VISUALISER FICHE ══ */
+function voirFiche(id) {
+  const f = fiches.find(x => x.id === id);
+  if (!f) return;
+
+  document.getElementById("modalVisuTitre").textContent =
+    (f.nom_rando || "Fiche") + (f.date_rando ? " — " + new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR") : "");
+
+  const profil = document.getElementById("modalVisuProfil");
+  if (f.profil_png) {
+    profil.src = f.profil_png;
+    profil.style.display = "block";
+  } else {
+    profil.style.display = "none";
+  }
+
+  /* Reconstituer un résumé lisible depuis les champs */
+  const lignes = [
+    "═══════════════════════════════════",
+    `Nom de la randonnée : ${f.nom_rando || "—"}`,
+    `Date de la randonnée : ${f.date_rando ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR") : "—"}`,
+    `Animateur-trice : ${f.animateur || "—"}`,
+    "═══════════════════════════════════",
+    `Parking covoiturage : ${f.parking_covoit || "—"}`,
+    `Heure de rendez-vous : ${f.heure_rv || "—"}`,
+    `Parking départ : ${f.parking_depart || "—"}`,
+    `GPS : ${f.gps || "—"}`,
+    "───────────────────────────────────",
+    `Distance : ${f.distance ? f.distance + " km" : "—"}`,
+    `Dénivelé + : ${f.denivele ? f.denivele + " m" : "—"}`,
+    `Durée marche : ${f.duree || "—"}`,
+    `IBP : ${f.ibp || "—"}`,
+    `Effort : ${f.effort || "—"}/5`,
+    `Technicité : ${f.technicite || "—"}/5`,
+    `Risque : ${f.risque || "—"}/5`,
+    "───────────────────────────────────",
+    `Coûts : ${f.couts || "—"}`,
+    f.remarques ? "───────────────────────────────────" : "",
+    f.remarques ? `Remarques : ${f.remarques}` : "",
+    "═══════════════════════════════════",
+  ].filter(l => l !== "").join("\n");
+
+  document.getElementById("modalVisuResume").textContent = lignes;
+  document.getElementById("modalVisu").classList.add("open");
+}
+
+function fermerModalVisu() {
+  document.getElementById("modalVisu").classList.remove("open");
+}
+
+document.getElementById("modalVisu").addEventListener("click", function(e) {
+  if (e.target === this) fermerModalVisu();
+});
+
+/* ══ DUPLIQUER / RÉUTILISER ══ */
+function dupliquerFiche(id) {
+  const f = fiches.find(x => x.id === id);
+  if (!f) return;
+
+  const payload = {
+    nomRando:      f.nom_rando,
+    animateur:     f.animateur,
+    parkingCovoit: f.parking_covoit,
+    heureRV:       f.heure_rv,
+    distance:      f.distance,
+    denivele:      f.denivele,
+    duree:         f.duree,
+    effort:        f.effort,
+    technicite:    f.technicite,
+    risque:        f.risque,
+    remarques:     f.remarques,
+  };
+
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  /* URL absolue + données encodées (sessionStorage ne fonctionne pas cross-domaine) */
+  window.location.href = "https://dbizcyber.github.io/randoFDR/index.html#fiche=" + encoded;
+}
+
+/* ══ SUPPRESSION ══ */
+function demanderSupp(id, nom) {
+  idASupp = Number(id);  /* forcer en number pour éviter null/string */
+  document.getElementById("modalSuppMsg").textContent =
+    `Supprimer la fiche "${nom}" ? Cette action est irréversible.`;
+  document.getElementById("modalSupp").classList.add("open");
+}
+
+function fermerModal() {
+  document.getElementById("modalSupp").classList.remove("open");
+  idASupp = null;
+}
+
+async function confirmerSupp() {
+  if (!idASupp) return;
+  const idCopie = idASupp;
+  fermerModal();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${idCopie}`, {
+      method: "DELETE",
+      headers: {
+        "apikey":        SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Prefer":        "return=minimal"
+      }
+    });
+    if (res.ok) {
+      showToast("🗑️ Fiche supprimée", "ok");
+      fiches = fiches.filter(f => f.id !== idCopie);
+      filtrerEtAfficher();
+    } else {
+      const err = await res.text();
+      console.error("Erreur suppression:", err);
+      showToast("Erreur lors de la suppression", "err");
+    }
+  } catch(e) {
+    showToast("Erreur réseau", "err");
+  }
+}
+
+/* ══ TOAST ══ */
+function showToast(msg, type = "") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show " + type;
+  setTimeout(() => t.className = "", 3000);
+}
+
+/* ══ RECHERCHE ══ */
+document.getElementById("searchInput").addEventListener("input", filtrerEtAfficher);
+
+/* ══ FERMER MODAL EN DEHORS ══ */
+document.getElementById("modalSupp").addEventListener("click", function(e) {
+  if (e.target === this) fermerModal();
+});
+
+/* ══ LANCEMENT ══ */
+chargerFiches();
+</script>
+
+</body>
+</html>
