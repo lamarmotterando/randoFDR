@@ -85,7 +85,7 @@
   .btn-primary { background: #2d6a4f; color: #fff; } .btn-primary:hover { background: #1b4332; }
   .btn-edit    { background: #3182ce; color: #fff; font-size: .8rem; padding: 5px 10px; } .btn-edit:hover { background: #2c5282; }
   .btn-delete  { background: #e53e3e; color: #fff; font-size: .8rem; padding: 5px 10px; }
-  .btn-suppr   { background: #742a2a; color: #fff; font-size: .8rem; padding: 5px 10px; } .btn-suppr:hover { background: #3d0000; } .btn-delete:hover { background: #c53030; }
+  .btn-suppr   { background: #742a2a; color: #fff; font-size: .8rem; padding: 5px 10px; } .btn-suppr:hover { background: #3d0000; } .btn-suppr:disabled { opacity:.5; cursor:not-allowed; } .btn-delete:hover { background: #c53030; }
   .btn-cancel  { background: #e2e8f0; color: #4a5568; } .btn-cancel:hover { background: #cbd5e0; }
   .form-actions { display: flex; gap: 10px; margin-top: 20px; }
 
@@ -605,7 +605,7 @@ function renderTable() {
       <td class="actions-cell">
         <button class="btn btn-edit"   onclick='openEdit(${ej})'>✏️ Modifier</button>
         ${!annulee ? `<button class="btn btn-delete" onclick='confirmDelete(${ev.id},"${(ev.nom_rando||"").replace(/"/g,"&quot;")}","${(ev.animateur||"").replace(/"/g,"&quot;")}",${JSON.stringify(ev.date_rando)})'>❌ Annuler</button>` : ""}
-        <button class="btn btn-suppr"  onclick='confirmSupprimer(${ev.id},"${(ev.nom_rando||"").replace(/"/g,"&quot;")}">🗑️ Supprimer</button>
+        <button class="btn btn-suppr" onclick='confirmSupprimer(${ev.id},"${(ev.nom_rando||"").replace(/"/g,"&quot;")}">🗑️ Supprimer</button>
       </td>`;
     tbody.appendChild(tr);
   });
@@ -727,6 +727,8 @@ Cette action est IRRÉVERSIBLE — l'enregistrement sera définitivement effacé
 
 async function supprimerFiche(id, nom) {
   if (!id) { showToast('ID manquant — impossible de supprimer.', true); return; }
+  /* Désactiver tous les boutons supprimer pendant l'opération */
+  document.querySelectorAll('.btn-suppr').forEach(b => b.disabled = true);
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
       method: "DELETE",
@@ -744,6 +746,8 @@ async function supprimerFiche(id, nom) {
     }
   } catch(e) {
     showToast('Erreur réseau : ' + e.message, true);
+  } finally {
+    document.querySelectorAll('.btn-suppr').forEach(b => b.disabled = false);
   }
 }
 
