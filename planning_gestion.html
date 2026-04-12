@@ -605,7 +605,7 @@ function renderTable() {
       <td class="actions-cell">
         <button class="btn btn-edit"   onclick='openEdit(${ej})'>✏️ Modifier</button>
         ${!annulee ? `<button class="btn btn-delete" onclick='confirmDelete(${ev.id},"${(ev.nom_rando||"").replace(/"/g,"&quot;")}","${(ev.animateur||"").replace(/"/g,"&quot;")}",${JSON.stringify(ev.date_rando)})'>❌ Annuler</button>` : ""}
-        <button class="btn btn-suppr" onclick='confirmSupprimer(${ev.id},"${(ev.nom_rando||"").replace(/"/g,"&quot;")}">🗑️ Supprimer</button>
+        <button class="btn btn-suppr" onclick="confirmSupprimer(${ev.id}, this)">🗑️ Supprimer</button>
       </td>`;
     tbody.appendChild(tr);
   });
@@ -718,33 +718,34 @@ async function saveEdit() {
 }
 
 /* ══ SUPPRIMER DÉFINITIVEMENT DANS SUPABASE ══ */
-function confirmSupprimer(id, nom) {
-  if (!confirm('Êtes-vous sûr de vouloir supprimer "' + nom + '" ? Cette action est IRRÉVERSIBLE.')) return;
-  supprimerFiche(id, nom);
+function confirmSupprimer(id, btn) {
+  const nom = btn.closest('tr').querySelector('td:nth-child(2)')?.textContent?.trim() || 'cet événement';
+  if (!confirm('Etes-vous sur de supprimer "' + nom + '" ? Cette action est IRREVERSIBLE.')) return;
+  supprimerFiche(id, nom, btn);
 }
 
-async function supprimerFiche(id, nom) {
-  if (!id) { showToast('ID manquant — impossible de supprimer.', true); return; }
-  document.querySelectorAll('.btn-suppr').forEach(b => b.disabled = true);
+async function supprimerFiche(id, nom, btn) {
+  if (!id) { showToast('ID manquant.', true); return; }
+  if (btn) btn.disabled = true;
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
-      method: "DELETE",
+    const res = await fetch(SUPABASE_URL + '/rest/v1/fiches?id=eq.' + id, {
+      method: 'DELETE',
       headers: {
-        "apikey":        SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Prefer":        "return=minimal"
+        'apikey':        SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Prefer':        'return=minimal'
       }
     });
     if (res.ok || res.status === 204) {
-      showToast(`🗑️ "${nom}" supprimé définitivement.`);
+      showToast('🗑️ "' + nom + '" supprimé définitivement.');
       charger();
     } else {
       showToast('Erreur suppression : ' + res.status, true);
+      if (btn) btn.disabled = false;
     }
   } catch(e) {
     showToast('Erreur réseau : ' + e.message, true);
-  } finally {
-    document.querySelectorAll('.btn-suppr').forEach(b => b.disabled = false);
+    if (btn) btn.disabled = false;
   }
 }
 
