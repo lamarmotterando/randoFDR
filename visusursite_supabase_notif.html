@@ -210,35 +210,51 @@ function extraireTotal(val) {
 }
 
 async function charger() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split("T")[0];
+
+  /* ── Fiches (obligatoire) ── */
+  let fiches = [];
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split("T")[0];
-
-    /* Charger animateurs et fiches en parallèle */
-    const [resAnimateurs, resFiches] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/animateurs?select=nom,tel&order=nom`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
-      }),
-      fetch(
-        `${SUPABASE_URL}/rest/v1/fiches` +
-        `?select=id,date_rando,nom_rando,animateur,ibp,distance,denivele,statut,` +
-        `heure_rv,parking_covoit,parking_depart,gps,duree,effort,technicite,risque,couts,remarques,profil_png` +
-        `&date_rando=gte.${todayStr}` +
-        `&order=date_rando.asc`,
-        { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
-      )
-    ]);
-
-    const animateurs = await resAnimateurs.json();
-    animateurs.forEach(a => { if (a.nom) animTel[a.nom.trim()] = a.tel || null; });
-
-    const fiches = await resFiches.json();
-    construireTableau(fiches, today);
+    const resFiches = await fetch(
+      SUPABASE_URL + "/rest/v1/fiches" +
+      "?select=id,date_rando,nom_rando,animateur,ibp,distance,denivele,statut," +
+      "heure_rv,parking_covoit,parking_depart,gps,duree,effort,technicite,risque,couts,remarques,profil_png" +
+      "&date_rando=gte." + todayStr +
+      "&order=date_rando.asc",
+      { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
+    );
+    if (!resFiches.ok) {
+      const txt = await resFiches.text();
+      throw new Error("fiches HTTP " + resFiches.status + " — " + txt);
+    }
+    fiches = await resFiches.json();
   } catch(e) {
+    console.error("Erreur chargement fiches:", e);
     document.getElementById("tbody").innerHTML =
-      "<tr><td colspan='6'>⚠️ Erreur de chargement.</td></tr>";
+      "<tr><td colspan='6'>⚠️ Erreur de chargement : " + e.message + "</td></tr>";
+    return;
   }
+
+  /* ── Animateurs / téléphone (best-effort, ne bloque pas) ── */
+  for (const colTel of ["telephone"]) {
+    try {
+      const r = await fetch(
+        SUPABASE_URL + "/rest/v1/animateurs?select=nom," + colTel + "&order=nom",
+        { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
+      );
+      if (!r.ok) { console.warn("[animTel] " + colTel + " HTTP " + r.status); continue; }
+      const data = await r.json();
+      if (Array.isArray(data) && data.length > 0 && colTel in data[0]) {
+        data.forEach(a => { if (a.nom) animTel[a.nom.trim()] = a[colTel] || null; });
+        console.log("[animTel] colonne '" + colTel + "' OK — " + data.length + " animateurs");
+        break;
+      }
+    } catch(ex) { console.warn("[animTel] tentative '" + colTel + "' :", ex.message); }
+  }
+
+  construireTableau(fiches, today);
 }
 
 function construireTableau(fiches, today) {
@@ -423,8 +439,9 @@ function ouvrirModal(f) {
   if (f.couts) {
     const total = extraireTotal(f.couts);
     if (total !== null) {
-      const p4 = (total / 4).toFixed(2).replace(".", ",");
-      const p5 = (total / 5).toFixed(2).replace(".", ",");
+      const arrondir = v => (Math.ceil(v * 10) / 10).toFixed(2).replace(".", ",");
+      const p4 = arrondir(total / 4);
+      const p5 = arrondir(total / 5);
       coutsHtml = `
         <div style="margin:4px 0;font-size:12px;">
           <span style="color:#888;font-weight:600;">💶 Coûts trajet : </span>
