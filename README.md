@@ -14,3 +14,4 @@ calcul IBP avec IBPindes
 effort, technicité et risque sur des échelles de 1 à 5
 remarques sur la rando: tourisme , difficulté spécifique
 coordonnées animateur/trice
+Last modif/ 14 avril 26 @ 15h00 (planning_gestion.html)
