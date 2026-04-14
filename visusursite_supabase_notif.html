@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visusursite_supabase_notifannulation</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+h3 {
+  text-align: center;
+  font-size: 18px;
+  margin: 12px 0;
+}
+
+#toggleBtn {
+  display: block;
+  margin: 12px auto;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.table-container {
+  width: 100%;
+  max-width: 98vw;
+  margin: 0 auto;
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #f0f0f0;
+  z-index: 10;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: black;
+  white-space: normal;
+  word-break: break-word;
+}
+
+td.description-col {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+thead { display: none; }
+
+tr:hover { background: #e0f3ff; }
+
+.jour-semaine {
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+@keyframes blink { 50% { background-color: yellow; } }
+.blink-alert { animation: blink 1s step-start infinite; }
+
+/* ── LIGNE ANNULÉE ── */
+tr.annulee {
+  opacity: 0.55;
+  background: #fff0f0 !important;
+}
+tr.annulee:hover { background: #ffe0e0 !important; }
+
+/* ── LIEN ANIMATEUR ── */
+.anim-link {
+  color: #0077cc;
+  text-decoration: underline dotted;
+  cursor: pointer;
+  font-size: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+.anim-link:hover { color: #003366; }
+
+@media screen and (max-width: 600px) {
+  body { font-size: 15px; background: #f4f4f4; }
+  h3 { font-size: 20px; margin: 16px 0 8px; }
+  #toggleBtn {
+    width: 90%; padding: 12px; font-size: 15px; border-radius: 8px;
+    border: none; background: #0077cc; color: white; font-weight: bold; margin-bottom: 12px;
+  }
+  .table-container { padding: 0 10px; }
+  table, thead, tbody, th, td, tr { display: block; }
+  thead { display: none; }
+  tr {
+    background: white; border-radius: 14px; padding: 14px 16px;
+    margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    border-left: 5px solid #0077cc; position: relative;
+  }
+  tr.annulee { border-left-color: #c53030 !important; background: #fff0f0 !important; }
+  tr td:nth-child(1) {
+    font-size: 17px; font-weight: bold; color: #1a1a1a; border: none;
+    padding: 0 0 6px 0; border-bottom: 1px solid #eee; margin-bottom: 8px;
+  }
+  tr td:nth-child(2) {
+    font-size: 18px; font-weight: bold; color: #003366; border: none;
+    padding: 6px 0; white-space: normal; line-height: 1.3;
+  }
+  tr td:nth-child(3) { font-size: 14px; color: #555; border: none; padding: 2px 0; }
+  tr td:nth-child(3)::before { content: "👤 "; }
+  tr td:nth-child(4) {
+    position: absolute; top: 14px; right: 14px; font-size: 13px; font-weight: bold;
+    padding: 4px 10px; border-radius: 20px; border: none; min-width: 36px; text-align: center;
+  }
+  tr td:nth-child(5), tr td:nth-child(6) {
+    display: inline-block; font-size: 13px; color: #444; border: none; padding: 4px 8px 0 0;
+  }
+  tr td:nth-child(5)::before { content: "📏 "; }
+  tr td:nth-child(6)::before { content: "⛰ "; }
+}
+</style>
+</head>
+<body>
+
+<h3>DE BELLES RANDOS ...</h3>
+<button id="toggleBtn">Afficher tout le programme</button>
+<div class="table-container">
+  <table id="table">
+    <thead>
+      <tr>
+        <th>Date</th><th>Randonnée</th><th>Animateur</th>
+        <th>IBP</th><th>Distance</th><th>Dénivelé</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script>
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+
+let filterEnabled = true;
+let minDisplay    = null;
+let maxDisplay    = null;
+let allRows       = [];
+
+/* ── Index téléphone par nom d'animateur ── */
+let animTel = {};
+
+function parseDate(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [yyyy, mm, jj] = s.split("-");
+    const d = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(jj));
+    d.setHours(0, 0, 0, 0); return d;
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    const [jj, mm, yyyy] = s.split("/");
+    const d = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(jj));
+    d.setHours(0, 0, 0, 0); return d;
+  }
+  return null;
+}
+
+function jourSemaine(dateStr) {
+  const d = parseDate(dateStr);
+  if (!d) return "";
+  return d.toLocaleDateString("fr-FR", { weekday: "long" });
+}
+
+function afficherDate(dateStr) {
+  if (!dateStr) return "";
+  const s = String(dateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [yyyy, mm, jj] = s.split("-");
+    return jj + "/" + mm + "/" + yyyy;
+  }
+  return s;
+}
+
+function couleurIBP(val) {
+  if (!val) return null;
+  const n = parseFloat(String(val).trim().replace(",", "."));
+  if (isNaN(n)) return null;
+  if (n <= 25)  return { bg: "#00dd00", color: "#ffffff" };
+  if (n <= 50)  return { bg: "#0077ff", color: "#ffffff" };
+  if (n <= 75)  return { bg: "#ff8800", color: "#ffffff" };
+  if (n <= 100) return { bg: "#ff1a1a", color: "#ffffff" };
+  return              { bg: "#343a40", color: "#ffffff" };
+}
+
+/* ── Extraire un montant numérique depuis un champ texte ── */
+function extraireTotal(val) {
+  if (!val) return null;
+  const s = String(val).replace(",", ".").replace(/\s/g, "");
+  const m = s.match(/(\d+(\.\d+)?)/);
+  if (!m) return null;
+  return parseFloat(m[1]);
+}
+
+async function charger() {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split("T")[0];
+
+    /* Charger animateurs et fiches en parallèle */
+    const [resAnimateurs, resFiches] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/animateurs?select=nom,tel&order=nom`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      }),
+      fetch(
+        `${SUPABASE_URL}/rest/v1/fiches` +
+        `?select=id,date_rando,nom_rando,animateur,ibp,distance,denivele,statut,` +
+        `heure_rv,parking_covoit,parking_depart,gps,duree,effort,technicite,risque,couts,remarques,profil_png` +
+        `&date_rando=gte.${todayStr}` +
+        `&order=date_rando.asc`,
+        { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
+      )
+    ]);
+
+    const animateurs = await resAnimateurs.json();
+    animateurs.forEach(a => { if (a.nom) animTel[a.nom.trim()] = a.tel || null; });
+
+    const fiches = await resFiches.json();
+    construireTableau(fiches, today);
+  } catch(e) {
+    document.getElementById("tbody").innerHTML =
+      "<tr><td colspan='6'>⚠️ Erreur de chargement.</td></tr>";
+  }
+}
+
+function construireTableau(fiches, today) {
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = "";
+  allRows = [];
+
+  fiches.forEach(f => {
+    const tr   = document.createElement("tr");
+    tr.style.cursor = "pointer";
+    tr.addEventListener("click", () => ouvrirModal(f));
+    const d    = parseDate(f.date_rando);
+    const diff = d ? Math.floor((d - today) / 86400000) : null;
+    const annulee = f.statut === "annulée";
+
+    if (d !== null) {
+      tr.dataset.dateValue = d.getTime();
+      tr.dataset.diff      = diff;
+    }
+    if (annulee) {
+      tr.classList.add("annulee");
+      tr.dataset.annulee = "1";
+    }
+
+    /* ── Date ── */
+    const tdDate = document.createElement("td");
+    const jour   = jourSemaine(f.date_rando);
+    const dateAff = afficherDate(f.date_rando);
+    tdDate.innerHTML = jour
+      ? `<span class="jour-semaine">${jour}</span> ${dateAff}`
+      : dateAff;
+    tr.appendChild(tdDate);
+
+    /* ── Nom ── */
+    const tdNom = document.createElement("td");
+    tdNom.classList.add("description-col");
+    if (annulee) {
+      tdNom.innerHTML = `<span style="text-decoration:line-through;color:#aaa">${f.nom_rando || "—"}</span>&nbsp;<span style="color:#c53030;font-weight:700;font-size:11px">❌ ANNULÉE</span>`;
+    } else {
+      tdNom.textContent = f.nom_rando || "—";
+    }
+    tr.appendChild(tdNom);
+
+    /* ── Animateur ── */
+    const tdAnim = document.createElement("td");
+    tdAnim.textContent = f.animateur || "—";
+    tr.appendChild(tdAnim);
+
+    /* ── IBP ── */
+    const tdIBP = document.createElement("td");
+    tdIBP.textContent = annulee ? "" : (f.ibp || "");
+    tdIBP.style.textAlign  = "center";
+    tdIBP.style.fontWeight = "700";
+    if (!annulee) {
+      const ibpStyle = couleurIBP(f.ibp);
+      if (ibpStyle) {
+        tdIBP.style.backgroundColor = ibpStyle.bg;
+        tdIBP.style.color           = ibpStyle.color;
+        tdIBP.style.borderRadius    = "4px";
+      }
+    }
+    tr.appendChild(tdIBP);
+
+    /* ── Distance ── */
+    const tdDist = document.createElement("td");
+    tdDist.textContent = f.distance ? f.distance + " km" : "";
+    tr.appendChild(tdDist);
+
+    /* ── Dénivelé ── */
+    const tdDen = document.createElement("td");
+    tdDen.textContent = f.denivele ? f.denivele + " m" : "";
+    tr.appendChild(tdDen);
+
+    tbody.appendChild(tr);
+    allRows.push(tr);
+  });
+
+  /* ── Prochaine rando non annulée → clignoter ── */
+  setTimeout(() => {
+    let prochaineRow = null;
+    let minDiff = Infinity;
+    allRows.forEach(tr => {
+      const diff = parseInt(tr.dataset.diff, 10);
+      if (!isNaN(diff) && diff >= 0 && diff < minDiff && !tr.dataset.annulee) {
+        minDiff      = diff;
+        prochaineRow = tr;
+      }
+    });
+
+    if (prochaineRow) {
+      prochaineRow.style.border = "2px solid red";
+      const tds = Array.from(prochaineRow.querySelectorAll("td"));
+      const couleursOrigin     = tds.map(td => td.style.backgroundColor);
+      const textCouleursOrigin = tds.map(td => td.style.color);
+      let blinkOn = false;
+      setInterval(() => {
+        blinkOn = !blinkOn;
+        tds.forEach((td, idx) => {
+          if (blinkOn) {
+            td.style.backgroundColor = "#ffff00";
+            td.style.color           = "#000000";
+          } else {
+            td.style.backgroundColor = couleursOrigin[idx];
+            td.style.color           = textCouleursOrigin[idx];
+          }
+        });
+      }, 600);
+
+      /* Filtre 3 prochaines — hors annulées */
+      minDisplay = parseInt(prochaineRow.dataset.dateValue, 10);
+      const aVenir = allRows.filter(tr => {
+        const diff = parseInt(tr.dataset.diff, 10);
+        return !isNaN(diff) && diff >= 0 && !tr.dataset.annulee;
+      });
+      if (aVenir.length >= 3)      maxDisplay = parseInt(aVenir[2].dataset.dateValue, 10);
+      else if (aVenir.length > 0)  maxDisplay = parseInt(aVenir[aVenir.length-1].dataset.dateValue, 10);
+      applyFilter();
+    }
+  }, 200);
+}
+
+function applyFilter() {
+  allRows.forEach(tr => {
+    const t = parseInt(tr.dataset.dateValue, 10);
+    if (filterEnabled && minDisplay !== null && maxDisplay !== null) {
+      tr.style.display = (t >= minDisplay && t <= maxDisplay) ? "" : "none";
+    } else {
+      tr.style.display = "";
+    }
+  });
+}
+
+document.getElementById("toggleBtn").onclick = () => {
+  filterEnabled = !filterEnabled;
+  applyFilter();
+  document.getElementById("toggleBtn").textContent =
+    filterEnabled ? "Afficher tout le programme" : "Afficher 3 randos";
+};
+
+charger();
+</script>
+
+<!-- ══ MODAL FICHE DE ROUTE ══ -->
+<div id="modal-fdr" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div id="modal-box" style="background:white;border-radius:16px;padding:24px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);font-family:Arial,sans-serif;position:relative;">
+    <button onclick="fermerModal()" style="position:absolute;top:14px;right:14px;background:#f0f0f0;border:none;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;">✕ Fermer</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+function ouvrirModal(f) {
+  const modal   = document.getElementById("modal-fdr");
+  const content = document.getElementById("modal-content");
+  const annulee = f.statut === "annulée";
+
+  const ibpNiveau = !f.ibp ? "" :
+    f.ibp <= 25  ? "🟢 Facile" :
+    f.ibp <= 50  ? "🔵 Assez Facile" :
+    f.ibp <= 75  ? "🟡 Peu Difficile" :
+    f.ibp <= 100 ? "🔴 Assez Difficile" : "⚫ Difficile";
+
+  const dateAff = f.date_rando ? (() => {
+    const d = parseDate(f.date_rando);
+    return d ? d.toLocaleDateString("fr-FR", {weekday:"long",day:"2-digit",month:"long",year:"numeric"}) : f.date_rando;
+  })() : "—";
+
+  /* Heure RV + Départ */
+  let heureRVAff = "", heureDepart = "";
+  if (f.heure_rv) {
+    const s = String(f.heure_rv).trim();
+    let hh = 0, mm = 0;
+    if (s.includes("h")) { const p = s.split("h"); hh = parseInt(p[0])||0; mm = parseInt(p[1])||0; }
+    else if (s.includes(":")) { const p = s.split(":"); hh = parseInt(p[0])||0; mm = parseInt(p[1])||0; }
+    heureRVAff  = `${String(hh).padStart(2,"0")}h${String(mm).padStart(2,"0")}`;
+    const tot   = hh * 60 + mm + 15;
+    heureDepart = `${String(Math.floor(tot/60)%24).padStart(2,"0")}h${String(tot%60).padStart(2,"0")}`;
+  }
+
+  /* ── Coûts : total + /4 + /5 ── */
+  let coutsHtml = "";
+  if (f.couts) {
+    const total = extraireTotal(f.couts);
+    if (total !== null) {
+      const p4 = (total / 4).toFixed(2).replace(".", ",");
+      const p5 = (total / 5).toFixed(2).replace(".", ",");
+      coutsHtml = `
+        <div style="margin:4px 0;font-size:12px;">
+          <span style="color:#888;font-weight:600;">💶 Coûts trajet : </span>
+          <span style="color:#222;font-weight:700;">${total.toFixed(2).replace(".", ",")} €</span>
+          <span style="color:#555;font-size:11px;margin-left:6px;">
+            → <strong>${p4} €</strong>/pers. (4 pers.)
+            &nbsp;|&nbsp; <strong>${p5} €</strong>/pers. (5 pers.)
+          </span>
+        </div>`;
+    } else {
+      /* texte libre sans montant extractible */
+      coutsHtml = `<div style="margin:4px 0;font-size:12px;"><span style="color:#888;font-weight:600;">💶 Coûts trajet : </span><span style="color:#222;">${f.couts}</span></div>`;
+    }
+  }
+
+  /* ── Animateur : nom cliquable si téléphone connu ── */
+  const tel = f.animateur ? (animTel[f.animateur.trim()] || null) : null;
+  const animHtml = f.animateur
+    ? (tel
+        ? `<span style="color:#888;font-weight:600;">👤 Animateur : </span>
+           <a href="tel:${tel}" style="color:#0077cc;font-weight:600;text-decoration:none;" title="📞 ${tel}">${f.animateur} 📞</a>
+           <span style="font-size:11px;color:#888;margin-left:4px;">${tel}</span>`
+        : `<span style="color:#888;font-weight:600;">👤 Animateur : </span><span style="color:#222;">${f.animateur}</span>`)
+    : "";
+
+  let html = "";
+  if (annulee) html += `<div style="background:#fff0f0;border-left:4px solid #c53030;padding:10px 14px;border-radius:6px;margin-bottom:14px;font-weight:700;color:#c53030;font-size:13px;">❌ RANDONNÉE ANNULÉE</div>`;
+  html += `<div style="font-size:18px;font-weight:700;color:#1a3a5c;margin-bottom:4px;padding-right:40px;">${f.nom_rando || "—"}</div>`;
+  html += `<div style="font-size:13px;color:#666;margin-bottom:16px;">📅 ${dateAff}</div>`;
+
+  if (f.profil_png) html += `<img src="${f.profil_png}" style="width:100%;border-radius:8px;margin-bottom:16px;" alt="Profil">`;
+
+  const sep  = `<hr style="border:none;border-top:1px solid #eee;margin:12px 0;">`;
+  const ligne = (label, val) => val ? `<div style="margin:4px 0;font-size:12px;"><span style="color:#888;font-weight:600;">${label} : </span><span style="color:#222;">${val}</span></div>` : "";
+  const stat  = (label, val) => val ? `<div style="background:#f5f5f5;border-radius:8px;padding:8px;text-align:center;"><div style="font-size:10px;color:#888;font-weight:600;">${label}</div><div style="font-size:15px;font-weight:700;color:#1a3a5c;">${val}</div></div>` : "";
+  const badge = (label, bg, color) => `<span style="background:${bg};color:${color};padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid ${color}44;white-space:nowrap;">${label}</span>`;
+
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">`;
+  html += `<div style="margin:4px 0;font-size:12px;">${animHtml}</div>`;
+  html += `<div>${heureRVAff ? ligne("⏰ RV", `${heureRVAff} → 🏁 Départ ${heureDepart}`) : ""}</div>`;
+  html += `</div>`;
+
+  html += sep;
+  html += ligne("🅿️ Covoiturage", f.parking_covoit);
+  html += ligne("🏁 Parking départ", f.parking_depart);
+  if (f.gps) {
+    html += ligne("📍 GPS", f.gps);
+    html += `<div style="margin:4px 0;"><a href="https://www.google.com/maps?q=${f.gps}" target="_blank" style="color:#0077cc;font-size:12px;">🗺 Ouvrir Google Maps</a></div>`;
+  }
+
+  html += sep;
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">`;
+  html += `<div>${stat("📏 Distance", f.distance ? f.distance+" km" : "")}</div>`;
+  html += `<div>${stat("⛰ Dénivelé", f.denivele ? f.denivele+" m" : "")}</div>`;
+  html += `<div>${stat("⏱ Durée", f.duree)}</div>`;
+  html += `</div>`;
+
+  if (f.ibp || f.effort || f.technicite || f.risque) {
+    const ibpColor = !f.ibp ? "#888" :
+      f.ibp <= 25 ? "#00bb00" : f.ibp <= 50 ? "#0066dd" :
+      f.ibp <= 75 ? "#dd7700" : f.ibp <= 100 ? "#dd1111" : "#343a40";
+    html += `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;">`;
+    if (f.ibp)       html += badge(`📊 IBP ${f.ibp}`, ibpColor, "#fff");
+    if (ibpNiveau)   html += badge(ibpNiveau, ibpColor+"22", ibpColor);
+    if (f.effort)    html += badge(`💪 Effort ${f.effort}/5`, "#1a3a5c22", "#1a3a5c");
+    if (f.technicite)html += badge(`🧗 Technicité ${f.technicite}/5`, "#2d6a4f22", "#2d6a4f");
+    if (f.risque)    html += badge(`⚠️ Risque ${f.risque}/5`, "#85640422", "#856404");
+    html += `</div>`;
+  }
+
+  if (coutsHtml) { html += sep; html += coutsHtml; }
+
+  if (f.remarques) {
+    html += sep;
+    html += `<div style="font-size:12px;font-weight:600;color:#888;margin-bottom:4px;">📌 REMARQUES</div>`;
+    html += `<div style="font-size:13px;color:#333;white-space:pre-wrap;background:#fffbf0;padding:10px;border-radius:6px;border-left:3px solid #f49d37;">${f.remarques}</div>`;
+  }
+
+  content.innerHTML = html;
+  modal.style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+function fermerModal() {
+  document.getElementById("modal-fdr").style.display = "none";
+  document.body.style.overflow = "";
+}
+document.getElementById("modal-fdr").addEventListener("click", function(e) {
+  if (e.target === this) fermerModal();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") fermerModal(); });
+</script>
+
+</body>
+</html>
