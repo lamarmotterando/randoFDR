@@ -457,14 +457,19 @@ function ouvrirModal(f) {
     }
   }
 
-  /* ── Animateur : nom cliquable si téléphone connu ── */
+  /* ── Animateur : bouton "Contact" → révèle nom + téléphone ── */
   const tel = f.animateur ? (animTel[f.animateur.trim()] || null) : null;
+  const contactId = "contact-" + (f.id || Math.random().toString(36).slice(2));
   const animHtml = f.animateur
-    ? (tel
-        ? `<span style="color:#888;font-weight:600;">👤 Animateur : </span>
-           <a href="tel:${tel}" style="color:#0077cc;font-weight:600;text-decoration:none;" title="📞 ${tel}">${f.animateur} 📞</a>
-           <span style="font-size:11px;color:#888;margin-left:4px;">${tel}</span>`
-        : `<span style="color:#888;font-weight:600;">👤 Animateur : </span><span style="color:#222;">${f.animateur}</span>`)
+    ? `<span style="color:#888;font-weight:600;">👤 Animateur : </span>
+       <button onclick="document.getElementById('${contactId}').style.display='inline';this.style.display='none';"
+         style="background:#e8f4fd;border:1px solid #90cdf4;border-radius:14px;padding:3px 12px;font-size:12px;font-weight:600;color:#0077cc;cursor:pointer;">
+         📞 Contact
+       </button>
+       <span id="${contactId}" style="display:none;">
+         <strong style="color:#222;">${f.animateur}</strong>
+         ${tel ? ` &nbsp;<a href="tel:${tel}" style="color:#0077cc;font-weight:600;text-decoration:none;">${tel}</a>` : ""}
+       </span>`
     : "";
 
   let html = "";
