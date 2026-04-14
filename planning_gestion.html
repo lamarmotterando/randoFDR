@@ -84,10 +84,18 @@
   .btn { padding: 10px 22px; border: none; border-radius: 8px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
   .btn-primary { background: #2d6a4f; color: #fff; } .btn-primary:hover { background: #1b4332; }
   .btn-edit    { background: #3182ce; color: #fff; font-size: .8rem; padding: 5px 10px; } .btn-edit:hover { background: #2c5282; }
-  .btn-delete  { background: #e53e3e; color: #fff; font-size: .8rem; padding: 5px 10px; }
-  .btn-suppr { background: #742a2a; color: #fff; font-size: .8rem; padding: 5px 10px; } .btn-suppr:hover { background: #3d0000; } .btn-suppr:disabled { opacity:.5; cursor:not-allowed; } .btn-delete:hover { background: #c53030; }
+  .btn-delete  { background: #e53e3e; color: #fff; font-size: .8rem; padding: 5px 10px; } .btn-delete:hover { background: #c53030; }
   .btn-cancel  { background: #e2e8f0; color: #4a5568; } .btn-cancel:hover { background: #cbd5e0; }
   .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+
+  /* ══ TOOLBAR SUPPRESSION MULTIPLE ══ */
+  .gestion-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  .gestion-header h2 { margin-bottom: 0; }
+  .sel-toolbar { display: flex; align-items: center; gap: 10px; }
+  .sel-count { font-size: .82rem; color: #718096; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 4px 12px; }
+  .btn-del-multi { background: #742a2a; color: #fff; font-size: .82rem; padding: 6px 14px; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background .2s; }
+  .btn-del-multi:hover:not(:disabled) { background: #3d0000; }
+  .btn-del-multi:disabled { opacity: .4; cursor: not-allowed; }
 
   #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #2d6a4f; color: #fff; padding: 12px 26px; border-radius: 30px; font-weight: 600; font-size: .9rem; box-shadow: 0 4px 16px rgba(0,0,0,.2); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
   #toast.show { opacity: 1; } #toast.error { background: #e53e3e; }
@@ -99,6 +107,7 @@
   thead th .sort-icon { display: inline-block; margin-left: 6px; font-size: .8rem; opacity: .45; }
   thead th.sort-asc .sort-icon, thead th.sort-desc .sort-icon { opacity: 1; }
   tbody tr { border-bottom: 1px solid #e2e8f0; } tbody tr:hover { background: #f7fafc; }
+  tbody tr.row-selected { background: #ebf8ff; }
   tbody td { padding: 10px 14px; vertical-align: middle; }
   .actions-cell { display: flex; gap: 5px; flex-wrap: wrap; }
   .badge       { display: inline-block; font-size: .75rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; padding: 2px 8px; font-weight: 600; }
@@ -106,6 +115,8 @@
   .date-cell { white-space: nowrap; }
   .date-cell .jour { font-weight: 700; text-transform: capitalize; color: #2d6a4f; margin-right: 4px; }
   .date-cell .date { color: #4a5568; }
+  .chk-col { width: 36px; text-align: center; }
+  input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #2d6a4f; }
 
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: center; justify-content: center; }
   .modal-overlay.open { display: flex; }
@@ -119,9 +130,16 @@
   .modal-confirm-warning { background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 12px 14px; margin: 12px 0; font-size: .85rem; color: #742a2a; line-height: 1.55; }
   .modal-confirm-note { font-size: .82rem; color: #718096; font-style: italic; margin-top: 8px; }
 
+  /* ══ MODAL CONFIRMATION SUPPRESSION MULTIPLE ══ */
+  .modal-suppr-icon { font-size: 2.6rem; margin-bottom: 12px; }
+  .modal-suppr-titre { font-size: 1.05rem; font-weight: 700; color: #742a2a; margin-bottom: 14px; }
+  .modal-suppr-body  { font-size: .88rem; color: #2d3748; line-height: 1.6; }
+  .modal-suppr-warning { background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 12px 14px; margin: 12px 0; font-size: .85rem; color: #742a2a; line-height: 1.55; }
+
   .spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .empty-state { text-align: center; padding: 40px; color: #a0aec0; font-style: italic; font-size: .95rem; }
+  .chk-warning { margin-top: 14px; font-size: .82rem; color: #742a2a; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 9px 14px; }
 </style>
 </head>
 <body>
@@ -219,11 +237,23 @@
 <!-- ══ ONGLET GESTION ══ -->
 <div id="tab-gestion" class="tab-content">
   <div class="card">
-    <h2>📋 Événements planifiés</h2>
+    <div class="gestion-header">
+      <div>
+        <h2>📋 Événements planifiés</h2>
+        <p class="chk-warning">⚠️ Les cases à cocher servent à la <strong>suppression définitive</strong> des fiches — action irréversible.</p>
+      </div>
+      <div class="sel-toolbar">
+        <span class="sel-count" id="sel-count">0 sélectionné(s)</span>
+        <button class="btn-del-multi" id="btn-del-multi" disabled onclick="confirmSupprimerSelection()">
+          🗑️ Supprimer la sélection
+        </button>
+      </div>
+    </div>
     <div class="table-wrap">
       <table id="events-table">
         <thead>
           <tr>
+            <th class="chk-col"><input type="checkbox" id="chk-all" onchange="toggleAll(this)" title="Tout sélectionner"></th>
             <th class="sortable" data-col="date" onclick="sortTable('date')">Date <span class="sort-icon">⇅</span></th>
             <th>Randonnée</th>
             <th class="sortable" data-col="animateur" onclick="sortTable('animateur')">Animateur <span class="sort-icon">⇅</span></th>
@@ -234,7 +264,7 @@
           </tr>
         </thead>
         <tbody id="events-body">
-          <tr><td colspan="7" class="empty-state">Chargement…</td></tr>
+          <tr><td colspan="8" class="empty-state">Chargement…</td></tr>
         </tbody>
       </table>
     </div>
@@ -314,6 +344,22 @@
   </div>
 </div>
 
+<!-- ══ MODAL CONFIRMATION SUPPRESSION MULTIPLE ══ -->
+<div class="modal-overlay" id="modal-suppr-multi">
+  <div class="modal" style="max-width:460px;text-align:center">
+    <div class="modal-suppr-icon">🗑️</div>
+    <div class="modal-suppr-titre" id="suppr-multi-titre"></div>
+    <div class="modal-suppr-body" id="suppr-multi-body"></div>
+    <div class="modal-suppr-warning">
+      ⚠️ Cette action est <strong>irréversible</strong>. Les fiches seront définitivement supprimées de la base de données.
+    </div>
+    <div class="modal-actions" style="justify-content:center;margin-top:20px;gap:14px">
+      <button class="btn btn-cancel" onclick="closeModal('modal-suppr-multi')">↩ Annuler</button>
+      <button class="btn" id="btn-confirm-suppr-multi" style="background:#742a2a;color:#fff;">🗑️ Confirmer la suppression</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -349,7 +395,6 @@ function deconnecter() {
   document.getElementById("login-err").style.display = "none";
 }
 
-/* Entrée clavier sur le formulaire de login */
 document.getElementById("login-pass").addEventListener("keydown", e => {
   if (e.key === "Enter") tentativeConnexion();
 });
@@ -362,7 +407,6 @@ const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
 const BASE_URL     = "https://lamarmotterando.github.io/randoFDR/data/";
 
-/* Vérifier session existante */
 if (sessionStorage.getItem(SESSION_KEY) === "1") {
   document.getElementById("login-screen").classList.add("hidden");
   document.getElementById("app").classList.add("visible");
@@ -426,7 +470,6 @@ async function loadData() {
       }).then(res => res.json()),
       fetch(BASE_URL + "randos.json").then(res => res.json()),
       fetch(BASE_URL + "parkings.js").then(res => res.text()).then(txt => {
-        /* parkings.js exporte un tableau JS — on extrait les valeurs entre crochets */
         const m = txt.match(/\[([^\]]+)\]/s);
         if (!m) return [];
         return m[1].split(",").map(s => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
@@ -443,7 +486,6 @@ function initAutocomplete() {
   setupAutocomplete("animateur-input", "animateur-list", () => animateurs.map(a => a.nom));
   setupAutocomplete("nom-input",       "nom-list",       () => randos);
   setupAutocomplete("parking-input",   "parking-list",   () => parkings);
-  /* Modal modification */
   setupAutocomplete("edit-animateur",  "edit-animateur-list", () => animateurs.map(a => a.nom));
   setupAutocomplete("edit-nom",        "edit-nom-list",       () => randos);
   setupAutocomplete("edit-parking",    "edit-parking-list",   () => parkings);
@@ -561,6 +603,7 @@ async function creerRando() {
 }
 
 async function loadEvents() {
+  resetSelection();
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?select=*&order=date_rando.asc`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
@@ -570,11 +613,89 @@ async function loadEvents() {
   } catch(e) { showToast("Erreur réseau lors du chargement.", true); }
 }
 
+/* ══ CASES À COCHER ══ */
+function toggleAll(master) {
+  document.querySelectorAll(".row-chk").forEach(c => c.checked = master.checked);
+  updateSelectionToolbar();
+}
+
+function updateSelectionToolbar() {
+  const all     = document.querySelectorAll(".row-chk");
+  const checked = document.querySelectorAll(".row-chk:checked");
+  const n = checked.length;
+
+  document.getElementById("sel-count").textContent = n + " sélectionné(s)";
+  const btnDel = document.getElementById("btn-del-multi");
+  btnDel.disabled = n === 0;
+
+  const chkAll = document.getElementById("chk-all");
+  chkAll.checked       = n > 0 && n === all.length;
+  chkAll.indeterminate = n > 0 && n < all.length;
+
+  /* surbrillance des lignes */
+  document.querySelectorAll("#events-body tr").forEach(tr => {
+    const c = tr.querySelector(".row-chk");
+    tr.classList.toggle("row-selected", !!(c && c.checked));
+  });
+}
+
+function resetSelection() {
+  document.getElementById("sel-count").textContent = "0 sélectionné(s)";
+  document.getElementById("btn-del-multi").disabled = true;
+  const chkAll = document.getElementById("chk-all");
+  if (chkAll) { chkAll.checked = false; chkAll.indeterminate = false; }
+}
+
+function confirmSupprimerSelection() {
+  const ids = [...document.querySelectorAll(".row-chk:checked")].map(c => c.dataset.id);
+  if (!ids.length) return;
+  const lignes = allRows.filter(r => ids.includes(String(r.id)));
+  const noms   = lignes.map(r => `• ${r.nom_rando || "—"} (${toDisplay(r.date_rando)})`).join("<br>");
+
+  document.getElementById("suppr-multi-titre").textContent =
+    `Supprimer ${ids.length} fiche${ids.length > 1 ? "s" : ""} définitivement ?`;
+  document.getElementById("suppr-multi-body").innerHTML = noms;
+
+  const btn = document.getElementById("btn-confirm-suppr-multi");
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener("click", () => {
+    closeModal("modal-suppr-multi");
+    supprimerSelection(ids);
+  });
+  document.getElementById("modal-suppr-multi").classList.add("open");
+}
+
+async function supprimerSelection(ids) {
+  const btnDel = document.getElementById("btn-del-multi");
+  btnDel.disabled = true;
+  let erreurs = 0;
+  for (const id of ids) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
+        method: "DELETE",
+        headers: {
+          "apikey":        SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Prefer":        "return=minimal"
+        }
+      });
+      if (!res.ok && res.status !== 204) erreurs++;
+    } catch(e) { erreurs++; }
+  }
+  if (erreurs === 0) {
+    showToast(`🗑️ ${ids.length} fiche${ids.length > 1 ? "s supprimées" : " supprimée"} définitivement.`);
+  } else {
+    showToast(`${erreurs} erreur(s) lors de la suppression.`, true);
+  }
+  loadEvents();
+}
+
 function renderTable() {
   const tbody = document.getElementById("events-body");
   tbody.innerHTML = "";
   if (!allRows.length) {
-    tbody.innerHTML = "<tr><td colspan='7' class='empty-state'>Aucun événement trouvé.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='8' class='empty-state'>Aucun événement trouvé.</td></tr>";
     updateSortIcons(); return;
   }
   const sorted = [...allRows].sort((a, b) => {
@@ -596,6 +717,7 @@ function renderTable() {
       : `<span class="date-cell"><span class="date">${dateAff||"—"}</span></span>`;
     tr.style.opacity = annulee ? "0.5" : "1";
     tr.innerHTML = `
+      <td class="chk-col"><input type="checkbox" class="row-chk" data-id="${ev.id}" onchange="updateSelectionToolbar()"></td>
       <td>${dateHtml}</td>
       <td><strong style="${annulee ? 'text-decoration:line-through' : ''}">${ev.nom_rando||"—"}</strong>${annulee ? " <span style='color:#e53e3e;font-size:.75rem'>❌ Annulée</span>" : ""}</td>
       <td>${ev.animateur||"—"}</td>
@@ -605,7 +727,6 @@ function renderTable() {
       <td class="actions-cell">
         <button class="btn btn-edit"   onclick='openEdit(${ej})'>✏️ Modifier</button>
         ${!annulee ? `<button class="btn btn-delete" onclick='confirmDelete(${ev.id},"${(ev.nom_rando||"").replace(/"/g,"&quot;")}","${(ev.animateur||"").replace(/"/g,"&quot;")}",${JSON.stringify(ev.date_rando)})'>❌ Annuler</button>` : ""}
-        <button class="btn btn-suppr" onclick="confirmSupprimer(${ev.id}, this)">🗑️ Supprimer</button>
       </td>`;
     tbody.appendChild(tr);
   });
@@ -686,7 +807,6 @@ async function saveEdit() {
       body: JSON.stringify(patch)
     });
     if (res.ok) {
-      /* Sync Google Calendar */
       const ficheActuelle = allRows.find(x => x.id == id) || {};
       syncCalendar("calendarUpdate", {
         dateRando:     date,
@@ -717,43 +837,10 @@ async function saveEdit() {
   setBusy("btn-save-edit", false);
 }
 
-/* ══ SUPPRIMER DÉFINITIVEMENT DANS SUPABASE ══ */
-function confirmSupprimer(id, btn) {
-  const nom = btn.closest('tr').querySelector('td:nth-child(2)')?.textContent?.trim() || 'cet événement';
-  if (!confirm('Etes-vous sur de supprimer "' + nom + '" ? Cette action est IRREVERSIBLE.')) return;
-  supprimerFiche(id, nom, btn);
-}
-
-async function supprimerFiche(id, nom, btn) {
-  if (!id) { showToast('ID manquant.', true); return; }
-  if (btn) btn.disabled = true;
-  try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/fiches?id=eq.' + id, {
-      method: 'DELETE',
-      headers: {
-        'apikey':        SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Prefer':        'return=minimal'
-      }
-    });
-    if (res.ok || res.status === 204) {
-      showToast('🗑️ "' + nom + '" supprimé définitivement.');
-      charger();
-    } else {
-      showToast('Erreur suppression : ' + res.status, true);
-      if (btn) btn.disabled = false;
-    }
-  } catch(e) {
-    showToast('Erreur réseau : ' + e.message, true);
-    if (btn) btn.disabled = false;
-  }
-}
-
 function confirmDelete(id, nom, animateur, dateRando) {
   document.getElementById("confirm-titre").textContent = `Annuler "${nom}" ?`;
   document.getElementById("confirm-body").textContent  = `Randonnée du ${toDisplay(dateRando)} — Animateur : ${animateur || "—"}`;
   const btn = document.getElementById("btn-confirm-annuler");
-  /* Remplacer le listener précédent */
   const newBtn = btn.cloneNode(true);
   btn.parentNode.replaceChild(newBtn, btn);
   newBtn.addEventListener("click", () => {
@@ -762,6 +849,7 @@ function confirmDelete(id, nom, animateur, dateRando) {
   });
   document.getElementById("modal-confirm").classList.add("open");
 }
+
 async function deleteEvent(id, nom, animateur, dateRando) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
@@ -787,7 +875,6 @@ async function deleteEvent(id, nom, animateur, dateRando) {
   } catch(e) { showToast("Erreur réseau.", true); }
 }
 
-/* Sync Calendar via Edge Function (best-effort) */
 async function syncCalendar(action, ficheData) {
   try {
     await fetch(`${SUPABASE_URL}/functions/v1/dynamic-handler`, {
