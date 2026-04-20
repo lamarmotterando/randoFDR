@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planning_gestion — La Marmotte</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #2d3748; min-height: 100vh; }
+
+  #login-screen {
+    position: fixed; inset: 0; background: linear-gradient(135deg, #1b4332, #2d6a4f, #52b788);
+    display: flex; align-items: center; justify-content: center; z-index: 9999;
+  }
+  #login-screen.hidden { display: none; }
+  .login-box {
+    background: #fff; border-radius: 18px; padding: 44px 40px; width: 360px; max-width: 94vw;
+    box-shadow: 0 12px 48px rgba(0,0,0,.35); text-align: center;
+  }
+  .login-box .logo { font-size: 3rem; margin-bottom: 10px; }
+  .login-box h2 { font-size: 1.3rem; color: #2d6a4f; margin-bottom: 6px; }
+  .login-box p  { font-size: .85rem; color: #718096; margin-bottom: 28px; }
+  .login-field  { margin-bottom: 16px; text-align: left; }
+  .login-field label { font-size: .82rem; font-weight: 600; color: #4a5568; display: block; margin-bottom: 5px; }
+  .login-field input {
+    width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+    font-size: .95rem; font-family: inherit; transition: border-color .2s;
+  }
+  .login-field input:focus { outline: none; border-color: #52b788; }
+  .login-err { color: #e53e3e; font-size: .83rem; margin-top: -8px; margin-bottom: 12px; display: none; }
+  .btn-login {
+    width: 100%; padding: 13px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #2d6a4f, #52b788); color: #fff;
+    font-size: 1rem; font-weight: 700; cursor: pointer; transition: opacity .2s; margin-top: 6px;
+  }
+  .btn-login:hover { opacity: .88; }
+
+  #app { display: none; }
+  #app.visible { display: block; }
+
+  header {
+    background: linear-gradient(135deg, #2d6a4f, #52b788); color: #fff;
+    padding: 16px 30px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.2); position: sticky; top: 0; z-index: 50;
+  }
+  header h1 { font-size: 1.3rem; font-weight: 700; flex: 1; }
+  header .icon { font-size: 1.6rem; }
+  .btn-logout { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.4); color: #fff; padding: 7px 14px; border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+  .btn-logout:hover { background: rgba(255,255,255,.35); }
+
+  .main-content { max-width: 1100px; margin: 0 auto; padding: 28px 24px 48px; display: flex; flex-direction: column; gap: 28px; }
+
+  .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 26px 28px; }
+  .card-title { font-size: 1.05rem; color: #2d6a4f; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+
+  .section-divider { display: flex; align-items: center; gap: 14px; }
+  .section-divider::before, .section-divider::after {
+    content: ''; flex: 1; height: 2px;
+    background: linear-gradient(90deg, transparent, #2d6a4f44, transparent); border-radius: 2px;
+  }
+  .section-divider span {
+    font-size: .78rem; font-weight: 700; color: #2d6a4f; letter-spacing: .08em;
+    text-transform: uppercase; white-space: nowrap; padding: 4px 14px;
+    background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 20px;
+  }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: .82rem; font-weight: 600; color: #4a5568; }
+  input[type=text], input[type=date], input[type=number], input[type=time], select, textarea {
+    padding: 9px 13px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+    font-size: .93rem; transition: border-color .2s; width: 100%; font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #52b788; }
+  .input-unit { position: relative; }
+  .input-unit input { padding-right: 40px; }
+  .input-unit span { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); font-size: .78rem; color: #a0aec0; font-weight: 600; pointer-events: none; }
+
+  .autocomplete-wrap { position: relative; }
+  .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,.1); display: none; }
+  .autocomplete-list.open { display: block; }
+  .autocomplete-item { padding: 8px 13px; font-size: .86rem; cursor: pointer; border-bottom: 1px solid #f0f4f8; }
+  .autocomplete-item:hover, .autocomplete-item.highlighted { background: #f0fff4; color: #2d6a4f; }
+
+  .ibp-badge { display: inline-block; margin-top: 5px; padding: 3px 10px; border-radius: 20px; font-size: .76rem; font-weight: 700; opacity: 0; transition: opacity .3s; }
+  .ibp-badge.visible { opacity: 1; }
+
+  .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: #2d6a4f; color: #fff; } .btn-primary:hover { background: #1b4332; }
+  .btn-edit    { background: #3182ce; color: #fff; font-size: .78rem; padding: 5px 10px; } .btn-edit:hover { background: #2c5282; }
+  .btn-delete  { background: #e53e3e; color: #fff; font-size: .78rem; padding: 5px 10px; } .btn-delete:hover { background: #c53030; }
+  .btn-cancel  { background: #e2e8f0; color: #4a5568; } .btn-cancel:hover { background: #cbd5e0; }
+  .form-actions { display: flex; gap: 10px; margin-top: 18px; }
+
+  .gestion-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .sel-toolbar { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .sel-count { font-size: .81rem; color: #718096; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 4px 12px; }
+  .btn-del-multi { background: #742a2a; color: #fff; font-size: .81rem; padding: 6px 14px; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background .2s; }
+  .btn-del-multi:hover:not(:disabled) { background: #3d0000; }
+  .btn-del-multi:disabled { opacity: .4; cursor: not-allowed; }
+
+  #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #2d6a4f; color: #fff; padding: 11px 24px; border-radius: 30px; font-weight: 600; font-size: .88rem; box-shadow: 0 4px 16px rgba(0,0,0,.2); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+  #toast.show { opacity: 1; } #toast.error { background: #e53e3e; }
+
+  .table-wrap { overflow-x: auto; width: 100%; }
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  thead th { background: #2d6a4f; color: #fff; padding: 10px 13px; text-align: left; white-space: nowrap; user-select: none; }
+  thead th.sortable { cursor: pointer; } thead th.sortable:hover { background: #1b4332; }
+  thead th .sort-icon { display: inline-block; margin-left: 5px; font-size: .78rem; opacity: .45; }
+  thead th.sort-asc .sort-icon, thead th.sort-desc .sort-icon { opacity: 1; }
+  tbody tr { border-bottom: 1px solid #e2e8f0; } tbody tr:hover { background: #f7fafc; }
+  tbody tr.row-selected { background: #ebf8ff; }
+  tbody td { padding: 9px 13px; vertical-align: middle; }
+  .actions-cell { display: flex; gap: 5px; flex-wrap: wrap; }
+  .badge       { display: inline-block; font-size: .73rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; padding: 2px 8px; font-weight: 600; }
+  .badge.green { background: #f0fff4; color: #276749; }
+  .date-cell { white-space: nowrap; }
+  .date-cell .jour { font-weight: 700; text-transform: capitalize; color: #2d6a4f; margin-right: 4px; }
+  .date-cell .date { color: #4a5568; }
+  .chk-col { width: 34px; text-align: center; }
+  input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #2d6a4f; }
+  .chk-warning { margin-top: 10px; font-size: .8rem; color: #742a2a; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 8px 13px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 14px; padding: 28px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+  .modal h3 { font-size: 1.05rem; color: #2d6a4f; margin-bottom: 18px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+  .modal-confirm-icon { font-size: 2.4rem; margin-bottom: 10px; }
+  .modal-confirm-titre { font-size: 1rem; font-weight: 700; color: #c53030; margin-bottom: 12px; }
+  .modal-confirm-body { font-size: .86rem; color: #2d3748; line-height: 1.6; margin-bottom: 6px; }
+  .modal-confirm-warning { background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 11px 13px; margin: 11px 0; font-size: .83rem; color: #742a2a; line-height: 1.5; }
+  .modal-confirm-note { font-size: .8rem; color: #718096; font-style: italic; margin-top: 7px; }
+  .modal-suppr-icon { font-size: 2.4rem; margin-bottom: 10px; }
+  .modal-suppr-titre { font-size: 1rem; font-weight: 700; color: #742a2a; margin-bottom: 12px; }
+  .modal-suppr-body  { font-size: .86rem; color: #2d3748; line-height: 1.6; }
+  .modal-suppr-warning { background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 11px 13px; margin: 11px 0; font-size: .83rem; color: #742a2a; line-height: 1.5; }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 3px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-state { text-align: center; padding: 36px; color: #a0aec0; font-style: italic; font-size: .93rem; }
+</style>
+</head>
+<body>
+
+<!-- ══ ÉCRAN DE CONNEXION ══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="logo">🏔️</div>
+    <h2>La Marmotte</h2>
+    <p>Accès réservé aux administrateurs</p>
+    <div class="login-field">
+      <label for="login-user">Identifiant</label>
+      <input type="text" id="login-user" placeholder="Identifiant" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label for="login-pass">Mot de passe</label>
+      <input type="password" id="login-pass" placeholder="Mot de passe" autocomplete="current-password">
+    </div>
+    <div class="login-err" id="login-err">Identifiant ou mot de passe incorrect.</div>
+    <button class="btn-login" onclick="tentativeConnexion()">🔓 Se connecter</button>
+  </div>
+</div>
+
+<!-- ══ APPLICATION ══ -->
+<div id="app">
+
+  <header>
+    <span class="icon">🏔️</span>
+    <h1>Prévision des Randonnées — La Marmotte</h1>
+    <button class="btn-logout" onclick="deconnecter()">🔒 Déconnexion</button>
+  </header>
+
+  <div class="main-content">
+
+    <!-- ══ CRÉATION ══ -->
+    <div class="card">
+      <div class="card-title">🆕 Nouvelle randonnée</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="date">Date *</label>
+          <input type="date" id="date" required="">
+        </div>
+        <div class="form-group">
+          <label for="animateur-input">Animateur *</label>
+          <div class="autocomplete-wrap">
+            <input type="text" id="animateur-input" placeholder="Tapez un nom…" autocomplete="off">
+            <div class="autocomplete-list" id="animateur-list"></div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label for="nom-input">Nom de la randonnée *</label>
+          <div class="autocomplete-wrap">
+            <input type="text" id="nom-input" placeholder="Tapez quelques lettres…" autocomplete="off">
+            <div class="autocomplete-list" id="nom-list"></div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label for="parking-input">Parking covoiturage</label>
+          <div class="autocomplete-wrap">
+            <input type="text" id="parking-input" placeholder="Tapez ou saisissez un parking…" autocomplete="off">
+            <div class="autocomplete-list" id="parking-list"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="ibp">Indice IBP</label>
+          <input type="number" id="ibp" placeholder="Ex : 45" min="0">
+          <span class="ibp-badge" id="ibp-badge"></span>
+        </div>
+        <div class="form-group"></div>
+        <div class="form-group">
+          <label for="distance">Distance *</label>
+          <div class="input-unit">
+            <input type="number" id="distance" placeholder="Ex : 18" min="0" step="0.1" required="">
+            <span>km</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="denivele">Dénivelé +</label>
+          <div class="input-unit">
+            <input type="number" id="denivele" placeholder="Ex : 850" min="0" step="1">
+            <span>m</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="btn-create" onclick="creerRando()">➕ Créer l'événement</button>
+      </div>
+    </div>
+
+    <!-- ══ SÉPARATEUR ══ -->
+    <div class="section-divider"><span>📋 Événements planifiés</span></div>
+
+    <!-- ══ GESTION ══ -->
+    <div class="card">
+      <div class="gestion-header">
+        <div>
+          <p class="chk-warning">⚠️ Les cases à cocher servent à la <strong>suppression définitive</strong> des fiches — action irréversible.</p>
+        </div>
+        <div class="sel-toolbar">
+          <span class="sel-count" id="sel-count">0 sélectionné(s)</span>
+          <button class="btn-del-multi" id="btn-del-multi" disabled onclick="confirmSupprimerSelection()">
+            🗑️ Supprimer la sélection
+          </button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="events-table">
+          <thead>
+            <tr>
+              <th class="chk-col"><input type="checkbox" id="chk-all" onchange="toggleAll(this)" title="Tout sélectionner"></th>
+              <th class="sortable" data-col="date" onclick="sortTable('date')">Date <span class="sort-icon">⇅</span></th>
+              <th>Randonnée</th>
+              <th class="sortable" data-col="animateur" onclick="sortTable('animateur')">Animateur <span class="sort-icon">⇅</span></th>
+              <th>IBP</th>
+              <th>Distance</th>
+              <th>Dénivelé +</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="events-body">
+            <tr><td colspan="8" class="empty-state">Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ MODAL MODIFIER ══ -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal" style="width:580px">
+    <h3>✏️ Modifier l'événement</h3>
+    <input type="hidden" id="edit-rowIndex">
+    <div class="form-grid">
+      <div class="form-group"><label>Date *</label><input type="date" id="edit-date"></div>
+      <div class="form-group">
+        <label>Animateur *</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="edit-animateur" placeholder="Tapez un nom…" autocomplete="off">
+          <div class="autocomplete-list" id="edit-animateur-list"></div>
+        </div>
+      </div>
+      <div class="form-group full">
+        <label>Nom de la randonnée *</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="edit-nom" placeholder="Tapez quelques lettres…" autocomplete="off">
+          <div class="autocomplete-list" id="edit-nom-list"></div>
+        </div>
+      </div>
+      <div class="form-group"><label>Heure RV</label><input type="time" id="edit-heureRV"></div>
+      <div class="form-group">
+        <label>Parking covoiturage</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="edit-parking" placeholder="Tapez ou saisissez…" autocomplete="off">
+          <div class="autocomplete-list" id="edit-parking-list"></div>
+        </div>
+      </div>
+      <div class="form-group"><label>IBP</label><input type="number" id="edit-ibp" min="0"></div>
+      <div class="form-group"><label>Durée</label><input type="text" id="edit-duree" placeholder="ex: 3h30"></div>
+      <div class="form-group"><label>Distance *</label><div class="input-unit"><input type="number" id="edit-distance" min="0" step="0.1" required=""><span>km</span></div></div>
+      <div class="form-group"><label>Dénivelé +</label><div class="input-unit"><input type="number" id="edit-denivele" min="0" step="1"><span>m</span></div></div>
+      <div class="form-group">
+        <label>Statut</label>
+        <select id="edit-statut">
+          <option value="publiée">✅ Publiée</option>
+          <option value="modifiée">✏️ Modifiée</option>
+          <option value="annulée">❌ Annulée</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Remarques</label>
+        <textarea id="edit-remarques" style="min-height:65px;resize:vertical" placeholder="Notes, modifications…"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal('modal-edit')">Annuler</button>
+      <button class="btn btn-primary" id="btn-save-edit" onclick="saveEdit()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL CONFIRMATION ANNULATION ══ -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="max-width:460px;text-align:center">
+    <div class="modal-confirm-icon">⚠️</div>
+    <div class="modal-confirm-titre" id="confirm-titre"></div>
+    <div class="modal-confirm-body" id="confirm-body"></div>
+    <div class="modal-confirm-warning">
+      ❌ La mention <strong>"Annulée"</strong> sera affichée sur tous les points d'affichage :<br>
+      planning du site, Google Calendar, historique.
+    </div>
+    <div class="modal-confirm-note">Ce n'est pas une suppression — la fiche reste visible barrée.<br>Elle peut être remise en statut <strong>"Publiée"</strong> à tout moment.</div>
+    <div class="modal-actions" style="justify-content:center;margin-top:18px;gap:14px">
+      <button class="btn btn-cancel" onclick="closeModal('modal-confirm')">↩ Garder la rando</button>
+      <button class="btn btn-delete" id="btn-confirm-annuler">❌ Confirmer l'annulation</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL CONFIRMATION SUPPRESSION MULTIPLE ══ -->
+<div class="modal-overlay" id="modal-suppr-multi">
+  <div class="modal" style="max-width:460px;text-align:center">
+    <div class="modal-suppr-icon">🗑️</div>
+    <div class="modal-suppr-titre" id="suppr-multi-titre"></div>
+    <div class="modal-suppr-body" id="suppr-multi-body"></div>
+    <div class="modal-suppr-warning">
+      ⚠️ Cette action est <strong>irréversible</strong>. Les fiches seront définitivement supprimées de la base de données.
+    </div>
+    <div class="modal-actions" style="justify-content:center;margin-top:18px;gap:14px">
+      <button class="btn btn-cancel" onclick="closeModal('modal-suppr-multi')">↩ Annuler</button>
+      <button class="btn" id="btn-confirm-suppr-multi" style="background:#742a2a;color:#fff;">🗑️ Confirmer la suppression</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const CREDS = { login: "Marmotte", password: "2027" };
+const SESSION_KEY = "planning_gestion_auth";
+
+function tentativeConnexion() {
+  const user = document.getElementById("login-user").value.trim();
+  const pass = document.getElementById("login-pass").value;
+  const err  = document.getElementById("login-err");
+  if (user === CREDS.login && pass === CREDS.password) {
+    sessionStorage.setItem(SESSION_KEY, "1");
+    document.getElementById("login-screen").classList.add("hidden");
+    document.getElementById("app").classList.add("visible");
+    err.style.display = "none";
+    initApp();
+  } else {
+    err.style.display = "block";
+    document.getElementById("login-pass").value = "";
+    document.getElementById("login-pass").focus();
+  }
+}
+
+function deconnecter() {
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById("login-screen").classList.remove("hidden");
+  document.getElementById("app").classList.remove("visible");
+  document.getElementById("login-user").value = "";
+  document.getElementById("login-pass").value = "";
+  document.getElementById("login-err").style.display = "none";
+}
+
+document.getElementById("login-pass").addEventListener("keydown", e => { if (e.key === "Enter") tentativeConnexion(); });
+document.getElementById("login-user").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("login-pass").focus(); });
+
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+const BASE_URL     = "https://lamarmotterando.github.io/randoFDR/data/";
+
+if (sessionStorage.getItem(SESSION_KEY) === "1") {
+  document.getElementById("login-screen").classList.add("hidden");
+  document.getElementById("app").classList.add("visible");
+  initApp();
+}
+
+let animateurs = [], randos = [], parkings = [], allRows = [];
+let sortCol = "date", sortDir = "desc";
+
+function initApp() {
+  loadData();
+  loadEvents();
+  const d0 = new Date();
+  const dow0 = d0.getDay();
+  const diff0 = dow0 === 0 ? 1 : dow0 === 1 ? 7 : (8 - dow0);
+  d0.setDate(d0.getDate() + diff0);
+  document.getElementById("date").value = d0.toISOString().split("T")[0];
+}
+
+function toDisplay(val) {
+  if (!val) return "";
+  const s = String(val).trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y,m,d] = s.split("-"); return d+"/"+m+"/"+y; }
+  return s;
+}
+function jourSemaine(val) {
+  if (!val) return "";
+  const s = String(val).trim();
+  let d;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [jj,mm,yyyy] = s.split("/"); d = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(jj)); }
+  else if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [yyyy,mm,jj] = s.split("-"); d = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(jj)); }
+  else return "";
+  return d.toLocaleDateString("fr-FR", { weekday: "long" });
+}
+function niveauIBP(v) {
+  const n = parseFloat(v);
+  if (isNaN(n) || v === "") return null;
+  if (n <= 25)  return { label: "🟢 N1 — Facile",          bg: "#d4edda", color: "#155724" };
+  if (n <= 50)  return { label: "🔵 N2 — Assez Facile",    bg: "#cce5ff", color: "#004085" };
+  if (n <= 75)  return { label: "🟡 N3 — Peu Difficile",   bg: "#fff3cd", color: "#856404" };
+  if (n <= 100) return { label: "🔴 N4 — Assez Difficile", bg: "#f8d7da", color: "#721c24" };
+  return              { label: "⚫ N5 — Difficile",         bg: "#343a40", color: "#ffffff" };
+}
+
+async function loadData() {
+  try {
+    const [a, r, p] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/animateurs?select=nom,email&order=nom`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      }).then(res => res.json()),
+      fetch(BASE_URL + "randos.json").then(res => res.json()),
+      fetch(BASE_URL + "parkings.js").then(res => res.text()).then(txt => {
+        const m = txt.match(/\[([^\]]+)\]/s);
+        if (!m) return [];
+        return m[1].split(",").map(s => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
+      })
+    ]);
+    animateurs = a.filter(x => x.nom && x.nom !== "");
+    randos = r; parkings = p;
+    initAutocomplete();
+  } catch(e) { console.error("Erreur chargement:", e); }
+}
+
+function initAutocomplete() {
+  setupAutocomplete("animateur-input", "animateur-list", () => animateurs.map(a => a.nom));
+  setupAutocomplete("nom-input",       "nom-list",       () => randos);
+  setupAutocomplete("parking-input",   "parking-list",   () => parkings);
+  setupAutocomplete("edit-animateur",  "edit-animateur-list", () => animateurs.map(a => a.nom));
+  setupAutocomplete("edit-nom",        "edit-nom-list",       () => randos);
+  setupAutocomplete("edit-parking",    "edit-parking-list",   () => parkings);
+}
+function setupAutocomplete(inputId, listId, getItems) {
+  const input = document.getElementById(inputId);
+  const list  = document.getElementById(listId);
+  let hi = -1;
+  input.addEventListener("input", () => {
+    const f = input.value.toLowerCase().trim();
+    list.innerHTML = ""; hi = -1;
+    if (!f) { list.classList.remove("open"); return; }
+    const matches = getItems().filter(i => i.toLowerCase().includes(f)).slice(0, 10);
+    if (!matches.length) { list.classList.remove("open"); return; }
+    matches.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "autocomplete-item";
+      div.textContent = item;
+      div.addEventListener("mousedown", () => { input.value = item; list.classList.remove("open"); });
+      list.appendChild(div);
+    });
+    list.classList.add("open");
+  });
+  input.addEventListener("keydown", e => {
+    const items = list.querySelectorAll(".autocomplete-item");
+    if (!items.length) return;
+    if      (e.key === "ArrowDown") { e.preventDefault(); hi = Math.min(hi+1, items.length-1); }
+    else if (e.key === "ArrowUp")   { e.preventDefault(); hi = Math.max(hi-1, 0); }
+    else if (e.key === "Enter" && hi >= 0) { e.preventDefault(); input.value = items[hi].textContent; list.classList.remove("open"); hi = -1; return; }
+    items.forEach((el, i) => el.classList.toggle("highlighted", i === hi));
+  });
+  input.addEventListener("blur", () => setTimeout(() => list.classList.remove("open"), 150));
+}
+
+document.getElementById("ibp").addEventListener("input", function() {
+  const badge = document.getElementById("ibp-badge");
+  const info  = niveauIBP(this.value);
+  if (!info) { badge.className = "ibp-badge"; return; }
+  badge.textContent = info.label; badge.style.background = info.bg; badge.style.color = info.color;
+  badge.className = "ibp-badge visible";
+});
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show" + (isError ? " error" : "");
+  setTimeout(() => t.className = "", 3500);
+}
+
+function setBusy(btnId, busy) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  if (busy) { btn.dataset.label = btn.innerHTML; btn.innerHTML = "<span class='spinner'></span> En cours…"; }
+  else        btn.innerHTML = btn.dataset.label;
+  btn.disabled = busy;
+}
+
+async function creerRando() {
+  const date    = document.getElementById("date").value;
+  const nom     = document.getElementById("nom-input").value.trim();
+  const anim    = document.getElementById("animateur-input").value.trim();
+  const parking = document.getElementById("parking-input").value.trim();
+  const ibp     = document.getElementById("ibp").value.trim();
+  const dist    = document.getElementById("distance").value.trim();
+  const den     = document.getElementById("denivele").value.trim();
+  if (!date || !nom || !anim) { showToast("Veuillez remplir les champs obligatoires (*)", true); return; }
+  if (!dist) { showToast("La distance est obligatoire (*)", true); return; }
+  setBusy("btn-create", true);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" },
+      body: JSON.stringify({
+        date_rando: date, nom_rando: nom, animateur: anim,
+        parking_covoit: parking || null,
+        ibp:      ibp  ? parseFloat(ibp)  : null,
+        distance: dist ? parseFloat(dist) : null,
+        denivele: den  ? parseInt(den)    : null,
+        statut: "publiée"
+      })
+    });
+    if (res.ok) {
+      showToast("✅ Randonnée créée !");
+      ["ibp","distance","denivele"].forEach(id => document.getElementById(id).value = "");
+      ["nom-input","animateur-input","parking-input"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("ibp-badge").className = "ibp-badge";
+      const last = new Date(date + "T12:00:00");
+      const dow  = last.getDay();
+      const next = new Date(last);
+      next.setDate(last.getDate() + (dow === 1 ? 3 : dow === 4 ? 4 : 3));
+      document.getElementById("date").value = next.toISOString().split("T")[0];
+      loadEvents();
+    } else {
+      const txt = await res.text();
+      showToast("Erreur : " + txt, true);
+    }
+  } catch(e) { showToast("Erreur réseau : " + e.message, true); }
+  setBusy("btn-create", false);
+}
+
+async function loadEvents() {
+  resetSelection();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?select=*&order=date_rando.asc`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+    });
+    allRows = await res.json();
+    renderTable();
+  } catch(e) { showToast("Erreur réseau lors du chargement.", true); }
+}
+
+function toggleAll(master) {
+  document.querySelectorAll(".row-chk").forEach(c => c.checked = master.checked);
+  updateSelectionToolbar();
+}
+
+function updateSelectionToolbar() {
+  const all     = document.querySelectorAll(".row-chk");
+  const checked = document.querySelectorAll(".row-chk:checked");
+  const n = checked.length;
+  document.getElementById("sel-count").textContent = n + " sélectionné(s)";
+  document.getElementById("btn-del-multi").disabled = n === 0;
+  const chkAll = document.getElementById("chk-all");
+  chkAll.checked       = n > 0 && n === all.length;
+  chkAll.indeterminate = n > 0 && n < all.length;
+  document.querySelectorAll("#events-body tr").forEach(tr => {
+    const c = tr.querySelector(".row-chk");
+    tr.classList.toggle("row-selected", !!(c && c.checked));
+  });
+}
+
+function resetSelection() {
+  document.getElementById("sel-count").textContent = "0 sélectionné(s)";
+  document.getElementById("btn-del-multi").disabled = true;
+  const chkAll = document.getElementById("chk-all");
+  if (chkAll) { chkAll.checked = false; chkAll.indeterminate = false; }
+}
+
+function confirmSupprimerSelection() {
+  const ids = [...document.querySelectorAll(".row-chk:checked")].map(c => c.dataset.id);
+  if (!ids.length) return;
+  const lignes = allRows.filter(r => ids.includes(String(r.id)));
+  const noms   = lignes.map(r => `• ${r.nom_rando || "—"} (${toDisplay(r.date_rando)})`).join("<br>");
+  document.getElementById("suppr-multi-titre").textContent = `Supprimer ${ids.length} fiche${ids.length > 1 ? "s" : ""} définitivement ?`;
+  document.getElementById("suppr-multi-body").innerHTML = noms;
+  const btn = document.getElementById("btn-confirm-suppr-multi");
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener("click", () => { closeModal("modal-suppr-multi"); supprimerSelection(ids); });
+  document.getElementById("modal-suppr-multi").classList.add("open");
+}
+
+async function supprimerSelection(ids) {
+  document.getElementById("btn-del-multi").disabled = true;
+  let erreurs = 0;
+  for (const id of ids) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" }
+      });
+      if (!res.ok && res.status !== 204) erreurs++;
+    } catch(e) { erreurs++; }
+  }
+  showToast(erreurs === 0 ? `🗑️ ${ids.length} fiche${ids.length > 1 ? "s supprimées" : " supprimée"}.` : `${erreurs} erreur(s) lors de la suppression.`, erreurs > 0);
+  loadEvents();
+}
+
+function renderTable() {
+  const tbody = document.getElementById("events-body");
+  tbody.innerHTML = "";
+  if (!allRows.length) {
+    tbody.innerHTML = "<tr><td colspan='8' class='empty-state'>Aucun événement trouvé.</td></tr>";
+    updateSortIcons(); return;
+  }
+  const sorted = [...allRows].sort((a, b) => {
+    let va = sortCol === "date" ? (a.date_rando||"") : (a.animateur||"").toLowerCase();
+    let vb = sortCol === "date" ? (b.date_rando||"") : (b.animateur||"").toLowerCase();
+    if (va < vb) return sortDir === "asc" ? -1 : 1;
+    if (va > vb) return sortDir === "asc" ?  1 : -1;
+    return 0;
+  });
+  sorted.forEach(ev => {
+    const tr = document.createElement("tr");
+    const ej = JSON.stringify(ev).replace(/'/g, "&#39;");
+    const dateAff = toDisplay(ev.date_rando);
+    const jour    = jourSemaine(ev.date_rando);
+    const statut  = ev.statut || "publiée";
+    const annulee = statut === "annulée";
+    const dateHtml = jour
+      ? `<span class="date-cell"><span class="jour">${jour}</span><span class="date">${dateAff}</span></span>`
+      : `<span class="date-cell"><span class="date">${dateAff||"—"}</span></span>`;
+    tr.style.opacity = annulee ? "0.5" : "1";
+    tr.innerHTML = `
+      <td class="chk-col"><input type="checkbox" class="row-chk" data-id="${ev.id}" onchange="updateSelectionToolbar()"></td>
+      <td>${dateHtml}</td>
+      <td><strong style="${annulee ? 'text-decoration:line-through' : ''}">${ev.nom_rando||"—"}</strong>${annulee ? " <span style='color:#e53e3e;font-size:.73rem'>❌ Annulée</span>" : ""}</td>
+      <td>${ev.animateur||"—"}</td>
+      <td>${ev.ibp      ? "<span class='badge'>"+ev.ibp+"</span>"             : "—"}</td>
+      <td>${ev.distance ? "<span class='badge green'>"+ev.distance+" km</span>": "—"}</td>
+      <td>${ev.denivele ? "<span class='badge green'>"+ev.denivele+" m</span>" : "—"}</td>
+      <td class="actions-cell">
+        <button class="btn btn-edit"   onclick='openEdit(${ej})'>✏️ Modifier</button>
+        ${!annulee ? `<button class="btn btn-delete" onclick='confirmDelete(${ev.id},"${(ev.nom_rando||"").replace(/"/g,"&quot;")}","${(ev.animateur||"").replace(/"/g,"&quot;")}",${JSON.stringify(ev.date_rando)})'>❌ Annuler</button>` : ""}
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  updateSortIcons();
+}
+
+function updateSortIcons() {
+  document.querySelectorAll("thead th.sortable").forEach(th => {
+    th.classList.remove("sort-asc","sort-desc");
+    const icon = th.querySelector(".sort-icon");
+    if (th.dataset.col === sortCol) {
+      th.classList.add(sortDir === "asc" ? "sort-asc" : "sort-desc");
+      icon.textContent = sortDir === "asc" ? "↑" : "↓";
+    } else icon.textContent = "⇅";
+  });
+}
+
+function sortTable(col) {
+  sortDir = sortCol === col ? (sortDir === "asc" ? "desc" : "asc") : "asc";
+  sortCol = col;
+  renderTable();
+}
+
+function openEdit(ev) {
+  document.getElementById("edit-rowIndex").value  = ev.id;
+  document.getElementById("edit-date").value      = ev.date_rando      || "";
+  document.getElementById("edit-nom").value       = ev.nom_rando       || "";
+  document.getElementById("edit-animateur").value = ev.animateur       || "";
+  document.getElementById("edit-heureRV").value   = ev.heure_rv        || "";
+  document.getElementById("edit-parking").value   = ev.parking_covoit  || "";
+  document.getElementById("edit-ibp").value       = ev.ibp             || "";
+  document.getElementById("edit-duree").value     = ev.duree           || "";
+  document.getElementById("edit-distance").value  = ev.distance        || "";
+  document.getElementById("edit-denivele").value  = ev.denivele        || "";
+  document.getElementById("edit-statut").value    = ev.statut          || "publiée";
+  document.getElementById("edit-remarques").value = ev.remarques       || "";
+  document.getElementById("modal-edit").classList.add("open");
+}
+
+async function saveEdit() {
+  const id        = document.getElementById("edit-rowIndex").value;
+  const date      = document.getElementById("edit-date").value;
+  const nom       = document.getElementById("edit-nom").value.trim();
+  const anim      = document.getElementById("edit-animateur").value.trim();
+  const heureRV   = document.getElementById("edit-heureRV").value.trim();
+  const parking   = document.getElementById("edit-parking").value.trim();
+  const ibp       = document.getElementById("edit-ibp").value.trim();
+  const duree     = document.getElementById("edit-duree").value.trim();
+  const dist      = document.getElementById("edit-distance").value.trim();
+  const den       = document.getElementById("edit-denivele").value.trim();
+  const statut    = document.getElementById("edit-statut").value;
+  const remarques = document.getElementById("edit-remarques").value.trim();
+  if (!date || !nom || !anim) { showToast("Champs obligatoires manquants.", true); return; }
+  if (!dist) { showToast("La distance est obligatoire.", true); return; }
+  setBusy("btn-save-edit", true);
+  try {
+    const patch = {
+      date_rando: date, nom_rando: nom, animateur: anim,
+      heure_rv: heureRV || null, parking_covoit: parking || null,
+      ibp: ibp ? parseFloat(ibp) : null, duree: duree || null,
+      distance: dist ? parseFloat(dist) : null,
+      denivele: den ? parseInt(den) : null,
+      statut, remarques: remarques || null,
+    };
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" },
+      body: JSON.stringify(patch)
+    });
+    if (res.ok) {
+      const ficheActuelle = allRows.find(x => x.id == id) || {};
+      syncCalendar("calendarUpdate", {
+        dateRando: date, dateRandoOld: ficheActuelle.date_rando || date,
+        nomRando: statut === "annulée" ? `❌ ANNULÉE — ${nom}` : nom,
+        animateur: anim, heureRV: heureRV || "", parking: parking || "",
+        parkingDepart: ficheActuelle.parking_depart || "", gps: ficheActuelle.gps || "",
+        distance: dist || "", denivele: den || "", duree: duree || "", ibp: ibp || "",
+        effort: ficheActuelle.effort || "", technicite: ficheActuelle.technicite || "",
+        risque: ficheActuelle.risque || "", couts: ficheActuelle.couts || "",
+      });
+      showToast("✅ Événement modifié !");
+      closeModal("modal-edit");
+      loadEvents();
+    } else {
+      showToast("Erreur : " + (await res.text()), true);
+    }
+  } catch(e) { showToast("Erreur réseau.", true); }
+  setBusy("btn-save-edit", false);
+}
+
+function confirmDelete(id, nom, animateur, dateRando) {
+  document.getElementById("confirm-titre").textContent = `Annuler "${nom}" ?`;
+  document.getElementById("confirm-body").textContent  = `Randonnée du ${toDisplay(dateRando)} — Animateur : ${animateur || "—"}`;
+  const btn = document.getElementById("btn-confirm-annuler");
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener("click", () => { closeModal("modal-confirm"); deleteEvent(id, nom, animateur, dateRando); });
+  document.getElementById("modal-confirm").classList.add("open");
+}
+
+async function deleteEvent(id, nom, animateur, dateRando) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" },
+      body: JSON.stringify({ statut: "annulée" })
+    });
+    if (res.ok) {
+      syncCalendar("calendarUpdate", { dateRando, dateRandoOld: dateRando, nomRando: `❌ ANNULÉE — ${nom}`, animateur: animateur || "" });
+      showToast("❌ Randonnée annulée.");
+      loadEvents();
+    } else showToast("Erreur lors de l'annulation.", true);
+  } catch(e) { showToast("Erreur réseau.", true); }
+}
+
+async function syncCalendar(action, ficheData) {
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/dynamic-handler`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` },
+      body: JSON.stringify({ action, fiche: ficheData })
+    });
+  } catch(e) { console.warn("[Calendar sync] Erreur:", e.message); }
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+document.querySelectorAll(".modal-overlay").forEach(o => {
+  o.addEventListener("click", function(e) { if (e.target === this) this.classList.remove("open"); });
+});
+</script>
+</body>
+</html>
