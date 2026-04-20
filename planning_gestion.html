@@ -123,6 +123,42 @@
   .date-cell .date { color: #4a5568; }
   .chk-col { width: 34px; text-align: center; }
   input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #2d6a4f; }
+
+  /* ══ BOUTON CALENDRIER HEADER ══ */
+  .btn-cal { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.4); color: #fff; padding: 7px 14px; border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+  .btn-cal:hover { background: rgba(255,255,255,.35); }
+
+  /* ══ POPUP CALENDRIER ══ */
+  #cal-popup {
+    position: fixed; top: 64px; right: 24px; z-index: 200;
+    background: #fff; border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,.22);
+    padding: 22px 20px 18px; width: 680px; max-width: 96vw;
+    display: none;
+  }
+  #cal-popup.open { display: block; }
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .cal-header h3 { font-size: .95rem; color: #2d6a4f; font-weight: 700; }
+  .cal-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #718096; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+  .cal-close:hover { background: #f0f4f8; }
+  .cal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .cal-month { font-size: .78rem; }
+  .cal-month-title { text-align: center; font-weight: 700; color: #2d6a4f; margin-bottom: 8px; font-size: .82rem; text-transform: capitalize; }
+  .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+  .cal-weekdays span { font-size: .68rem; font-weight: 700; color: #a0aec0; padding-bottom: 4px; }
+  .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-day {
+    text-align: center; padding: 4px 2px; border-radius: 5px;
+    font-size: .74rem; color: #4a5568; cursor: default; min-width: 0;
+    line-height: 1.3;
+  }
+  .cal-day.empty { visibility: hidden; }
+  .cal-day.has-rando { background: #c6f6d5; color: #1b4332; font-weight: 700; cursor: pointer; }
+  .cal-day.has-rando:hover { background: #9ae6b4; }
+  .cal-day.today { outline: 2px solid #2d6a4f; outline-offset: -2px; }
+  .cal-day.annulee { background: #fed7d7; color: #742a2a; text-decoration: line-through; }
+  .cal-legend { display: flex; gap: 16px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: .76rem; color: #718096; align-items: center; }
+  .cal-legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
   .chk-warning { margin-top: 10px; font-size: .8rem; color: #742a2a; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 8px 13px; }
 
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: center; justify-content: center; }
@@ -172,7 +208,8 @@
   <header>
     <span class="icon">🏔️</span>
     <h1>Prévision des Randonnées — La Marmotte</h1>
-    <button class="btn-logout" onclick="deconnecter()">🔒 Déconnexion</button>
+    <button class="btn-cal" id="btn-cal" onclick="toggleCal()">📅 Calendrier</button>
+  <button class="btn-logout" onclick="deconnecter()">🔒 Déconnexion</button>
   </header>
 
   <div class="main-content">
@@ -356,6 +393,21 @@
       <button class="btn btn-cancel" onclick="closeModal('modal-suppr-multi')">↩ Annuler</button>
       <button class="btn" id="btn-confirm-suppr-multi" style="background:#742a2a;color:#fff;">🗑️ Confirmer la suppression</button>
     </div>
+  </div>
+</div>
+
+
+<!-- ══ POPUP CALENDRIER 3 MOIS ══ -->
+<div id="cal-popup">
+  <div class="cal-header">
+    <h3>📅 Calendrier des randonnées</h3>
+    <button class="cal-close" onclick="toggleCal()">✕</button>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+  <div class="cal-legend">
+    <div class="cal-legend-dot" style="background:#c6f6d5;outline:1.5px solid #68d391;outline-offset:0"></div><span>Rando programmée</span>
+    <div class="cal-legend-dot" style="background:#fed7d7"></div><span>Annulée</span>
+    <div class="cal-legend-dot" style="background:#fff;outline:2px solid #2d6a4f;outline-offset:0"></div><span>Aujourd'hui</span>
   </div>
 </div>
 
@@ -548,7 +600,7 @@ async function creerRando() {
       })
     });
     if (res.ok) {
-      syncCalendar("calendarCreate", {
+      const calOk = await syncCalendar("calendarCreate", {
         dateRando:     date,
         nomRando:      nom,
         animateur:     anim,
@@ -569,7 +621,7 @@ async function creerRando() {
         covoit5:       "",
         profilUrl:     "",
       });
-      showToast("✅ Randonnée créée et ajoutée au Calendar !");
+      showToast(calOk ? "✅ Randonnée créée et ajoutée au Calendar !" : "✅ Randonnée créée (Calendar non mis à jour)", !calOk);
       ["ibp","distance","denivele"].forEach(id => document.getElementById(id).value = "");
       ["nom-input","animateur-input","parking-input"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("ibp-badge").className = "ibp-badge";
@@ -808,8 +860,8 @@ async function deleteEvent(id, nom, animateur, dateRando) {
       body: JSON.stringify({ statut: "annulée" })
     });
     if (res.ok) {
-      syncCalendar("calendarUpdate", { dateRando, dateRandoOld: dateRando, nomRando: `❌ ANNULÉE — ${nom}`, animateur: animateur || "" });
-      showToast("❌ Randonnée annulée.");
+      const calOkAnn = await syncCalendar("calendarUpdate", { dateRando, dateRandoOld: dateRando, nomRando: `❌ ANNULÉE — ${nom}`, animateur: animateur || "" });
+      showToast(calOkAnn ? "❌ Randonnée annulée et Calendar mis à jour." : "❌ Randonnée annulée (Calendar non mis à jour)", !calOkAnn);
       loadEvents();
     } else showToast("Erreur lors de l'annulation.", true);
   } catch(e) { showToast("Erreur réseau.", true); }
@@ -834,6 +886,95 @@ async function syncCalendar(action, ficheData) {
     return false;
   }
 }
+
+
+/* ══ POPUP CALENDRIER ══ */
+function toggleCal() {
+  const popup = document.getElementById("cal-popup");
+  const isOpen = popup.classList.toggle("open");
+  if (isOpen) renderCal();
+}
+
+function renderCal() {
+  const grid = document.getElementById("cal-grid");
+  grid.innerHTML = "";
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  /* Construire un Set des dates avec rando */
+  const randoDates   = new Set();
+  const annuleeDates = new Set();
+  allRows.forEach(ev => {
+    if (!ev.date_rando) return;
+    const iso = ev.date_rando.substring(0, 10);
+    if ((ev.statut || "") === "annulée") annuleeDates.add(iso);
+    else randoDates.add(iso);
+  });
+
+  for (let m = 0; m < 3; m++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + m, 1);
+    const month   = d.getMonth();
+    const year    = d.getFullYear();
+    const titre   = d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    const premier = new Date(year, month, 1).getDay(); /* 0=dim */
+    const offset  = (premier === 0) ? 6 : premier - 1; /* lundi en premier */
+    const nbJours = new Date(year, month + 1, 0).getDate();
+
+    const div = document.createElement("div");
+    div.className = "cal-month";
+    div.innerHTML = `<div class="cal-month-title">${titre}</div>
+      <div class="cal-weekdays">
+        <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
+      </div>
+      <div class="cal-days" id="cal-days-${m}"></div>`;
+    grid.appendChild(div);
+
+    const daysEl = document.getElementById("cal-days-" + m);
+
+    /* Cases vides avant le 1er */
+    for (let i = 0; i < offset; i++) {
+      const e = document.createElement("div");
+      e.className = "cal-day empty";
+      e.textContent = " ";
+      daysEl.appendChild(e);
+    }
+
+    for (let j = 1; j <= nbJours; j++) {
+      const iso  = `${year}-${String(month+1).padStart(2,"0")}-${String(j).padStart(2,"0")}`;
+      const cell = document.createElement("div");
+      cell.className = "cal-day";
+      cell.textContent = j;
+
+      const dt = new Date(year, month, j);
+      if (dt.getTime() === today.getTime()) cell.classList.add("today");
+
+      if (annuleeDates.has(iso)) {
+        cell.classList.add("annulee");
+        cell.title = "Rando annulée";
+      } else if (randoDates.has(iso)) {
+        cell.classList.add("has-rando");
+        const ev = allRows.find(r => r.date_rando && r.date_rando.substring(0,10) === iso);
+        cell.title = ev ? ev.nom_rando + (ev.animateur ? " — " + ev.animateur : "") : "Rando";
+        cell.addEventListener("click", () => {
+          toggleCal();
+          const row = document.querySelector(`#events-body td span.date`);
+          /* Scroll vers le tableau */
+          document.querySelector("#events-body").closest(".card").scrollIntoView({ behavior: "smooth" });
+        });
+      }
+      daysEl.appendChild(cell);
+    }
+  }
+}
+
+/* Fermer le popup en cliquant en dehors */
+document.addEventListener("click", function(e) {
+  const popup = document.getElementById("cal-popup");
+  const btn   = document.getElementById("btn-cal");
+  if (popup && popup.classList.contains("open") && !popup.contains(e.target) && e.target !== btn) {
+    popup.classList.remove("open");
+  }
+});
 
 function closeModal(id) { document.getElementById(id).classList.remove("open"); }
 document.querySelectorAll(".modal-overlay").forEach(o => {
