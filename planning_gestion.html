@@ -138,6 +138,10 @@
   #cal-popup.open { display: block; }
   .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
   .cal-header h3 { font-size: .95rem; color: #2d6a4f; font-weight: 700; }
+  .cal-nav { display: flex; align-items: center; gap: 6px; }
+  .cal-nav-btn { background: #f0fff4; border: 1px solid #c6f6d5; color: #2d6a4f; width: 28px; height: 28px; border-radius: 7px; font-size: .95rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s; line-height: 1; }
+  .cal-nav-btn:hover { background: #9ae6b4; }
+  .cal-nav-label { font-size: .78rem; color: #718096; min-width: 110px; text-align: center; }
   .cal-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #718096; line-height: 1; padding: 2px 6px; border-radius: 6px; }
   .cal-close:hover { background: #f0f4f8; }
   .cal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -397,10 +401,18 @@
 </div>
 
 
-<!-- ══ POPUP CALENDRIER 3 MOIS ══ -->
+<!-- ══ POPUP CALENDRIER ══ -->
 <div id="cal-popup">
   <div class="cal-header">
     <h3>📅 Calendrier des randonnées</h3>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calNav(-3)" title="3 mois en arrière">&#8810;</button>
+      <button class="cal-nav-btn" onclick="calNav(-1)" title="Mois précédent">&lt;</button>
+      <span class="cal-nav-label" id="cal-nav-label"></span>
+      <button class="cal-nav-btn" onclick="calNav(1)" title="Mois suivant">&gt;</button>
+      <button class="cal-nav-btn" onclick="calNav(3)" title="3 mois en avant">&#8811;</button>
+      <button class="cal-nav-btn" onclick="calReset()" title="Revenir au mois actuel" style="font-size:.7rem;width:auto;padding:0 7px;">Auj.</button>
+    </div>
     <button class="cal-close" onclick="toggleCal()">✕</button>
   </div>
   <div class="cal-grid" id="cal-grid"></div>
@@ -889,10 +901,22 @@ async function syncCalendar(action, ficheData) {
 
 
 /* ══ POPUP CALENDRIER ══ */
+let calOffset = 0; /* décalage en mois par rapport au mois courant */
+
 function toggleCal() {
   const popup = document.getElementById("cal-popup");
   const isOpen = popup.classList.toggle("open");
-  if (isOpen) renderCal();
+  if (isOpen) { calOffset = 0; renderCal(); }
+}
+
+function calNav(delta) {
+  calOffset += delta;
+  renderCal();
+}
+
+function calReset() {
+  calOffset = 0;
+  renderCal();
 }
 
 function renderCal() {
@@ -901,7 +925,15 @@ function renderCal() {
   const today = new Date();
   today.setHours(0,0,0,0);
 
-  /* Construire un Set des dates avec rando */
+  /* Label navigation */
+  const debut = new Date(today.getFullYear(), today.getMonth() + calOffset, 1);
+  const fin   = new Date(today.getFullYear(), today.getMonth() + calOffset + 2, 1);
+  const labelDebut = debut.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+  const labelFin   = fin.toLocaleDateString("fr-FR",   { month: "short", year: "numeric" });
+  const label = document.getElementById("cal-nav-label");
+  if (label) label.textContent = labelDebut + " – " + labelFin;
+
+  /* Sets de dates */
   const randoDates   = new Set();
   const annuleeDates = new Set();
   allRows.forEach(ev => {
@@ -912,12 +944,12 @@ function renderCal() {
   });
 
   for (let m = 0; m < 3; m++) {
-    const d = new Date(today.getFullYear(), today.getMonth() + m, 1);
-    const month   = d.getMonth();
-    const year    = d.getFullYear();
-    const titre   = d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-    const premier = new Date(year, month, 1).getDay(); /* 0=dim */
-    const offset  = (premier === 0) ? 6 : premier - 1; /* lundi en premier */
+    const d      = new Date(today.getFullYear(), today.getMonth() + calOffset + m, 1);
+    const month  = d.getMonth();
+    const year   = d.getFullYear();
+    const titre  = d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    const premier = new Date(year, month, 1).getDay();
+    const offset  = (premier === 0) ? 6 : premier - 1;
     const nbJours = new Date(year, month + 1, 0).getDate();
 
     const div = document.createElement("div");
@@ -931,7 +963,6 @@ function renderCal() {
 
     const daysEl = document.getElementById("cal-days-" + m);
 
-    /* Cases vides avant le 1er */
     for (let i = 0; i < offset; i++) {
       const e = document.createElement("div");
       e.className = "cal-day empty";
@@ -957,8 +988,6 @@ function renderCal() {
         cell.title = ev ? ev.nom_rando + (ev.animateur ? " — " + ev.animateur : "") : "Rando";
         cell.addEventListener("click", () => {
           toggleCal();
-          const row = document.querySelector(`#events-body td span.date`);
-          /* Scroll vers le tableau */
           document.querySelector("#events-body").closest(".card").scrollIntoView({ behavior: "smooth" });
         });
       }
