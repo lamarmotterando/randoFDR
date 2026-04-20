@@ -644,6 +644,13 @@ async function supprimerSelection(ids) {
   let erreurs = 0;
   for (const id of ids) {
     try {
+      const fiche = allRows.find(r => String(r.id) === String(id));
+      if (fiche && fiche.date_rando) {
+        await syncCalendar("calendarDelete", {
+          dateRando: fiche.date_rando,
+          animateur: fiche.animateur || ""
+        });
+      }
       const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
         method: "DELETE",
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" }
@@ -651,10 +658,12 @@ async function supprimerSelection(ids) {
       if (!res.ok && res.status !== 204) erreurs++;
     } catch(e) { erreurs++; }
   }
-  showToast(erreurs === 0 ? `🗑️ ${ids.length} fiche${ids.length > 1 ? "s supprimées" : " supprimée"}.` : `${erreurs} erreur(s) lors de la suppression.`, erreurs > 0);
+  const msg = erreurs === 0
+    ? `🗑️ ${ids.length} fiche${ids.length > 1 ? "s supprimées" : " supprimée"}.`
+    : `${erreurs} erreur(s) lors de la suppression.`;
+  showToast(msg, erreurs > 0);
   loadEvents();
 }
-
 function renderTable() {
   const tbody = document.getElementById("events-body");
   tbody.innerHTML = "";
@@ -808,12 +817,22 @@ async function deleteEvent(id, nom, animateur, dateRando) {
 
 async function syncCalendar(action, ficheData) {
   try {
-    await fetch(`${SUPABASE_URL}/functions/v1/dynamic-handler`, {
+    const res  = await fetch(`${SUPABASE_URL}/functions/v1/dynamic-handler`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` },
       body: JSON.stringify({ action, fiche: ficheData })
     });
-  } catch(e) { console.warn("[Calendar sync] Erreur:", e.message); }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      console.warn("[Calendar sync] Echec:", res.status, JSON.stringify(data));
+      return false;
+    }
+    console.log("[Calendar sync] OK:", action);
+    return true;
+  } catch(e) {
+    console.warn("[Calendar sync] Erreur reseau:", e.message);
+    return false;
+  }
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove("open"); }
