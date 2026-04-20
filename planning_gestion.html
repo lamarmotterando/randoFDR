@@ -548,7 +548,28 @@ async function creerRando() {
       })
     });
     if (res.ok) {
-      showToast("✅ Randonnée créée !");
+      syncCalendar("calendarCreate", {
+        dateRando:     date,
+        nomRando:      nom,
+        animateur:     anim,
+        tel:           "",
+        heureRV:       "",
+        parking:       parking || "",
+        parkingDepart: "",
+        gps:           "",
+        distance:      dist    || "",
+        denivele:      den     || "",
+        duree:         "",
+        ibp:           ibp     || "",
+        effort:        "",
+        technicite:    "",
+        risque:        "",
+        couts:         "",
+        covoit4:       "",
+        covoit5:       "",
+        profilUrl:     "",
+      });
+      showToast("✅ Randonnée créée et ajoutée au Calendar !");
       ["ibp","distance","denivele"].forEach(id => document.getElementById(id).value = "");
       ["nom-input","animateur-input","parking-input"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("ibp-badge").className = "ibp-badge";
