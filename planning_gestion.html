@@ -183,6 +183,18 @@
   .spinner { display: inline-block; width: 16px; height: 16px; border: 3px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .empty-state { text-align: center; padding: 36px; color: #a0aec0; font-style: italic; font-size: .93rem; }
+  .tr-separator td { background: #f0fff4; border-top: 2px solid #2d6a4f; border-bottom: 2px solid #2d6a4f; padding: 0; }
+  .tr-separator-btn {
+    width: 100%; background: none; border: none; cursor: pointer;
+    padding: 7px 14px; font-size: .8rem; font-weight: 600; color: #2d6a4f;
+    text-align: left; display: flex; align-items: center; gap: 8px;
+    font-family: inherit;
+  }
+  .tr-separator-btn:hover { background: #c6f6d5; }
+  .tr-separator-arrow { transition: transform .2s; display: inline-block; font-size: .85rem; }
+  .tr-separator-arrow.open { transform: rotate(90deg); }
+  .tr-old { display: none; }
+  .tr-old.visible { display: table-row; }
 </style>
 </head>
 <body>
@@ -728,6 +740,44 @@ async function supprimerSelection(ids) {
   showToast(msg, erreurs > 0);
   loadEvents();
 }
+let _oldEventsOpen = false;
+
+function buildEventRow(ev, extraClass) {
+  const tr = document.createElement("tr");
+  if (extraClass) tr.className = extraClass;
+  const ej      = JSON.stringify(ev).replace(/'/g, "&#39;");
+  const dateAff = toDisplay(ev.date_rando);
+  const jour    = jourSemaine(ev.date_rando);
+  const statut  = ev.statut || "publiée";
+  const annulee = statut === "annulée";
+  const dateHtml = jour
+    ? `<span class="date-cell"><span class="jour">${jour}</span><span class="date">${dateAff}</span></span>`
+    : `<span class="date-cell"><span class="date">${dateAff||"—"}</span></span>`;
+  tr.style.opacity = annulee ? "0.5" : "1";
+  tr.innerHTML = `
+    <td class="chk-col"><input type="checkbox" class="row-chk" data-id="${ev.id}" onchange="updateSelectionToolbar()"></td>
+    <td>${dateHtml}</td>
+    <td><strong style="${annulee ? 'text-decoration:line-through' : ''}">${ev.nom_rando||"—"}</strong>${annulee ? " <span style='color:#e53e3e;font-size:.73rem'>❌ Annulée</span>" : ""}</td>
+    <td>${ev.animateur||"—"}</td>
+    <td>${ev.ibp      ? "<span class='badge'>"+ev.ibp+"</span>"             : "—"}</td>
+    <td>${ev.distance ? "<span class='badge green'>"+ev.distance+" km</span>": "—"}</td>
+    <td>${ev.denivele ? "<span class='badge green'>"+ev.denivele+" m</span>" : "—"}</td>
+    <td class="actions-cell">
+      <button class="btn btn-edit" onclick='openEdit(${ej})'>✏️ Modifier</button>
+      ${!annulee ? `<button class="btn btn-delete btn-annuler" data-id="${ev.id}" data-nom="${(ev.nom_rando||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}" data-anim="${(ev.animateur||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}" data-date="${ev.date_rando||''}">❌ Annuler</button>` : ""}
+    </td>`;
+  return tr;
+}
+
+function toggleOldEvents() {
+  _oldEventsOpen = !_oldEventsOpen;
+  document.querySelectorAll(".tr-old").forEach(tr => tr.classList.toggle("visible", _oldEventsOpen));
+  const arrow = document.querySelector(".tr-separator-arrow");
+  if (arrow) arrow.classList.toggle("open", _oldEventsOpen);
+  const lbl = document.getElementById("old-events-label");
+  if (lbl) lbl.textContent = _oldEventsOpen ? "Masquer les anciens événements" : lbl.dataset.label;
+}
+
 function renderTable() {
   const tbody = document.getElementById("events-body");
   tbody.innerHTML = "";
@@ -735,6 +785,11 @@ function renderTable() {
     tbody.innerHTML = "<tr><td colspan='8' class='empty-state'>Aucun événement trouvé.</td></tr>";
     updateSortIcons(); return;
   }
+
+  /* Date du jour à minuit pour comparaison */
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayISO = today.toISOString().split("T")[0];
+
   const sorted = [...allRows].sort((a, b) => {
     let va = sortCol === "date" ? (a.date_rando||"") : (a.animateur||"").toLowerCase();
     let vb = sortCol === "date" ? (b.date_rando||"") : (b.animateur||"").toLowerCase();
@@ -742,31 +797,41 @@ function renderTable() {
     if (va > vb) return sortDir === "asc" ?  1 : -1;
     return 0;
   });
-  sorted.forEach(ev => {
+
+  /* Séparer futurs (>= aujourd'hui) et passés (< aujourd'hui) */
+  const futurs = sorted.filter(ev => (ev.date_rando||"") >= todayISO);
+  const passes = sorted.filter(ev => (ev.date_rando||"") <  todayISO);
+
+  /* ── Lignes futures ── */
+  if (futurs.length === 0) {
     const tr = document.createElement("tr");
-    const ej = JSON.stringify(ev).replace(/'/g, "&#39;");
-    const dateAff = toDisplay(ev.date_rando);
-    const jour    = jourSemaine(ev.date_rando);
-    const statut  = ev.statut || "publiée";
-    const annulee = statut === "annulée";
-    const dateHtml = jour
-      ? `<span class="date-cell"><span class="jour">${jour}</span><span class="date">${dateAff}</span></span>`
-      : `<span class="date-cell"><span class="date">${dateAff||"—"}</span></span>`;
-    tr.style.opacity = annulee ? "0.5" : "1";
-    tr.innerHTML = `
-      <td class="chk-col"><input type="checkbox" class="row-chk" data-id="${ev.id}" onchange="updateSelectionToolbar()"></td>
-      <td>${dateHtml}</td>
-      <td><strong style="${annulee ? 'text-decoration:line-through' : ''}">${ev.nom_rando||"—"}</strong>${annulee ? " <span style='color:#e53e3e;font-size:.73rem'>❌ Annulée</span>" : ""}</td>
-      <td>${ev.animateur||"—"}</td>
-      <td>${ev.ibp      ? "<span class='badge'>"+ev.ibp+"</span>"             : "—"}</td>
-      <td>${ev.distance ? "<span class='badge green'>"+ev.distance+" km</span>": "—"}</td>
-      <td>${ev.denivele ? "<span class='badge green'>"+ev.denivele+" m</span>" : "—"}</td>
-      <td class="actions-cell">
-        <button class="btn btn-edit"   onclick='openEdit(${ej})'>✏️ Modifier</button>
-        ${!annulee ? `<button class="btn btn-delete" onclick='confirmDelete(${ev.id},"${(ev.nom_rando||"").replace(/"/g,"&quot;")}","${(ev.animateur||"").replace(/"/g,"&quot;")}",${JSON.stringify(ev.date_rando)})'>❌ Annuler</button>` : ""}
-      </td>`;
+    tr.innerHTML = "<td colspan='8' class='empty-state'>Aucun événement à venir.</td>";
     tbody.appendChild(tr);
-  });
+  } else {
+    futurs.forEach(ev => tbody.appendChild(buildEventRow(ev, "")));
+  }
+
+  /* ── Séparateur dépliable ── */
+  if (passes.length > 0) {
+    const trSep = document.createElement("tr");
+    trSep.className = "tr-separator";
+    trSep.innerHTML = `<td colspan="8">
+      <button class="tr-separator-btn" onclick="toggleOldEvents()">
+        <span class="tr-separator-arrow">▶</span>
+        <span id="old-events-label" data-label="Afficher les ${passes.length} ancien${passes.length > 1 ? 's' : ''} événement${passes.length > 1 ? 's' : ''}">Afficher les ${passes.length} ancien${passes.length > 1 ? 's' : ''} événement${passes.length > 1 ? 's' : ''}</span>
+      </button>
+    </td>`;
+    tbody.appendChild(trSep);
+
+    /* ── Lignes passées (masquées par défaut) ── */
+    /* Passés affichés du plus récent au plus ancien */
+    const passesDesc = [...passes].sort((a, b) => (b.date_rando||"").localeCompare(a.date_rando||""));
+    passesDesc.forEach(ev => {
+      const tr = buildEventRow(ev, "tr-old" + (_oldEventsOpen ? " visible" : ""));
+      tbody.appendChild(tr);
+    });
+  }
+
   updateSortIcons();
 }
 
@@ -1008,6 +1073,17 @@ document.addEventListener("click", function(e) {
 function closeModal(id) { document.getElementById(id).classList.remove("open"); }
 document.querySelectorAll(".modal-overlay").forEach(o => {
   o.addEventListener("click", function(e) { if (e.target === this) this.classList.remove("open"); });
+});
+
+/* Délégation pour bouton Annuler — évite les bugs avec apostrophes/guillemets */
+document.getElementById("events-body").addEventListener("click", function(e) {
+  const btn = e.target.closest(".btn-annuler");
+  if (!btn) return;
+  const id   = btn.dataset.id;
+  const nom  = btn.dataset.nom;
+  const anim = btn.dataset.anim;
+  const date = btn.dataset.date;
+  confirmDelete(id, nom, anim, date);
 });
 </script>
 </body>
