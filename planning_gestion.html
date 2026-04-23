@@ -312,6 +312,7 @@
               <th>IBP</th>
               <th>Distance</th>
               <th>Dénivelé +</th>
+              <th>Participants</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -370,6 +371,31 @@
         <label>Remarques</label>
         <textarea id="edit-remarques" style="min-height:65px;resize:vertical" placeholder="Notes, modifications…"></textarea>
       </div>
+
+      <!-- ══ PARTICIPANTS (visible si rando passée et non annulée) ══ -->
+      <div id="edit-sectionParticipants" class="form-group full" style="display:none;border-top:1px solid #e0e8f0;padding-top:14px;margin-top:4px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <div style="width:3px;height:14px;background:#2e7d32;border-radius:2px;flex-shrink:0;"></div>
+          <span style="font-size:12px;font-weight:700;color:#4a6785;text-transform:uppercase;letter-spacing:0.04em;">Participants — après rando</span>
+          <span style="font-size:11px;background:#e3f0fb;color:#185fa5;padding:2px 8px;border-radius:6px;font-weight:600;">nouveau</span>
+        </div>
+        <div style="display:grid;grid-template-columns:100px 1fr;gap:12px;align-items:start;">
+          <div>
+            <label>Nombre</label>
+            <input type="number" id="edit-nb-participants" min="0" placeholder="—" readonly
+              style="background:#f5f7fa;color:#666;cursor:default;width:100%;box-sizing:border-box;">
+            <p style="font-size:11px;color:#888;margin:4px 0 0;">calculé auto</p>
+          </div>
+          <div>
+            <label>Noms <span style="font-weight:400;color:#888;">(un par ligne, optionnel)</span></label>
+            <textarea id="edit-noms-participants" rows="5"
+              placeholder="Marie D.&#10;Paul B.&#10;…"
+              oninput="syncNbParticipantsGestion()"
+              style="width:100%;box-sizing:border-box;resize:vertical;min-height:100px;"></textarea>
+          </div>
+        </div>
+      </div>
+
     </div>
     <div class="modal-actions">
       <button class="btn btn-cancel" onclick="closeModal('modal-edit')">Annuler</button>
@@ -762,6 +788,13 @@ function buildEventRow(ev, extraClass) {
     <td>${ev.ibp      ? "<span class='badge'>"+ev.ibp+"</span>"             : "—"}</td>
     <td>${ev.distance ? "<span class='badge green'>"+ev.distance+" km</span>": "—"}</td>
     <td>${ev.denivele ? "<span class='badge green'>"+ev.denivele+" m</span>" : "—"}</td>
+    <td>${(() => {
+      if (annulee) return "<span style='color:#aaa'>—</span>";
+      const passe = ev.date_rando && new Date(ev.date_rando) < new Date();
+      if (!passe) return "<span style='color:#aaa'>—</span>";
+      if (ev.nb_participants) return "<span class='badge green'>"+ev.nb_participants+" pers.</span>";
+      return "<span class='badge' style='background:#fff8e1;color:#b45309;border:1px solid #fcd34d;'>À saisir</span>";
+    })()}</td>
     <td class="actions-cell">
       <button class="btn btn-edit" onclick='openEdit(${ej})'>✏️ Modifier</button>
       ${!annulee ? `<button class="btn btn-delete btn-annuler" data-id="${ev.id}" data-nom="${(ev.nom_rando||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}" data-anim="${(ev.animateur||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}" data-date="${ev.date_rando||''}">❌ Annuler</button>` : ""}
@@ -865,7 +898,23 @@ function openEdit(ev) {
   document.getElementById("edit-denivele").value  = ev.denivele        || "";
   document.getElementById("edit-statut").value    = ev.statut          || "publiée";
   document.getElementById("edit-remarques").value = ev.remarques       || "";
+
+  /* ══ PARTICIPANTS — visible si rando passée et non annulée ══ */
+  const dateRando  = new Date(ev.date_rando);
+  const estPassee  = dateRando < new Date();
+  const estAnnulee = (ev.statut === "annulée");
+  const secPart = document.getElementById("edit-sectionParticipants");
+  secPart.style.display = (estPassee && !estAnnulee) ? "block" : "none";
+  document.getElementById("edit-noms-participants").value  = ev.noms_participants || "";
+  document.getElementById("edit-nb-participants").value    = ev.nb_participants   || "";
+
   document.getElementById("modal-edit").classList.add("open");
+}
+
+function syncNbParticipantsGestion() {
+  const lignes = document.getElementById("edit-noms-participants").value
+    .split("\n").filter(l => l.trim() !== "");
+  document.getElementById("edit-nb-participants").value = lignes.length > 0 ? lignes.length : "";
 }
 
 async function saveEdit() {
@@ -881,6 +930,8 @@ async function saveEdit() {
   const den       = document.getElementById("edit-denivele").value.trim();
   const statut    = document.getElementById("edit-statut").value;
   const remarques = document.getElementById("edit-remarques").value.trim();
+  const nbPart    = document.getElementById("edit-nb-participants").value;
+  const nomsPart  = document.getElementById("edit-noms-participants").value.trim();
   if (!date || !nom || !anim) { showToast("Champs obligatoires manquants.", true); return; }
   if (!dist) { showToast("La distance est obligatoire.", true); return; }
   setBusy("btn-save-edit", true);
@@ -892,6 +943,8 @@ async function saveEdit() {
       distance: dist ? parseFloat(dist) : null,
       denivele: den ? parseInt(den) : null,
       statut, remarques: remarques || null,
+      nb_participants:   nbPart ? parseInt(nbPart) : null,
+      noms_participants: nomsPart || null,
     };
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
       method: "PATCH",
