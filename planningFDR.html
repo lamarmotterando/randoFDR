@@ -251,6 +251,31 @@
         </div>
       </div>
       <div><label>Remarques</label><textarea id="modifRemarques" placeholder="Décrivez les modifications…"></textarea></div>
+
+      <!-- ══ SECTION PARTICIPANTS (visible uniquement si rando passée et non annulée) ══ -->
+      <div id="sectionParticipants" style="display:none;border-top:1px solid #e0e8f0;margin-top:12px;padding-top:14px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <div style="width:3px;height:14px;background:#2e7d32;border-radius:2px;"></div>
+          <span style="font-size:12px;font-weight:700;color:#4a6785;text-transform:uppercase;letter-spacing:0.04em;">Participants — après rando</span>
+          <span style="font-size:11px;background:#e3f0fb;color:#185fa5;padding:2px 8px;border-radius:6px;font-weight:600;">nouveau</span>
+        </div>
+        <div style="display:grid;grid-template-columns:100px 1fr;gap:12px;align-items:start;">
+          <div>
+            <label>Nombre</label>
+            <input type="number" id="modifNbParticipants" min="0" placeholder="—" readonly
+              style="background:#f5f7fa;color:#666;cursor:default;">
+            <p style="font-size:11px;color:#888;margin:4px 0 0;">calculé auto</p>
+          </div>
+          <div>
+            <label>Noms <span style="font-weight:400;color:#888;">(un par ligne, optionnel)</span></label>
+            <textarea id="modifNomsParticipants" rows="5"
+              placeholder="Marie D.&#10;Paul B.&#10;…"
+              oninput="syncNbParticipants()"
+              style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+          </div>
+        </div>
+      </div>
+
       <div class="err-msg" id="modifErr">Erreur lors de la sauvegarde. Réessayez.</div>
       <div style="display:flex;gap:10px;margin-top:4px;">
         <button class="btn-save" style="flex:2" onclick="sauvegarderModif()">💾 Enregistrer</button>
@@ -261,8 +286,9 @@
 </div>
 
 <script>
-const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+/* SUPABASE_URL et SUPABASE_KEY déclarés par les scripts externes (envoiRando.js / menuAnimateurs.js) */
+if (typeof SUPABASE_URL === "undefined") { window.SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co"; }
+if (typeof SUPABASE_KEY === "undefined") { window.SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE"; }
 
 let fiches = [];
 let idEnCours = null;
@@ -353,7 +379,7 @@ async function charger() {
   try {
     const aujourd = new Date().toISOString().split("T")[0];
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,heure_rv,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque&order=date_rando.asc`,
+      `${SUPABASE_URL}/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,heure_rv,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque,nb_participants,noms_participants&order=date_rando.asc`,
       { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
     );
     fiches = await res.json();
@@ -368,9 +394,36 @@ async function charger() {
     const bodyAvenir = document.getElementById("body-avenir");
     bodyAvenir.style.maxHeight = bodyAvenir.scrollHeight + "px";
     setTimeout(() => bodyAvenir.style.maxHeight = "none", 320);
+
+    /* ══ OUVERTURE AUTO depuis lien email (?id=XXX) ══ */
+    ouvrirDepuisUrl();
+
   } catch(e) {
     document.getElementById("listeAvenir").innerHTML = '<div class="empty">⚠️ Erreur de chargement.</div>';
   }
+}
+
+/* ══ LECTURE PARAMÈTRE ?id= — lien email rappel participants ══ */
+function ouvrirDepuisUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const idParam = params.get("id");
+  if (!idParam) return;
+
+  const id = parseInt(idParam);
+  const f = fiches.find(x => x.id === id);
+  if (!f) return;
+
+  idEnCours = id;
+  ouvrirModif(id);
+
+  setTimeout(() => {
+    const section = document.getElementById("sectionParticipants");
+    if (section && section.style.display !== "none") {
+      section.scrollIntoView({ behavior: "smooth", block: "center" });
+      section.style.outline = "2px solid #2e7d32";
+      setTimeout(() => section.style.outline = "", 2500);
+    }
+  }, 300);
 }
 
 /* ══ RENDU LOCAL — sans rechargement réseau ══ */
@@ -506,7 +559,23 @@ function ouvrirModif(id) {
   document.getElementById("modifRemarques").value     = f.remarques      || "";
   document.getElementById("modifErr").style.display   = "none";
 
+  /* ══ PARTICIPANTS — visible si rando passée et non annulée ══ */
+  const dateRando = new Date(f.date_rando);
+  const estPassee = dateRando < new Date();
+  const estAnnulee = (f.statut === "annulée");
+  const sectionPart = document.getElementById("sectionParticipants");
+  sectionPart.style.display = (estPassee && !estAnnulee) ? "block" : "none";
+  document.getElementById("modifNomsParticipants").value = f.noms_participants || "";
+  document.getElementById("modifNbParticipants").value   = f.nb_participants   || "";
+
   document.getElementById("modalModif").classList.add("open");
+}
+
+/* ══ SYNC COMPTEUR PARTICIPANTS ══ */
+function syncNbParticipants() {
+  const lignes = document.getElementById("modifNomsParticipants").value
+    .split("\n").filter(l => l.trim() !== "");
+  document.getElementById("modifNbParticipants").value = lignes.length > 0 ? lignes.length : "";
 }
 
 function fermerModif() {
@@ -639,8 +708,10 @@ async function sauvegarderModif() {
     distance:       parseFloat(document.getElementById("modifDistance").value) || null,
     denivele:       parseInt(document.getElementById("modifDenivele").value)   || null,
     duree:          document.getElementById("modifDuree").value.trim()         || null,
-    statut:         document.getElementById("modifStatut").value,
-    remarques:      document.getElementById("modifRemarques").value.trim()     || null,
+    statut:            document.getElementById("modifStatut").value,
+    remarques:         document.getElementById("modifRemarques").value.trim()              || null,
+    nb_participants:   parseInt(document.getElementById("modifNbParticipants").value)      || null,
+    noms_participants: document.getElementById("modifNomsParticipants").value.trim()       || null,
   };
 
   /* Sélecteur ciblé sur le modal de modification */
