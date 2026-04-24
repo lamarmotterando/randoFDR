@@ -13,8 +13,8 @@
 <title>Feuille de route - La Marmotte</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <link rel="stylesheet" href="css/style.css">
@@ -778,7 +778,7 @@ sections.forEach(s => obs.observe(s));
     }).addTo(wmLeafMap);
   }
 
-  /* ── Recherche Waymarked Trails ── */
+  /* ── Recherche via Nominatim (OSM) + Overpass — CORS ok ── */
   async function doSearch() {
     const q = input.value.trim();
     if (!q) return;
@@ -788,40 +788,60 @@ sections.forEach(s => obs.observe(s));
     selectedTrail = null;
 
     try {
-      const url = `https://hiking.waymarkedtrails.org/api/v1/search?query=${encodeURIComponent(q)}&lang=fr&limit=8`;
-      const res  = await fetch(url);
+      /* 1. Overpass : chercher les relations de type route=hiking contenant le nom */
+      const overpassQuery = `
+        [out:json][timeout:25];
+        relation["route"="hiking"]["name"~"${q}",i];
+        out tags bb;
+      `;
+      const res = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        body: 'data=' + encodeURIComponent(overpassQuery)
+      });
       if (!res.ok) throw new Error('Erreur réseau');
       const data = await res.json();
-      const list = data.results || [];
+      const elements = data.elements || [];
 
-      if (!list.length) {
+      if (!elements.length) {
         results.innerHTML = '<div style="padding:20px;text-align:center;color:#7a6652;font-size:13px">Aucun résultat — essayez un autre nom</div>';
         return;
       }
 
       results.innerHTML = '';
-      list.forEach(trail => {
+      elements.slice(0, 8).forEach(el => {
+        const tags    = el.tags || {};
+        const name    = tags.name || tags['name:fr'] || '—';
+        const distKm  = tags.distance ? parseFloat(tags.distance).toFixed(1)
+                      : tags['osmc:length'] ? parseFloat(tags['osmc:length']).toFixed(1)
+                      : null;
+        const elev    = tags.ascent ? Math.round(parseFloat(tags.ascent)) : null;
+        const network = tags.network || tags.route_type || '';
+        const ref     = tags.ref || '';
+        const loc     = tags['from'] && tags['to'] ? `${tags['from']} → ${tags['to']}` : (tags.description || network || ref || '');
+
+        /* bbox pour centrer la carte */
+        const bbox = el.bounds ? {
+          minlat: el.bounds.minlat, maxlat: el.bounds.maxlat,
+          minlon: el.bounds.minlon, maxlon: el.bounds.maxlon
+        } : null;
+
         const card = document.createElement('div');
         card.className = 'wm-card';
-
-        const distKm = trail.length ? (trail.length / 1000).toFixed(1) : null;
-        const elev   = trail.ascent  ? Math.round(trail.ascent)         : null;
-        const type   = trail.route   || '';
-
         card.innerHTML = `
-          <div class="wm-card-name">${trail.name || '—'}</div>
-          <div class="wm-card-loc">${trail.locname || trail.ref || ''}</div>
+          <div class="wm-card-name">${name}</div>
+          <div class="wm-card-loc">${loc}</div>
           <div class="wm-pills">
             ${distKm ? `<span class="wm-pill wm-pill-dist">📏 ${distKm} km</span>` : ''}
             ${elev   ? `<span class="wm-pill wm-pill-elev">⛰ ${elev} m D+</span>` : ''}
-            ${type   ? `<span class="wm-pill wm-pill-type">${type}</span>`          : ''}
+            ${ref    ? `<span class="wm-pill wm-pill-type">${ref}</span>`           : ''}
           </div>`;
 
+        const trail = { id: el.id, name, bbox, tags };
         card.addEventListener('click', () => selectTrail(card, trail, distKm, elev));
         results.appendChild(card);
       });
     } catch(e) {
-      errBox.textContent = 'Impossible de contacter Waymarked Trails. Vérifiez votre connexion.';
+      errBox.textContent = 'Erreur de recherche — vérifiez votre connexion.';
       errBox.style.display = 'block';
       results.innerHTML = '';
     }
@@ -839,21 +859,42 @@ sections.forEach(s => obs.observe(s));
     document.getElementById('wmFElev').textContent = elev   ? `${elev} m`    : '—';
     fiche.style.display = 'block';
 
-    /* Charger la géométrie et afficher sur la carte */
+    /* Charger la géométrie via Overpass (CORS ok) */
     placeholder.style.display = 'none';
     try {
-      const geoUrl = `https://hiking.waymarkedtrails.org/api/v1/details/relation/${trail.id}/geometry/geojson`;
-      const geoRes = await fetch(geoUrl);
+      const geoQuery = `[out:json][timeout:25];relation(${trail.id});(._;>;);out geom;`;
+      const geoRes = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        body: 'data=' + encodeURIComponent(geoQuery)
+      });
       if (!geoRes.ok) throw new Error();
-      const geojson = await geoRes.json();
+      const geoData = await geoRes.json();
 
-      if (wmPolyline) wmLeafMap.removeLayer(wmPolyline);
-      wmPolyline = L.geoJSON(geojson, {
-        style: { color: '#c1440e', weight: 3, opacity: 0.85 }
-      }).addTo(wmLeafMap);
-      wmLeafMap.fitBounds(wmPolyline.getBounds(), { padding: [20, 20] });
+      /* Convertir les ways en GeoJSON */
+      const features = [];
+      (geoData.elements || []).forEach(el => {
+        if (el.type === 'way' && el.geometry) {
+          features.push({
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: el.geometry.map(p => [p.lon, p.lat])
+            }
+          });
+        }
+      });
+
+      if (features.length > 0) {
+        if (wmPolyline) wmLeafMap.removeLayer(wmPolyline);
+        wmPolyline = L.geoJSON({ type: 'FeatureCollection', features }, {
+          style: { color: '#c1440e', weight: 3, opacity: 0.85 }
+        }).addTo(wmLeafMap);
+        wmLeafMap.fitBounds(wmPolyline.getBounds(), { padding: [20, 20] });
+      } else if (trail.bbox) {
+        const b = trail.bbox;
+        wmLeafMap.fitBounds([[b.minlat, b.minlon],[b.maxlat, b.maxlon]], { padding:[20,20] });
+      }
     } catch(e) {
-      /* Si pas de géométrie dispo, centrer sur bbox */
       if (trail.bbox) {
         try {
           const b = trail.bbox;
