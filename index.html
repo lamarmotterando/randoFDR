@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Création de fiches randonnée avec météo, GPX, covoiturage et export PDF">
+<meta name="theme-color" content="#c1440e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="La Marmotte">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Feuille de route - La Marmotte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+<header class="app-header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <span class="logo-icon">🥾</span>
+      <div>
+        <h1 style="font-family:Arial,Helvetica,sans-serif">Feuille de route - La Marmotte</h1>
+        <div class="tagline">Préparez vos randonnées bibi_1503_1155</div>
+      </div>
+    </div>
+    <a href="carteRandos.html" class="btn-carte-header" title="Carte des randonnées">🗺 Carte</a>
+    <button class="btn-carte-header" id="btnWaymarked" title="Chercher une randonnée sur Waymarked Trails" style="background:#e8f5e9;border-color:#81c784;color:#2e7d32">
+  🔍 Rando
+</button>
+    <button class="btn-reset-header" id="btnReset" title="Réinitialiser le formulaire">🔄 Reset</button>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu">☰</button>
+  </div>
+</header>
+
+<nav class="app-nav" id="appNav">
+  <ul>
+    <li><a href="#infos">📋 Infos</a></li>
+    <li><a href="#meteo">🌤 Météo</a></li>
+    <li><a href="#covoit">🚗 Covoit</a></li>
+    <li><a href="#parking">🅿️ Parking</a></li>
+    <li><a href="#couts">💶 Coûts</a></li>
+    <li><a href="#gpx">🗺 GPX</a></li>
+    <li><a href="#profil">📈 Profil</a></li>
+    <li><a href="#section-remarques">📝 Notes</a></li>
+    <li><a href="#resume">📄 Résumé</a></li>
+    <li><a href="#envoi">✉️ Envoi</a></li>
+  </ul>
+</nav>
+</div>
+
+<main class="app-main">
+
+  <!-- 1. INFORMATIONS GÉNÉRALES -->
+  <section class="card" id="infos">
+    <div class="card-header">
+      <div class="section-icon" style="background:#e8f5e9">📋</div>
+      <h2>Informations générales</h2>
+    </div>
+    <div class="form-group">
+      <label>Rechercher une randonnée</label>
+      <div class="search-rando">
+        <input id="rechercheRando" type="text" placeholder="Tapez quelques lettres…" autocomplete="off">
+        <div id="suggestions"></div>
+      </div>
+      <select id="rando"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nom de la randonnée</label>
+        <input id="nomRando" placeholder="Nom de la randonnée">
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="dateRando">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Animateur·trice</label>
+      <select id="animateur"></select>
+      <input id="nouvelAnimateur" placeholder="Nom animateur" style="display:none;margin-top:8px">
+    </div>
+  </section>
+
+  <!-- 2. COVOITURAGE -->
+  <section class="card" id="covoit">
+    <div class="card-header">
+      <div class="section-icon" style="background:#fff3e0">🚗</div>
+      <h2>Covoiturage</h2>
+    </div>
+    <div class="form-group">
+      <label>Parking covoiturage</label>
+      <select id="parkingCovoiturage"></select>
+      <input id="nouveauParking" placeholder="Saisir le nom du parking" class="input-autre">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Heure de rendez-vous</label>
+        <input type="time" id="heureRV">
+      </div>
+      <div class="form-group">
+        <label>Heure de départ</label>
+        <div style="padding:10px 14px;background:var(--fog);border-radius:var(--radius-sm);font-weight:700;color:var(--forest);min-height:42px">
+          <span id="heureDepart">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Trajet suggéré</label>
+      <textarea id="itineraire" placeholder="Décrivez l'itinéraire de covoiturage…"></textarea>
+    </div>
+  </section>
+
+  <!-- 3. PARKING RANDO -->
+  <section class="card" id="parking">
+    <div class="card-header">
+      <div class="section-icon" style="background:#f3e5f5">🅿️</div>
+      <h2>Parking départ randonnée</h2>
+    </div>
+    <div class="form-group">
+      <label>Rechercher un lieu</label>
+      <input id="lieuRecherche" placeholder="Rechercher un lieu, village, département. Le trajet n'est pas tjrs optimisé, modification Km A/R possible" style="background-image:none;font-size:14px;width:100%">
+      <button id="btnGeocoder" style="margin-top:8px;width:100%">🔍 Localiser</button>
+    </div>
+    <div id="map"></div>
+    <div class="stat-row" style="margin-top:14px">
+      <div class="stat-badge">
+        <div class="stat-label">Distance A/R</div>
+        <div class="stat-value" style="display:flex;align-items:center;gap:4px">
+          <input id="distanceAR" type="number" min="0" step="0.1" value="0"
+            style="width:70px;padding:2px 6px;font-size:inherit;font-weight:700;
+                   color:var(--forest,#2d6a4f);background:transparent;
+                   border:none;border-bottom:1.5px dashed var(--stone,#8a7560);
+                   text-align:right;outline:none;"
+            title="Modifiable manuellement"> km
+        </div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">Adresse</div>
+        <div style="font-size:12px;font-weight:500;color:var(--pine);margin-top:2px"><span id="parkingRandoAdresse">—</span></div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">GPS</div>
+        <div class="stat-value" style="font-size:13px"><span id="latParking">—</span>, <span id="lonParking">—</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. MÉTÉO -->
+  <section class="card" id="meteo">
+    <div class="card-header">
+      <div class="section-icon" style="background:#e3f2fd">🌤</div>
+      <h2>Météo prévue</h2>
+    </div>
+    <div id="meteoRando">
+      <p>☀️ État<br><span id="meteoEtat">—</span></p>
+      <p>🌡 Température<br><span id="meteoTemp">—</span></p>
+      <p>🌧 Pluie<br><span id="meteoPluie">—</span></p>
+      <p>🧭 Vent<br><span id="meteoVent">—</span></p>
+      <p>💨 Rafales<br><span id="meteoRafales">—</span></p>
+    </div>
+  </section>
+
+  <!-- 5. COÛTS -->
+  <section class="card" id="couts">
+    <div class="card-header">
+      <div class="section-icon" style="background:#fce4ec">💶</div>
+      <h2>Coût du trajet</h2>
+    </div>
+    <div class="form-group">
+      <label>Autoroute (€)</label>
+      <input type="number" id="autoroute" value="0" min="0" step="0.5">
+    </div>
+    <div class="cout-grid">
+      <div class="cout-item">
+        <div class="cout-label">Coût km</div>
+        <div class="cout-value"><span id="coutKm">0.00 €</span></div>
+      </div>
+      <div class="cout-item">
+        <div class="cout-label">Total trajet</div>
+        <div class="cout-value"><span id="coutTotal">0.00 €</span></div>
+      </div>
+      <div class="cout-item">
+        <div class="cout-label">Par 4 (covoit)</div>
+        <div class="cout-value"><span id="cout4">0.00 €</span></div>
+      </div>
+      <div class="cout-item">
+        <div class="cout-label">Par 5 (covoit)</div>
+        <div class="cout-value"><span id="cout5">0.00 €</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. GPX -->
+  <section class="card" id="gpx">
+    <div class="card-header">
+      <div class="section-icon" style="background:#e8f5e9">🗺</div>
+      <h2>Analyse GPX</h2>
+    </div>
+    <div class="gpx-drop-zone" id="gpxDropZone">
+      <div class="drop-icon">📂</div>
+      <div class="drop-text">Glissez votre fichier GPX ici</div>
+      <div class="drop-sub">ou cliquez pour sélectionner (.gpx)</div>
+      <input type="file" id="gpxFile" accept=".gpx">
+    </div>
+    <div id="gpx-status"></div>
+
+    <p id="gpx-manuel-hint" style="font-size:12px;color:var(--stone);margin:8px 0 4px;font-style:italic">
+      Sans fichier GPX, saisissez les valeurs manuellement ci-dessous :
+    </p>
+
+    <div class="stat-row">
+      <div class="stat-badge">
+        <div class="stat-label">Distance (km)</div>
+        <div class="stat-value stat-editable">
+          <span id="distanceGPX" class="stat-span">—</span>
+          <input id="distanceGPX_manuel" type="number" min="0" step="0.1"
+            class="stat-input" placeholder="ex: 12.5" style="display:none">
+        </div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">Dénivelé + (m)</div>
+        <div class="stat-value stat-editable">
+          <span id="denivele" class="stat-span">—</span>
+          <input id="denivele_manuel" type="number" min="0" step="1"
+            class="stat-input" placeholder="ex: 450" style="display:none">
+        </div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">Durée marche</div>
+        <div class="stat-value stat-editable">
+          <span id="dureeMarche" class="stat-span">—</span>
+          <input id="dureeMarche_manuel" type="text"
+            class="stat-input" placeholder="ex: 3h30" style="display:none">
+        </div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">IBP</div>
+        <div class="stat-value"><span id="ibp">—</span></div>
+      </div>
+      <div class="stat-badge">
+        <div class="stat-label">Effort (1–5)</div>
+        <div class="stat-value stat-editable">
+          <span id="effort" class="stat-span">—</span>
+          <input id="effort_manuel" type="number" min="1" max="5" step="1"
+            class="stat-input" placeholder="1–5" style="display:none">
+        </div>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:14px">
+      <div class="form-group">
+        <label>Technicité (1–5)</label>
+        <input id="technicite" type="number" min="1" max="5" placeholder="1 à 5">
+        <div id="erreur-technicite" class="erreur-champ" style="display:none">⚠️ Valeur entre 1 et 5 uniquement</div>
+      </div>
+      <div class="form-group">
+        <label>Risque (1–5)</label>
+        <input id="risque" type="number" min="1" max="5" placeholder="1 à 5">
+        <div id="erreur-risque" class="erreur-champ" style="display:none">⚠️ Valeur entre 1 et 5 uniquement</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. PROFIL ALTIMÉTRIQUE -->
+  <section class="card" id="profil">
+    <div class="card-header">
+      <div class="section-icon" style="background:#e8eaf6">📈</div>
+      <h2>Profil altimétrique</h2>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Heure départ marche</label>
+        <input type="time" id="heureDepartMarche">
+      </div>
+      <div class="form-group">
+        <label>Vitesse moyenne (km/h)</label>
+        <input type="number" id="vitesse" value="4" min="1" max="10" step="0.5">
+      </div>
+    </div>
+    <div id="dureeMarcheSim"></div>
+    <div id="heureArriveeSim"></div>
+    <div class="profil-container">
+      <canvas id="profilAltitude"></canvas>
+    </div>
+  </section>
+
+  <!-- 8. REMARQUES -->
+  <section class="card" id="section-remarques">
+    <div class="card-header">
+      <div class="section-icon" style="background:#fff8e1">📝</div>
+      <h2>Remarques</h2>
+    </div>
+    <textarea id="remarques" placeholder="Particularités du parcours, points d'attention, équipements conseillés…" style="min-height:110px"></textarea>
+  </section>
+
+  <!-- 9. RÉSUMÉ -->
+  <section class="card" id="resume">
+    <div class="card-header">
+      <div class="section-icon" style="background:#e0f7fa">📄</div>
+      <h2>Résumé</h2>
+    </div>
+    <div class="btn-row">
+      <button id="btnResume">✨ Générer le résumé</button>
+    </div>
+    <pre id="resumeRando"></pre>
+  </section>
+
+  <!-- 10. EXPORT PDF & ENVOI -->
+  <section class="card" id="envoi">
+    <div class="card-header">
+      <div class="section-icon" style="background:#fce4ec">✉️</div>
+      <h2>Envoi (fichiers txt et profil)</h2>
+    </div>
+    <div class="form-group">
+      <label>Email pour copie</label>
+      <input type="email" id="emailUser" placeholder="votre@email.com">
+    </div>
+    <button type="button" id="btnEnvoyer">✉️ Envoyer</button>
+  </section>
+
+</main>
+
+<script type="module" src="js/app.js"></script>
+
+<script>
+/* Hamburger */
+const navToggle = document.getElementById('navToggle');
+const appNav    = document.getElementById('appNav');
+
+function ajusterPaddingMain() {
+  const topbar = document.getElementById('topbar');
+  const main   = document.querySelector('.app-main');
+  if (topbar && main) main.style.paddingTop = topbar.offsetHeight + 16 + 'px';
+}
+
+navToggle.addEventListener('click', () => {
+  appNav.classList.toggle('open');
+  navToggle.textContent = appNav.classList.contains('open') ? '✕' : '☰';
+  setTimeout(ajusterPaddingMain, 360);
+});
+document.querySelectorAll('.app-nav a').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    appNav.classList.remove('open');
+    navToggle.textContent = '☰';
+    setTimeout(ajusterPaddingMain, 360);
+
+    const targetId = link.getAttribute('href').replace('#', '');
+    const target   = document.getElementById(targetId);
+    if (!target) return;
+
+    const topbarH  = document.getElementById('topbar').offsetHeight;
+    const offsetY  = target.getBoundingClientRect().top + window.scrollY - topbarH - 12;
+    window.scrollTo({ top: offsetY, behavior: 'smooth' });
+  });
+});
+
+window.addEventListener('load',   ajusterPaddingMain);
+window.addEventListener('resize', ajusterPaddingMain);
+ajusterPaddingMain();
+
+/* Drag & drop GPX */
+const dropZone = document.getElementById('gpxDropZone');
+if (dropZone) {
+  ['dragenter','dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.style.borderColor='var(--sage)'; }));
+  ['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.style.borderColor=''; }));
+  dropZone.addEventListener('drop', ev => {
+    const file = ev.dataTransfer.files[0];
+    if (file && file.name.endsWith('.gpx')) {
+      const input = document.getElementById('gpxFile');
+      const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    }
+  });
+}
+
+/* Validation technicité et risque */
+function validerIntervalle(inputId, erreurId) {
+  const input  = document.getElementById(inputId);
+  const erreur = document.getElementById(erreurId);
+  input.addEventListener('input', () => {
+    const val = parseFloat(input.value);
+    if (input.value !== '' && (isNaN(val) || val < 1 || val > 5)) {
+      erreur.style.display = 'block';
+      input.style.borderColor = 'var(--sunset, #e76f51)';
+    } else {
+      erreur.style.display = 'none';
+      input.style.borderColor = '';
+    }
+  });
+}
+validerIntervalle('technicite', 'erreur-technicite');
+validerIntervalle('risque',     'erreur-risque');
+
+/* Enregistrement Service Worker PWA — uniquement sur GitHub Pages */
+if ('serviceWorker' in navigator && location.hostname === 'dbizcyber.github.io') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/randoFDR/sw.js')
+      .then(reg => console.log('[PWA] Service Worker enregistré:', reg.scope))
+      .catch(err => console.warn('[PWA] Erreur SW:', err));
+  });
+}
+
+/* ══ RESET FORMULAIRE (sans rechargement) ══ */
+function resetFormulaire() {
+
+  /* 1. Vider localStorage */
+  localStorage.removeItem('randoFDR_form');
+
+  /* 2. Inputs / selects / textareas */
+  ['rechercheRando','nomRando','dateRando','animateur',
+   'parkingCovoiturage','nouveauParking','heureRV','itineraire',
+   'autoroute','technicite','risque','remarques',
+   'heureDepartMarche','vitesse','emailUser',
+   'distanceGPX_manuel','denivele_manuel','dureeMarche_manuel','effort_manuel',
+   'lieuRecherche'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = id === 'autoroute' ? '0' : id === 'vitesse' ? '4' : '';
+  });
+
+  /* 3. Spans → — */
+  ['meteoEtat','meteoTemp','meteoPluie','meteoVent','meteoRafales',
+   'parkingRandoAdresse','ibp','effort','heureDepart',
+   'distanceGPX','denivele','dureeMarche'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
+  });
+
+  /* 4. Coûts → 0.00 € */
+  ['coutKm','coutTotal','cout4','cout5'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '0.00 €';
+  });
+
+  /* 5. distanceAR (input) → 0 */
+  const distAR = document.getElementById('distanceAR');
+  if (distAR) {
+    if (distAR.tagName === 'INPUT') { distAR.value = '0'; distAR.dataset.manuel = ''; }
+    else distAR.textContent = '0';
+  }
+
+  /* 6. latParking / lonParking */
+  const latEl = document.getElementById('latParking');
+  if (latEl) { latEl.textContent = '—'; latEl.dataset.userSet = ''; }
+  const lonEl = document.getElementById('lonParking');
+  if (lonEl) lonEl.textContent = '—';
+
+  /* 7. Zones texte résumé + simulations */
+  ['resumeRando','dureeMarcheSim','heureArriveeSim','gpx-status'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  });
+
+  /* 8. Masquer nouveauParking */
+  const champAutre = document.getElementById('nouveauParking');
+  if (champAutre) { champAutre.style.display = 'none'; champAutre.value = ''; }
+
+  /* 9. Réinitialiser saisie manuelle GPX */
+  if (window._initGPXManuel) {
+    window._initGPXManuel();
+  } else {
+    ['distanceGPX_manuel','denivele_manuel','dureeMarche_manuel','effort_manuel'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.value = ''; el.style.display = 'block'; }
+    });
+    ['distanceGPX','denivele','dureeMarche','effort'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
+
+  /* 10. Vider GPX + variables globales */
+  const gpxFile = document.getElementById('gpxFile');
+  if (gpxFile) gpxFile.value = '';
+  window.profilExportBase64 = null;
+  window.coordsParking      = '';
+  window.gpxImporte         = false;
+
+  /* 11. Détruire le graphique Chart.js */
+  if (window.chartProfil) { window.chartProfil.destroy(); window.chartProfil = null; }
+
+  /* 12. Réinitialiser la carte Leaflet */
+  if (window._resetCarte) window._resetCarte();
+
+  /* 13. Date du jour */
+  const dateInput = document.getElementById('dateRando');
+  if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+
+  /* 14. Indicateurs visuels */
+  window._majIndicateurs && window._majIndicateurs();
+
+  /* 15. Scroller en haut */
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  console.log('[Reset] Formulaire réinitialisé');
+}
+
+/* Bouton Reset */
+document.getElementById('btnReset')?.addEventListener('click', () => {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(44,26,14,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:white;border-radius:16px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.25);font-family:Outfit,Arial,sans-serif;text-align:center';
+
+  box.innerHTML = `
+    <div style="font-size:36px;margin-bottom:12px">🔄</div>
+    <div style="font-size:17px;font-weight:700;color:#c1440e;margin-bottom:10px">Réinitialiser tout le formulaire ?</div>
+    <div style="font-size:14px;color:#2c1a0e;margin-bottom:24px">Toutes les données saisies seront effacées.</div>
+    <div style="display:flex;gap:10px">
+      <button id="resetAnnuler"   style="flex:1;padding:11px;background:#f5ead8;color:#2c1a0e;border:1.5px solid #e8d8c4;border-radius:8px;font-size:14px;font-weight:600;font-family:Outfit,Arial,sans-serif;cursor:pointer;margin-top:0;box-shadow:none;transform:none">Annuler</button>
+      <button id="resetConfirmer" style="flex:1;padding:11px;background:linear-gradient(135deg,#c1440e,#f49d37);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;font-family:Outfit,Arial,sans-serif;cursor:pointer;margin-top:0;box-shadow:none;transform:none">Oui, effacer</button>
+    </div>
+  `;
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  box.querySelector('#resetAnnuler').addEventListener('click', () => overlay.remove());
+  box.querySelector('#resetConfirmer').addEventListener('click', () => {
+    overlay.remove();
+    resetFormulaire();
+  });
+});
+
+/* ══ RECHERCHE RANDO → NOM RANDO ══ */
+(function() {
+  var inputR = document.getElementById('rechercheRando');
+  var nomR   = document.getElementById('nomRando');
+  if (!inputR || !nomR) return;
+  inputR.addEventListener('input', function() {
+    nomR.value = inputR.value;
+    window._majIndicateurs && window._majIndicateurs();
+  });
+})();
+
+/* ══ DISTANCE A/R MANUELLE → RECALCUL COUTS ══ */
+(function() {
+  var elAR = document.getElementById('distanceAR');
+  if (!elAR) return;
+  elAR.addEventListener('input', function() {
+    elAR.dataset.manuel = '1';
+    if (window._calculCovoiturage) window._calculCovoiturage();
+  });
+  elAR.addEventListener('change', function() {
+    if (!elAR.value || parseFloat(elAR.value) === 0) elAR.dataset.manuel = '';
+  });
+})();
+
+/* Pré-remplissage depuis l'historique (#fiche=...) */
+(function() {
+  const hash = window.location.hash;
+  if (!hash.startsWith("#fiche=")) return;
+  const encoded = hash.replace("#fiche=", "");
+  window.history.replaceState({}, "", window.location.pathname);
+  try {
+    const f = JSON.parse(decodeURIComponent(atob(encoded)));
+    window.addEventListener("load", () => setTimeout(() => {
+      const set    = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+      const setTxt = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
+      set("nomRando",           f.nomRando);
+      set("technicite",         f.technicite);
+      set("risque",             f.risque);
+      set("remarques",          f.remarques);
+      set("heureRV",            f.heureRV);
+      const selAnim = document.getElementById("animateur");
+      if (selAnim && f.animateur) { selAnim.value = f.animateur; selAnim.dispatchEvent(new Event("change")); }
+      const selPark = document.getElementById("parkingCovoiturage");
+      if (selPark && f.parkingCovoit) { selPark.value = f.parkingCovoit; selPark.dispatchEvent(new Event("change")); }
+      set("distanceGPX_manuel", f.distance);
+      set("denivele_manuel",    f.denivele);
+      set("dureeMarche_manuel", f.duree);
+      set("effort_manuel",      f.effort);
+      setTxt("distanceGPX", f.distance);
+      setTxt("denivele",    f.denivele);
+      setTxt("dureeMarche", f.duree);
+      setTxt("effort",      f.effort);
+      window._majIndicateurs && window._majIndicateurs();
+    }, 800));
+  } catch(e) { console.warn("Erreur lecture fiche:", e); }
+})();
+
+window.addEventListener("message", (e) => {
+  if (!e.data || e.data.type !== "chargerFiche") return;
+  const f = e.data.payload;
+  if (!f) return;
+  const remplir = () => {
+    const set    = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.textContent = val; };
+    set("nomRando",           f.nomRando);
+    set("heureRV",            f.heureRV);
+    set("technicite",         f.technicite);
+    set("risque",             f.risque);
+    set("remarques",          f.remarques);
+    const selAnim = document.getElementById("animateur");
+    if (selAnim && f.animateur) { selAnim.value = f.animateur; selAnim.dispatchEvent(new Event("change")); }
+    const selPark = document.getElementById("parkingCovoiturage");
+    if (selPark && f.parkingCovoit) { selPark.value = f.parkingCovoit; selPark.dispatchEvent(new Event("change")); }
+    set("distanceGPX_manuel", f.distance);
+    set("denivele_manuel",    f.denivele);
+    set("dureeMarche_manuel", f.duree);
+    set("effort_manuel",      f.effort);
+    setTxt("distanceGPX",     f.distance);
+    setTxt("denivele",        f.denivele);
+    setTxt("dureeMarche",     f.duree);
+    setTxt("effort",          f.effort);
+    window._majIndicateurs && window._majIndicateurs();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    console.log("[postMessage] Fiche chargée ✅", f.nomRando);
+  };
+  if (window._majIndicateurs) { remplir(); } else { setTimeout(remplir, 800); }
+});
+
+/* Active nav au scroll */
+const sections = document.querySelectorAll('.card[id]');
+const navLinks  = document.querySelectorAll('.app-nav a');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const a = document.querySelector(`.app-nav a[href="#${e.target.id}"]`);
+      if (a) a.classList.add('active');
+    }
+  });
+}, { threshold:0.3 });
+sections.forEach(s => obs.observe(s));
+</script>
+
+<!-- Modale Waymarked Trails -->
+<div id="wmModal" style="display:none;position:fixed;inset:0;background:rgba(44,26,14,0.6);z-index:9998;align-items:center;justify-content:center;padding:12px">
+  <div id="wmBox" style="background:#fff;border-radius:16px;width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.28);font-family:Outfit,Arial,sans-serif">
+
+    <!-- En-tête modale -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e8d8c4;background:#f5ead8;border-radius:16px 16px 0 0;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🔍</span>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#2c1a0e">Importer depuis Waymarked Trails</div>
+          <div style="font-size:11px;color:#7a6652">Données OpenStreetMap · Gratuit · Sans clé API</div>
+        </div>
+      </div>
+      <button id="wmClose" style="background:none;border:none;font-size:22px;cursor:pointer;color:#7a6652;line-height:1;padding:4px;margin:0;box-shadow:none;transform:none">✕</button>
+    </div>
+
+    <!-- Corps modale : 2 colonnes -->
+    <div style="display:flex;flex:1;min-height:0;overflow:hidden">
+
+      <!-- Colonne gauche : recherche + résultats -->
+      <div style="flex:0 0 320px;display:flex;flex-direction:column;border-right:1px solid #e8d8c4;overflow:hidden">
+
+        <!-- Barre de recherche -->
+        <div style="padding:12px 14px;border-bottom:1px solid #f0e4d0;flex-shrink:0">
+          <div style="display:flex;gap:6px">
+            <input id="wmInput" type="text" placeholder="Ex : Luberon, Sainte-Victoire…"
+              style="flex:1;padding:9px 12px;border:1.5px solid #d4c4b0;border-radius:8px;font-size:13px;font-family:Outfit,Arial,sans-serif;outline:none;color:#2c1a0e">
+            <button id="wmSearch" style="background:#2e7d32;color:#fff;border:none;border-radius:8px;padding:0 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:Outfit,Arial,sans-serif;white-space:nowrap;margin:0;box-shadow:none;transform:none">
+              Chercher
+            </button>
+          </div>
+          <div id="wmError" style="display:none;margin-top:7px;padding:7px 10px;background:#fff3e0;border-radius:6px;font-size:12px;color:#c1440e"></div>
+        </div>
+
+        <!-- Liste résultats -->
+        <div id="wmResults" style="flex:1;overflow-y:auto;padding:10px 10px 10px"></div>
+      </div>
+
+      <!-- Colonne droite : carte + fiche -->
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden">
+
+        <!-- Carte Leaflet embarquée -->
+        <div id="wmMap" style="flex:1;min-height:220px;background:#e8f0e4;position:relative">
+          <div id="wmMapPlaceholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#7a6652">
+            <span style="font-size:32px">🗺</span>
+            <span style="font-size:13px">Sélectionnez une randonnée</span>
+          </div>
+        </div>
+
+        <!-- Fiche pré-remplie -->
+        <div id="wmFiche" style="display:none;padding:14px 16px;border-top:1px solid #e8d8c4;flex-shrink:0;background:#fafaf8">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#7a6652;margin-bottom:10px;font-weight:600">Champs à injecter dans le formulaire</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+            <div class="wm-badge">
+              <div class="wm-label">Nom</div>
+              <div class="wm-val" id="wmFNom">—</div>
+            </div>
+            <div class="wm-badge">
+              <div class="wm-label">Distance</div>
+              <div class="wm-val" id="wmFDist">—</div>
+            </div>
+            <div class="wm-badge">
+              <div class="wm-label">Dénivelé +</div>
+              <div class="wm-val" id="wmFElev">—</div>
+            </div>
+          </div>
+          <button id="wmInject" style="width:100%;padding:11px;background:linear-gradient(135deg,#2e7d32,#66bb6a);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:Outfit,Arial,sans-serif;margin:0;box-shadow:none;transform:none">
+            ↙ Injecter dans le formulaire FDR
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.wm-card {
+  background:#fff;border:1.5px solid #e8d8c4;border-radius:10px;
+  padding:10px 12px;margin-bottom:7px;cursor:pointer;transition:all .15s;
+}
+.wm-card:hover { border-color:#81c784;background:#f1f8e9; }
+.wm-card.selected { border-color:#2e7d32;background:#e8f5e9; }
+.wm-card-name { font-size:13px;font-weight:700;color:#2c1a0e;margin-bottom:3px }
+.wm-card-loc  { font-size:11px;color:#7a6652;margin-bottom:7px }
+.wm-pills     { display:flex;gap:5px;flex-wrap:wrap }
+.wm-pill      { font-size:11px;border-radius:20px;padding:1px 8px;font-weight:600 }
+.wm-pill-dist { background:#e8f5e9;color:#2e7d32 }
+.wm-pill-elev { background:#fff3e0;color:#e65100 }
+.wm-pill-type { background:#f5f5f5;color:#555 }
+.wm-badge     { background:#f5ead8;border-radius:8px;padding:7px 10px }
+.wm-label     { font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#7a6652;margin-bottom:2px }
+.wm-val       { font-size:13px;font-weight:700;color:#2c1a0e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+#wmInput:focus { border-color:#2e7d32;box-shadow:0 0 0 3px rgba(46,125,50,.12) }
+#wmResults::-webkit-scrollbar { width:4px }
+#wmResults::-webkit-scrollbar-thumb { background:#d4c4b0;border-radius:2px }
+</style>
+
+<script>
+(function() {
+  /* ── Refs ── */
+  const btnOpen  = document.getElementById('btnWaymarked');
+  const modal    = document.getElementById('wmModal');
+  const btnClose = document.getElementById('wmClose');
+  const input    = document.getElementById('wmInput');
+  const btnSrch  = document.getElementById('wmSearch');
+  const results  = document.getElementById('wmResults');
+  const errBox   = document.getElementById('wmError');
+  const fiche    = document.getElementById('wmFiche');
+  const placeholder = document.getElementById('wmMapPlaceholder');
+
+  let wmLeafMap  = null;   /* instance Leaflet locale à la modale */
+  let wmPolyline = null;
+  let selectedTrail = null;
+
+  /* ── Ouvrir / fermer ── */
+  btnOpen.addEventListener('click', () => {
+    modal.style.display = 'flex';
+    setTimeout(() => { if (!wmLeafMap) initWmMap(); input.focus(); }, 80);
+  });
+  btnClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  function closeModal() { modal.style.display = 'none'; }
+
+  /* ── Initialiser la carte Leaflet de la modale ── */
+  function initWmMap() {
+    wmLeafMap = L.map('wmMap', { zoomControl: true, attributionControl: false })
+      .setView([43.85, 5.2], 9);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 17,
+      attribution: '© OSM'
+    }).addTo(wmLeafMap);
+
+    /* Overlay tracés Waymarked Trails */
+    L.tileLayer('https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png', {
+      maxZoom: 17, opacity: 0.8
+    }).addTo(wmLeafMap);
+  }
+
+  /* ── Recherche Waymarked Trails ── */
+  async function doSearch() {
+    const q = input.value.trim();
+    if (!q) return;
+    results.innerHTML = '<div style="padding:20px;text-align:center;color:#7a6652;font-size:13px">🔍 Recherche en cours…</div>';
+    errBox.style.display = 'none';
+    fiche.style.display  = 'none';
+    selectedTrail = null;
+
+    try {
+      const url = `https://hiking.waymarkedtrails.org/api/v1/search?query=${encodeURIComponent(q)}&lang=fr&limit=8`;
+      const res  = await fetch(url);
+      if (!res.ok) throw new Error('Erreur réseau');
+      const data = await res.json();
+      const list = data.results || [];
+
+      if (!list.length) {
+        results.innerHTML = '<div style="padding:20px;text-align:center;color:#7a6652;font-size:13px">Aucun résultat — essayez un autre nom</div>';
+        return;
+      }
+
+      results.innerHTML = '';
+      list.forEach(trail => {
+        const card = document.createElement('div');
+        card.className = 'wm-card';
+
+        const distKm = trail.length ? (trail.length / 1000).toFixed(1) : null;
+        const elev   = trail.ascent  ? Math.round(trail.ascent)         : null;
+        const type   = trail.route   || '';
+
+        card.innerHTML = `
+          <div class="wm-card-name">${trail.name || '—'}</div>
+          <div class="wm-card-loc">${trail.locname || trail.ref || ''}</div>
+          <div class="wm-pills">
+            ${distKm ? `<span class="wm-pill wm-pill-dist">📏 ${distKm} km</span>` : ''}
+            ${elev   ? `<span class="wm-pill wm-pill-elev">⛰ ${elev} m D+</span>` : ''}
+            ${type   ? `<span class="wm-pill wm-pill-type">${type}</span>`          : ''}
+          </div>`;
+
+        card.addEventListener('click', () => selectTrail(card, trail, distKm, elev));
+        results.appendChild(card);
+      });
+    } catch(e) {
+      errBox.textContent = 'Impossible de contacter Waymarked Trails. Vérifiez votre connexion.';
+      errBox.style.display = 'block';
+      results.innerHTML = '';
+    }
+  }
+
+  /* ── Sélectionner un trail ── */
+  async function selectTrail(card, trail, distKm, elev) {
+    document.querySelectorAll('.wm-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedTrail = { trail, distKm, elev };
+
+    /* Afficher la fiche */
+    document.getElementById('wmFNom').textContent  = trail.name || '—';
+    document.getElementById('wmFDist').textContent = distKm ? `${distKm} km` : '—';
+    document.getElementById('wmFElev').textContent = elev   ? `${elev} m`    : '—';
+    fiche.style.display = 'block';
+
+    /* Charger la géométrie et afficher sur la carte */
+    placeholder.style.display = 'none';
+    try {
+      const geoUrl = `https://hiking.waymarkedtrails.org/api/v1/details/relation/${trail.id}/geometry/geojson`;
+      const geoRes = await fetch(geoUrl);
+      if (!geoRes.ok) throw new Error();
+      const geojson = await geoRes.json();
+
+      if (wmPolyline) wmLeafMap.removeLayer(wmPolyline);
+      wmPolyline = L.geoJSON(geojson, {
+        style: { color: '#c1440e', weight: 3, opacity: 0.85 }
+      }).addTo(wmLeafMap);
+      wmLeafMap.fitBounds(wmPolyline.getBounds(), { padding: [20, 20] });
+    } catch(e) {
+      /* Si pas de géométrie dispo, centrer sur bbox */
+      if (trail.bbox) {
+        try {
+          const b = trail.bbox;
+          wmLeafMap.fitBounds([[b.minlat, b.minlon],[b.maxlat, b.maxlon]], { padding:[20,20] });
+        } catch(_) {}
+      }
+    }
+  }
+
+  /* ── Injecter dans le formulaire ── */
+  document.getElementById('wmInject').addEventListener('click', () => {
+    if (!selectedTrail) return;
+    const { trail, distKm, elev } = selectedTrail;
+
+    /* Nom */
+    const nomEl = document.getElementById('nomRando');
+    if (nomEl) { nomEl.value = trail.name || ''; }
+    const rechEl = document.getElementById('rechercheRando');
+    if (rechEl) { rechEl.value = trail.name || ''; }
+
+    /* Distance GPX manuel */
+    const distEl = document.getElementById('distanceGPX_manuel');
+    if (distEl && distKm) { distEl.value = distKm; distEl.style.display = 'block'; }
+    const distSpan = document.getElementById('distanceGPX');
+    if (distSpan && distKm) { distSpan.textContent = distKm; }
+
+    /* Dénivelé manuel */
+    const elevEl = document.getElementById('denivele_manuel');
+    if (elevEl && elev) { elevEl.value = elev; elevEl.style.display = 'block'; }
+    const elevSpan = document.getElementById('denivele');
+    if (elevSpan && elev) { elevSpan.textContent = elev; }
+
+    /* Recalculer IBP et indicateurs */
+    window._majIndicateurs && window._majIndicateurs();
+
+    /* Toast confirmation */
+    showToast(`✅ "${trail.name}" injecté dans le formulaire`);
+    closeModal();
+
+    /* Scroll vers section GPX */
+    const gpxSection = document.getElementById('gpx');
+    if (gpxSection) {
+      const topbarH = document.getElementById('topbar')?.offsetHeight || 0;
+      const offsetY = gpxSection.getBoundingClientRect().top + window.scrollY - topbarH - 12;
+      window.scrollTo({ top: offsetY, behavior: 'smooth' });
+    }
+  });
+
+  /* ── Touches ── */
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+  btnSrch.addEventListener('click', doSearch);
+
+  /* ── Toast ── */
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2e7d32;color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:600;font-family:Outfit,Arial,sans-serif;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.2);white-space:nowrap';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+})();
+</script>
+
+</body>
+</html>
