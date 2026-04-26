@@ -239,6 +239,7 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
           <th onclick="trier('distance')" class="col-stats">Km <span class="sort-icon" id="sort-distance"></span></th>
           <th onclick="trier('denivele')" class="col-stats">D+ <span class="sort-icon" id="sort-denivele"></span></th>
           <th onclick="trier('animateur')" class="col-anim">Animateur <span class="sort-icon" id="sort-animateur"></span></th>
+          <th onclick="trier('nb_participants')" class="col-stats">Participants <span class="sort-icon" id="sort-nb_participants"></span></th>
           <th>Statut</th>
         </tr>
       </thead>
@@ -275,7 +276,7 @@ let idEnCours = null;
 async function charger() {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque,lieu&order=date_rando.desc`,
+      `${SUPABASE_URL}/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque,lieu,nb_participants,noms_participants&order=date_rando.desc`,
       { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
     );
     toutes = await res.json();
@@ -397,6 +398,7 @@ function afficher() {
       <td class="td-num col-stats">${f.distance ? f.distance + " km" : "—"}</td>
       <td class="td-num col-stats">${f.denivele  ? f.denivele  + " m" : "—"}</td>
       <td class="td-anim col-anim">👤 ${f.animateur || "—"}</td>
+      <td class="td-num col-stats">${f.nb_participants ? f.nb_participants + " pers." : "—"}</td>
       <td>${badgeHtml}</td>
     </tr>`;
   }).join("");
@@ -639,6 +641,53 @@ function voirDetail(id) {
       </div>
     </div>
   </div>`;
+  }
+
+  /* ── Participants ── */
+  if (f.nb_participants || f.noms_participants) {
+    const dateRando = new Date(f.date_rando + "T12:00:00");
+    const estPassee = dateRando < new Date();
+    if (estPassee && f.statut !== "annulée") {
+
+      /* Construire la liste des noms avec avertissement si ? présent */
+      let listeHtml = "";
+      let nbInconnus = 0;
+      if (f.noms_participants) {
+        const lignes = f.noms_participants.split("\n").filter(l => l.trim());
+        nbInconnus = lignes.filter(l => l.includes("?")).length;
+        listeHtml = lignes.map(l => {
+          const inconnu = l.includes("?");
+          return `<div style="padding:3px 0;border-bottom:1px solid #f0e8dc;font-size:13px;${inconnu ? "color:var(--stone);font-style:italic;" : ""}">
+            ${inconnu ? "⚠️ " : ""}${l.trim()}
+          </div>`;
+        }).join("");
+      }
+
+      html += `
+  <div class="detail-section">
+    <div class="detail-section-titre">👥 Participants</div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">Nombre</div>
+        <div class="detail-value" style="font-size:20px;font-weight:700;color:var(--blue);">
+          ${f.nb_participants || "—"}
+        </div>
+      </div>
+      ${nbInconnus > 0 ? `
+      <div class="detail-item">
+        <div class="detail-label">Avertissement</div>
+        <div class="detail-value" style="color:#856404;font-size:12px;">
+          ⚠️ ${nbInconnus} participant${nbInconnus > 1 ? "s" : ""} sans nom identifié
+        </div>
+      </div>` : "<div class='detail-item'></div>"}
+      ${listeHtml ? `
+      <div class="detail-item span2" style="padding:0;">
+        <div class="detail-label" style="padding:8px 12px 4px;">Liste</div>
+        <div style="padding:0 12px 8px;">${listeHtml}</div>
+      </div>` : ""}
+    </div>
+  </div>`;
+    }
   }
 
   document.getElementById("modalContenu").innerHTML = html;
