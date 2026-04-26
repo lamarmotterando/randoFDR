@@ -435,11 +435,32 @@ function majStats() {
     });
   }
 
+  /* Calcul stats animateur AVANT d'écrire le HTML */
+  let aMoyKm = 0, aMoyDen = 0, aMoyIBP = 0;
+  if (animFiltré && aNb > 0) {
+    aMoyKm  = aKm  / aNb;
+    aMoyDen = aDen / aNb;
+    aMoyIBP = aNbIBP ? aIBP / aNbIBP : 0;
+  }
+
+  const animNom = animFiltré
+    ? (filtrées.find(r => (r.animateur || "").toLowerCase().includes(animFiltré))?.animateur || animFiltré)
+    : "";
+
   document.getElementById("statsText").innerHTML =
     `📊 <strong>${n}</strong> randonnée(s) affichée(s) sur ${toutes.length}<br>` +
+    `<span style="color:var(--stone);font-size:12px;">Club —</span> ` +
     `Moy. Distance : <strong>${moyKm.toFixed(1)} km</strong> · ` +
     `Moy. D+ : <strong>${moyDen.toFixed(0)} m</strong> · ` +
-    `Moy. IBP : <strong>${moyIBP.toFixed(0)}</strong>`;
+    `Moy. IBP : <strong>${moyIBP.toFixed(0)}</strong>` +
+    (animFiltré && aNb > 0
+      ? `<br><span style="color:var(--blue);font-size:12px;">👤 ${animNom} (${aNb} rando${aNb > 1 ? "s" : ""}) —</span> ` +
+        `Moy. Distance : <strong style="color:var(--blue);">${aMoyKm.toFixed(1)} km</strong> · ` +
+        `Moy. D+ : <strong style="color:var(--blue);">${aMoyDen.toFixed(0)} m</strong> · ` +
+        `Moy. IBP : <strong style="color:var(--blue);">${aMoyIBP.toFixed(0)}</strong>`
+      : animFiltré
+      ? `<br><span style="color:var(--stone);font-size:12px;">👤 Aucune randonnée trouvée pour ce filtre.</span>`
+      : "");
 
   /* Radar chart */
   const ctx = document.getElementById("radarCanvas");
@@ -460,9 +481,6 @@ function majStats() {
   }];
 
   if (aNb > 0) {
-    const aMoyKm  = aNb    ? aKm  / aNb    : 0;
-    const aMoyDen = aNb    ? aDen / aNb    : 0;
-    const aMoyIBP = aNbIBP ? aIBP / aNbIBP : 0;
     datasets.push({
       label: "Animateur",
       data: [
