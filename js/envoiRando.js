@@ -119,19 +119,25 @@ async function chercherFicheExistante(date_rando, animateur) {
       .split(/\s+/).filter(m => m.length > 2);
 
     const motsAnim = normaliser(animateur);
+    console.log("[Supabase] Recherche fiche — date:", date_rando, "| animateur FDR:", animateur, "| mots:", motsAnim);
+    console.log("[Supabase] Fiches trouvées ce jour:", rows.map(r => ({ id: r.id, animateur: r.animateur, ibp: r.ibp })));
 
     // 1) Match animateur
     let found = rows.find(r => {
       const mots = normaliser(r.animateur);
-      return motsAnim.some(m => mots.includes(m));
+      const match = motsAnim.some(m => mots.includes(m));
+      console.log("[Supabase] Comparaison animateur — fiche id:" + r.id, "| supabase:", r.animateur, "| mots:", mots, "| match:", match);
+      return match;
     });
 
     // 2) Fallback : seule fiche du jour sans ibp (= prévisionnelle sans FDR)
     if (!found) {
       const sansFDR = rows.filter(r => !r.ibp);
+      console.log("[Supabase] Fallback sans IBP:", sansFDR.map(r => r.id));
       if (sansFDR.length === 1) found = sansFDR[0];
     }
 
+    console.log("[Supabase] Fiche existante trouvée:", found ? found.id : "AUCUNE → POST");
     return found ? found.id : null;
   } catch(e) {
     console.warn("[Supabase] Erreur recherche fiche:", e.message);
