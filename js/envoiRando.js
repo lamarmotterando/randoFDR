@@ -146,6 +146,7 @@ async function chercherFicheExistante(date_rando, animateur) {
 }
 
 async function sauvegarderFiche(fiche) {
+  console.log("[Supabase] sauvegarderFiche appelée — date:", fiche.date_rando, "| animateur:", fiche.animateur);
   try {
     const idExistant = await chercherFicheExistante(fiche.date_rando, fiche.animateur);
 
