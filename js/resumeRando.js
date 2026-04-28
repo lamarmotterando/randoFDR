@@ -16,6 +16,8 @@ const pluie = txt("meteoPluie")
 const temp = txt("meteoTemp")
 const vent = txt("meteoVent")
 const raf = txt("meteoRafales")
+const fiabiliteEl = document.getElementById("meteoFiabilite")
+const fiabiliteTexte = fiabiliteEl?.textContent?.trim() || ""
 
 /* parking covoiturage : saisie manuelle si "Autre" sélectionné */
 const parkingCovoitVal = val("parkingCovoiturage", "Non renseigné")
@@ -67,7 +69,7 @@ Nom de la randonnée : ${nom}
 
 📆 Date de la randonnée : ${formatDate(date)}
 
-🌤️ Météo prévue le ${formatDate(date)} (fournie à titre indicatif par open-meteo.com): ${meteo}, ${pluie} ● ${temp} ● ${vent} ● ${raf}
+🌤️ Météo prévue le ${formatDate(date)} (Météo-France ARPEGE+AROME via Open-Meteo): ${meteo}, ${pluie} ● ${temp} ● ${vent} ● ${raf}${fiabiliteTexte ? "\n   ℹ️ Fiabilité : " + fiabiliteTexte : ""}
 
 🅿️ Parking Covoiturage : ${parkingCovoit}
 🕞 Heure de rendez-vous : ${rv}
