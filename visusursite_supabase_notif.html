@@ -339,17 +339,18 @@ async function remplirEmojiTableau(gpsStr, dateStr, tdCell) {
   const today    = new Date(); today.setHours(0,0,0,0);
   const diffDays = Math.round((target - today) / 86400000);
 
-  if (diffDays < 0 || diffDays > MAX_FORECAST_DAYS) {
+  /* Météo-France (ARPEGE+AROME) fiable jusqu'à J+7 */
+  if (diffDays < 0 || diffDays > 7) {
     tdCell.textContent = "";
     tdCell.classList.remove("loading");
     return;
   }
 
   const coords = parseGPS(gpsStr) || { lat: 43.9, lon: 5.4 };
-  const url = `https://api.open-meteo.com/v1/forecast`
+  const url = `https://api.open-meteo.com/v1/meteofrance`
     + `?latitude=${coords.lat}&longitude=${coords.lon}`
-    + `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,windspeed_10m_max`
-    + `&timezone=Europe%2FParis&start_date=${isoDate}&end_date=${isoDate}`;
+    + `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,windgusts_10m_max`
+    + `&timezone=Europe%2FParis&forecast_days=7`;
 
   try {
     const r = await fetch(url);
@@ -358,20 +359,32 @@ async function remplirEmojiTableau(gpsStr, dateStr, tdCell) {
     const d = data.daily;
     if (!d || !d.weathercode || !d.weathercode.length) throw new Error();
 
-    const code  = d.weathercode[0];
-    const tmax  = d.temperature_2m_max[0];
-    const tmin  = d.temperature_2m_min[0];
-    const pluie = d.precipitation_sum[0];
-    const prob  = d.precipitation_probability_max ? d.precipitation_probability_max[0] : null;
-    const vent  = d.windspeed_10m_max[0];
+    /* Trouver le bon index par date */
+    const idx = d.time ? d.time.indexOf(isoDate) : 0;
+    if (idx === -1) throw new Error();
+
+    const code  = d.weathercode[idx];
+    const tmax  = d.temperature_2m_max[idx];
+    const tmin  = d.temperature_2m_min[idx];
+    const prob  = d.precipitation_probability_max ? d.precipitation_probability_max[idx] : null;
+    const vent  = d.windspeed_10m_max[idx];
+    const raf   = d.windgusts_10m_max ? d.windgusts_10m_max[idx] : null;
     const [icon, label] = wmoInfo(code);
 
-    /* Tooltip avec tous les détails */
+    /* Fiabilité selon horizon */
+    const fiabilite = diffDays <= 2
+      ? "✅ AROME 1,3km"
+      : diffDays <= 4
+        ? `🟡 ARPEGE J+${diffDays}`
+        : `⚠️ indicatif J+${diffDays}`;
+
+    /* Tooltip complet */
     let tip = label;
     if (tmax !== null && tmin !== null) tip += ` · ${tmin}°→${tmax}°C`;
-    if (pluie !== null) tip += ` · 💧${pluie}mm`;
-    if (prob  !== null) tip += ` (${prob}%)`;
+    if (prob  !== null) tip += ` · 🌧${prob}%`;
     if (vent  !== null) tip += ` · 💨${vent}km/h`;
+    if (raf   !== null) tip += ` (raf. ${raf}km/h)`;
+    tip += ` · ${fiabilite}`;
     if (!parseGPS(gpsStr)) tip += " (région)";
 
     tdCell.textContent = icon;
