@@ -46,7 +46,7 @@ export async function afficherMeteo(lat, lon) {
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&models=meteofrance` +
     `&daily=weathercode,temperature_2m_max,temperature_2m_min,` +
-    `precipitation_probability_max,windspeed_10m_max,windgusts_10m_max` +
+    `precipitation_probability_max,windspeed_10m_max` +
     `&timezone=Europe%2FParis&forecast_days=7`;
 
   let data;
@@ -98,8 +98,8 @@ export async function afficherMeteo(lat, lon) {
   document.getElementById("meteoVent").textContent = `🧭 ${vent} km/h`;
 
   /* ── Rafales ── */
-  const raf = data.daily.windgusts_10m_max[i];
-  document.getElementById("meteoRafales").textContent = `💨 ${raf} km/h`;
+  const raf = null; // non dispo meteofrance
+  if (raf !== null) document.getElementById("meteoRafales").textContent = `💨 ${raf} km/h`; else document.getElementById("meteoRafales").textContent = "—";
 
   /* ── Bandeau fiabilité ── */
   _afficherFiabilite(diffJours);
