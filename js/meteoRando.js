@@ -46,7 +46,7 @@ export async function afficherMeteo(lat, lon) {
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&models=meteofrance` +
     `&daily=weathercode,temperature_2m_max,temperature_2m_min,` +
-    `precipitation_probability_max,windspeed_10m_max,windgusts_10m_max,winddirection_10m_dominant` +
+    `precipitation_probability_max,windspeed_10m_max,windgusts_10m_max` +
     `&timezone=Europe%2FParis&forecast_days=7`;
 
   let data;
@@ -95,9 +95,7 @@ export async function afficherMeteo(lat, lon) {
 
   /* ── Vent ── */
   const vent = data.daily.windspeed_10m_max[i];
-  const dir  = data.daily.winddirection_10m_dominant[i];
-  document.getElementById("meteoVent").textContent =
-    `🧭 ${directionVent(dir)} ${vent} km/h`;
+  document.getElementById("meteoVent").textContent = `🧭 ${vent} km/h`;
 
   /* ── Rafales ── */
   const raf = data.daily.windgusts_10m_max[i];
