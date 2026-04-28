@@ -463,32 +463,115 @@ function voirDetail(id) {
     f.ibp <= 75  ? "🟡 N3 — Peu Difficile" :
     f.ibp <= 100 ? "🔴 N4 — Assez Difficile" : "⚫ N5 — Difficile";
 
-  const lignes = [
-    f.statut === "annulée" ? "❌ RANDONNÉE ANNULÉE" : f.statut === "modifiée" ? "✏️ RANDONNÉE MODIFIÉE" : "",
-    "═══════════════════════════════════",
-    `📅 Date        : ${f.date_rando ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", {weekday:"long",day:"2-digit",month:"long",year:"numeric"}) : "—"}`,
-    `👤 Animateur   : ${f.animateur || "—"}`,
-    `⏰ RV          : ${f.heure_rv || "—"}`,
-    "───────────────────────────────────",
-    `🅿️ Covoiturage : ${f.parking_covoit || "—"}`,
-    `🏁 Parking     : ${f.parking_depart || "—"}`,
-    f.gps ? `📍 GPS         : ${f.gps}` : "",
-    f.gps ? `🗺 Maps        : https://www.google.com/maps?q=${f.gps}` : "",
-    "───────────────────────────────────",
-    `📏 Distance    : ${f.distance ? f.distance + " km" : "—"}`,
-    `⛰  Dénivelé   : ${f.denivele ? f.denivele + " m" : "—"}`,
-    `⏱  Durée      : ${f.duree || "—"}`,
-    f.ibp ? `📊 IBP         : ${f.ibp}  ${ibpNiveau}` : "",
-    `🎯 Effort ${f.effort||"—"}/5 · Tech. ${f.technicite||"—"}/5 · Risque ${f.risque||"—"}/5`,
-    f.couts ? "───────────────────────────────────" : "",
-    f.couts ? `💶 Coûts       : ${f.couts}` : "",
-    f.remarques ? "───────────────────────────────────" : "",
-    f.remarques ? `📌 Remarques   : ${f.remarques}` : "",
-    "═══════════════════════════════════",
-  ].filter(l => l !== "").join("\n");
+  /* ── Construction du texte de base (météo = chargement) ── */
+  function _buildLignes(meteoLigne) {
+    return [
+      f.statut === "annulée" ? "❌ RANDONNÉE ANNULÉE" : f.statut === "modifiée" ? "✏️ RANDONNÉE MODIFIÉE" : "",
+      "═══════════════════════════════════",
+      `📅 Date        : ${f.date_rando ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", {weekday:"long",day:"2-digit",month:"long",year:"numeric"}) : "—"}`,
+      `👤 Animateur   : ${f.animateur || "—"}`,
+      `⏰ RV          : ${f.heure_rv || "—"}`,
+      "───────────────────────────────────",
+      meteoLigne,
+      "───────────────────────────────────",
+      `🅿️ Covoiturage : ${f.parking_covoit || "—"}`,
+      `🏁 Parking     : ${f.parking_depart || "—"}`,
+      f.gps ? `📍 GPS         : ${f.gps}` : "",
+      f.gps ? `🗺 Maps        : https://www.google.com/maps?q=${f.gps}` : "",
+      "───────────────────────────────────",
+      `📏 Distance    : ${f.distance ? f.distance + " km" : "—"}`,
+      `⛰  Dénivelé   : ${f.denivele ? f.denivele + " m" : "—"}`,
+      `⏱  Durée      : ${f.duree || "—"}`,
+      f.ibp ? `📊 IBP         : ${f.ibp}  ${ibpNiveau}` : "",
+      `🎯 Effort ${f.effort||"—"}/5 · Tech. ${f.technicite||"—"}/5 · Risque ${f.risque||"—"}/5`,
+      f.couts ? "───────────────────────────────────" : "",
+      f.couts ? `💶 Coûts       : ${f.couts}` : "",
+      f.remarques ? "───────────────────────────────────" : "",
+      f.remarques ? `📌 Remarques   : ${f.remarques}` : "",
+      "═══════════════════════════════════",
+    ].filter(l => l !== "").join("\n");
+  }
 
-  document.getElementById("modalDetailResume").textContent = lignes;
+  /* Afficher immédiatement avec météo en cours de chargement */
+  const resumeEl = document.getElementById("modalDetailResume");
+  resumeEl.textContent = _buildLignes("🌤 Météo        : ⏳ chargement…");
   document.getElementById("modalDetail").classList.add("open");
+
+  /* ── Fetch météo Météo-France (ARPEGE + AROME) ── */
+  (async () => {
+    if (!f.date_rando || f.statut === "annulée") return;
+
+    const today     = new Date(); today.setHours(0,0,0,0);
+    const target    = new Date(f.date_rando + "T00:00:00");
+    const diffJours = Math.round((target - today) / 86400000);
+
+    if (diffJours < 0 || diffJours > 7) {
+      resumeEl.textContent = _buildLignes("🌤 Météo        : hors horizon de prévision");
+      return;
+    }
+
+    /* Coordonnées GPS de la fiche ou centre Provence par défaut */
+    let lat = 43.9, lon = 5.4;
+    if (f.gps) {
+      const m = String(f.gps).match(/(-?\d+\.?\d*)\s*[,;]\s*(-?\d+\.?\d*)/);
+      if (m) { lat = parseFloat(m[1]); lon = parseFloat(m[2]); }
+    }
+
+    try {
+      const url = `https://api.open-meteo.com/v1/meteofrance`
+        + `?latitude=${lat}&longitude=${lon}`
+        + `&daily=weathercode,temperature_2m_max,temperature_2m_min,`
+        + `precipitation_probability_max,windspeed_10m_max,windgusts_10m_max,winddirection_10m_dominant`
+        + `&timezone=Europe%2FParis&forecast_days=7`;
+
+      const r = await fetch(url);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const data = await r.json();
+      const d = data.daily;
+      if (!d || !d.weathercode) throw new Error("données invalides");
+
+      /* Trouver l'index du jour */
+      const idx = d.time.indexOf(f.date_rando);
+      if (idx === -1) throw new Error("date absente");
+
+      const wmoMap = {
+        0:"☀️ Soleil", 1:"🌤 Peu nuageux", 2:"⛅ Part. nuageux", 3:"☁️ Couvert",
+        45:"🌫 Brouillard", 48:"🌫 Givre",
+        51:"🌦 Bruine", 61:"🌧 Pluie légère", 63:"🌧 Pluie", 65:"🌧 Pluie forte",
+        71:"❄️ Neige légère", 73:"❄️ Neige", 75:"❄️ Neige forte", 77:"🌨 Grésil",
+        80:"🌦 Averses", 81:"🌧 Averses mod.", 82:"⛈ Av. violentes",
+        95:"⛈ Orage", 96:"⛈ Orage+grêle", 99:"⛈ Orage+grêle++",
+      };
+
+      const etat  = wmoMap[d.weathercode[idx]] || "Conditions variables";
+      const tmin  = d.temperature_2m_min[idx];
+      const tmax  = d.temperature_2m_max[idx];
+      const pluie = d.precipitation_probability_max[idx];
+      const vent  = d.windspeed_10m_max[idx];
+      const raf   = d.windgusts_10m_max[idx];
+
+      const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSO","SO","OSO","O","ONO","NO","NNO"];
+      const dir  = dirs[Math.round(d.winddirection_10m_dominant[idx] / 22.5) % 16];
+
+      const fiabilite = diffJours <= 2
+        ? "✅ AROME 1,3km — fiable"
+        : diffJours <= 4
+          ? `🟡 ARPEGE 5km — bonne (J+${diffJours})`
+          : `⚠️ indicative (J+${diffJours}, au-delà de J+4)`;
+
+      const meteoLigne =
+        `🌤 Météo J+${diffJours}    : ${etat}\n` +
+        `   🌡 Temp.       : ${tmin} / ${tmax} °C\n` +
+        `   🌧 Pluie       : ${pluie} %\n` +
+        `   🧭 Vent        : ${dir} ${vent} km/h  💨 Rafales ${raf} km/h\n` +
+        `   ℹ️ Fiabilité   : ${fiabilite}\n` +
+        `   📡 Source      : Météo-France ARPEGE+AROME via Open-Meteo`;
+
+      resumeEl.textContent = _buildLignes(meteoLigne);
+    } catch(e) {
+      resumeEl.textContent = _buildLignes("🌤 Météo        : ❌ indisponible (" + e.message + ")");
+    }
+  })();
 }
 
 function fermerDetail() {
