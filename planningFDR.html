@@ -522,7 +522,7 @@ function voirDetail(id) {
         + `?latitude=${lat}&longitude=${lon}`
         + `&daily=weathercode,temperature_2m_max,temperature_2m_min,`
         + `precipitation_probability_max,windspeed_10m_max`
-        + `&models=meteofrance`
+        + 
         + `&timezone=Europe%2FParis&forecast_days=7`;
 
       const r = await fetch(url);
@@ -549,7 +549,7 @@ function voirDetail(id) {
       const tmax  = d.temperature_2m_max[idx];
       const pluie = d.precipitation_probability_max[idx];
       const vent  = d.windspeed_10m_max[idx];
-      const raf = null; // non dispo meteofrance
+      const raf = d.windgusts_10m_max?.[idx] ?? null;
 
       const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSO","SO","OSO","O","ONO","NO","NNO"];
       const dir = ""; // direction non dispo modèle meteofrance
@@ -564,7 +564,7 @@ function voirDetail(id) {
         `🌤 Météo J+${diffJours}    : ${etat}\n` +
         `   🌡 Temp.       : ${tmin} / ${tmax} °C\n` +
         `   🌧 Pluie       : ${pluie} %\n` +
-        `   🧭 Vent        : ${vent} km/h\n` +
+        `   🧭 Vent        : ${vent} km/h${raf !== null ? "  💨 Rafales " + raf + " km/h" : ""}\n` +
         `   ℹ️ Fiabilité   : ${fiabilite}\n` +
         `   📡 Source      : Météo-France ARPEGE+AROME via Open-Meteo`;
 
