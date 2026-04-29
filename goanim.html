@@ -1,0 +1,646 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Fiche de route</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&amp;family=Source+Sans+3:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+  :root {
+    --vert:    #2d6a4f;
+    --vert-cl: #d8f3dc;
+    --vert-md: #52b788;
+    --brun:    #5c4033;
+    --or:      #b5832a;
+    --or-cl:   #fdf3e3;
+    --bg:      #f7f4f0;
+    --txt:     #1a1a1a;
+    --txt2:    #5a5a5a;
+    --bord:    #e0d8d0;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    background: var(--bg);
+    color: var(--txt);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    top: env(safe-area-inset-top, 0);
+    z-index: 100;
+    width: 100%;
+    background: var(--vert);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .logo {
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .logo small {
+    display: block;
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 10px;
+    font-weight: 300;
+    opacity: .75;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-top: 1px;
+  }
+  .back-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.92);
+    background: rgba(255,255,255,0.13);
+    border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 20px;
+    padding: 6px 14px;
+    min-height: 36px;
+    text-decoration: none;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .back-btn:active { background: rgba(255,255,255,0.25); }
+
+  main {
+    width: 100%;
+    padding: 18px 14px 40px;
+  }
+
+  .etat {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--txt2);
+    font-size: 15px;
+    line-height: 1.8;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid var(--bord);
+    border-top-color: var(--vert);
+    border-radius: 50%;
+    animation: spin .75s linear infinite;
+    margin: 0 auto 14px;
+  }
+
+  .fiche { opacity: 1; }
+
+  .annulee-banner {
+    background: #fff0f0;
+    border-left: 4px solid #c53030;
+    padding: 11px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-weight: 700;
+    color: #c53030;
+    font-size: 14px;
+  }
+  .fiche-titre {
+    font-family: 'Lora', serif;
+    font-size: clamp(17px, 5vw, 22px);
+    font-weight: 600;
+    color: #1a3a5c;
+    line-height: 1.3;
+    margin-bottom: 3px;
+    word-break: break-word;
+  }
+  .fiche-date {
+    font-size: 15px;
+    color: var(--txt2);
+    margin-bottom: 16px;
+  }
+  .profil-img {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    display: block;
+  }
+  .sep { border: none; border-top: 1px solid var(--bord); margin: 12px 0; }
+
+  .ligne {
+    display: flex;
+    gap: 6px;
+    font-size: 13px;
+    margin: 6px 0;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .lbl { color: #888; font-weight: 600; white-space: nowrap; flex-shrink: 0; text-align: left; }
+  .val { color: #222; flex: 1; min-width: 0; word-break: break-word; text-align: left; }
+
+  .anim-nom {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a3a5c;
+    margin: 4px 0 8px;
+  }
+  .tel-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .tel-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    min-height: 44px;
+    -webkit-tap-highlight-color: transparent;
+    transition: filter .15s;
+  }
+  .tel-btn:active { filter: brightness(.9); }
+  .tel-btn.sms  { background: var(--vert-cl); color: var(--vert); }
+  .tel-btn.call { background: #dbeafe;        color: #1d4ed8; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .stat-box {
+    background: #ede9e3;
+    border-radius: 10px;
+    padding: 11px 6px;
+    text-align: center;
+  }
+  .stat-lbl { font-size: 10px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .stat-val { font-size: clamp(13px, 3.8vw, 17px); font-weight: 700; color: #1a3a5c; margin-top: 3px; }
+
+  .badges-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+  .badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .couts-bloc {
+    background: var(--or-cl);
+    border: 1px solid #e8d5b0;
+    border-radius: 12px;
+    padding: 13px 14px;
+    margin: 12px 0;
+  }
+  .couts-titre {
+    font-size: 12px; font-weight: 700; color: var(--or);
+    text-transform: uppercase; letter-spacing: .04em; margin-bottom: 10px;
+  }
+  .couts-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+  }
+  .cout-box { border-radius: 10px; padding: 11px 6px; text-align: center; }
+  .cout-box.total { background: #fff3cd; border: 1px solid #f0c040; }
+  .cout-box.pers4 { background: #d4edda; border: 1px solid #82c996; }
+  .cout-box.pers5 { background: #cce5ff; border: 1px solid #74b3f5; }
+  .cout-lbl { font-size: 9px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: .04em; }
+  .cout-val { font-size: clamp(13px, 3.8vw, 16px); font-weight: 700; margin-top: 3px; }
+  .cout-box.total .cout-val { color: #856404; }
+  .cout-box.pers4 .cout-val { color: #1a6a35; }
+  .cout-box.pers5 .cout-val { color: #0a4a8a; }
+
+  .meteo-bloc {
+    border-radius: 12px; padding: 13px 14px; margin: 12px 0;
+    border: 1px solid #bfdbfe;
+    background: linear-gradient(135deg,#e8f4fd,#dbeafe);
+  }
+  .meteo-titre {
+    font-size: 11px; font-weight: 700; color: #1e40af;
+    text-transform: uppercase; letter-spacing: .04em;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .meteo-icon-label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .m-icon  { font-size: 22px; line-height: 1; }
+  .m-label { font-size: 14px; font-weight: 700; color: #1a3a5c; }
+  .meteo-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+  .meteo-box {
+    border-radius: 7px; padding: 7px 5px; text-align: center;
+    background: rgba(255,255,255,.75); border: 1px solid rgba(191,219,254,.5);
+  }
+  .meteo-lbl { font-size: 9px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .meteo-val { font-size: clamp(12px, 3.2vw, 14px); font-weight: 700; color: #1a3a5c; margin-top: 2px; }
+  .meteo-bloc.meteo-good { background: linear-gradient(135deg,#f0fdf4,#dcfce7); border-color: #86efac; }
+  .meteo-bloc.meteo-good .meteo-titre,.meteo-bloc.meteo-good .meteo-val { color: #166534; }
+  .meteo-bloc.meteo-bad  { background: linear-gradient(135deg,#fef2f2,#fee2e2); border-color: #fca5a5; }
+  .meteo-bloc.meteo-bad  .meteo-titre,.meteo-bloc.meteo-bad .meteo-val  { color: #991b1b; }
+  .meteo-loading { color: #9ca3af; font-style: italic; font-size: 13px; }
+  .meteo-err     { color: #b91c1c; font-size: 13px; }
+
+  .remarques-bloc {
+    background: #fffbf0; border-left: 3px solid #f49d37;
+    border-radius: 6px; padding: 11px 13px; margin-top: 4px;
+  }
+  .remarques-titre { font-size: 11px; font-weight: 700; color: #888; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
+  .remarques-txt   { font-size: 13px; color: #333; white-space: pre-wrap; line-height: 1.6; }
+
+  footer {
+    text-align: center; font-size: 10px; color: var(--txt2);
+    margin-top: 28px; padding-top: 14px;
+    border-top: 1px solid var(--bord);
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+
+  @keyframes spin    { to { transform: rotate(360deg); } }
+  @keyframes fadeUp  { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+  @media (max-width: 400px) {
+    main               { padding: 14px 11px 36px; }
+    .couts-grid        { grid-template-columns: 1fr; gap: 6px; }
+    .meteo-grid        { grid-template-columns: repeat(2,1fr); }
+    .stats-grid        { gap: 5px; }
+    .tel-btn           { font-size: 13px; padding: 9px 10px; }
+  }
+
+  @media (min-width: 401px) and (max-width: 600px) {
+    .couts-grid        { grid-template-columns: repeat(3,1fr); }
+    .meteo-grid        { grid-template-columns: repeat(4,1fr); }
+  }
+
+  @media (min-width: 601px) {
+    main         { padding: 28px 40px 56px; }
+    .fiche-titre { font-size: 24px; }
+    .stat-val    { font-size: 19px; }
+    .stats-grid  { gap: 12px; }
+    .cout-val    { font-size: 21px; }
+    .couts-grid  { gap: 12px; }
+    .meteo-val   { font-size: 17px; }
+    .meteo-grid  { gap: 12px; }
+    .badge       { font-size: 14px; padding: 7px 16px; }
+    .badges-row  { gap: 10px; }
+    .tel-btn     { font-size: 15px; padding: 12px 20px; max-width: 220px; }
+    .tel-row     { justify-content: flex-start; }
+    .ligne       { font-size: 15px; }
+    .remarques-txt { font-size: 15px; }
+  }
+
+  @media (min-width: 1100px) {
+    main {
+      max-width: none;
+      width: 100%;
+      margin: 0;
+      padding: 36px 80px 64px;
+    }
+    .fiche-titre { font-size: 28px; }
+    .stat-val    { font-size: 22px; }
+    .cout-val    { font-size: 24px; }
+    .meteo-val   { font-size: 20px; }
+    .stats-grid  { gap: 16px; }
+    .couts-grid  { gap: 16px; }
+    .meteo-grid  { gap: 16px; }
+  }
+</style>
+
+
+
+<header>
+  <div class="logo">
+    La Marmotte
+    <small>Feuille de route</small>
+  </div>
+  <a href="https://www.lamarmottechateaurenard.com/randonnees2/" class="back-btn">← Retour</a>
+</header>
+
+<main id="main">
+  <div class="etat"><div class="spinner"></div>Chargement…</div>
+</main>
+
+<script>
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+const MAX_FORECAST_DAYS = 16;
+
+const params    = new URLSearchParams(window.location.search);
+const animParam = params.get("animateur");
+const randoNom  = params.get("rando");
+
+/* ══ UTILITAIRES ══ */
+function parseDate(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y,m,d] = s.split("-");
+    const dt = new Date(+y,+m-1,+d); dt.setHours(0,0,0,0); return dt;
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    const [d,m,y] = s.split("/");
+    const dt = new Date(+y,+m-1,+d); dt.setHours(0,0,0,0); return dt;
+  }
+  return null;
+}
+function toISODate(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [d,m,y]=s.split("/"); return `${y}-${m}-${d}`; }
+  return null;
+}
+function formatTel(t) {
+  if (!t) return "";
+  const s = String(t).replace(/\D/g,"");
+  return s.length===10 ? s.replace(/(\d{2})(?=\d)/g,"$1 ").trim() : t;
+}
+function extraireTotal(val) {
+  if (!val) return null;
+  const m = String(val).replace(",",".").replace(/\s/g,"").match(/(\d+(\.\d+)?)/);
+  return m ? parseFloat(m[1]) : null;
+}
+function heureRVCalc(h) {
+  if (!h) return { rv:"", depart:"" };
+  const s=String(h).trim(); let hh=0,mm=0;
+  if (s.includes("h")) { const p=s.split("h"); hh=+p[0]||0; mm=+p[1]||0; }
+  else if (s.includes(":")) { const p=s.split(":"); hh=+p[0]||0; mm=+p[1]||0; }
+  const pad = n => String(n).padStart(2,"0");
+  const tot = hh*60+mm+15;
+  return { rv:`${pad(hh)}h${pad(mm)}`, depart:`${pad(Math.floor(tot/60)%24)}h${pad(tot%60)}` };
+}
+function ibpCouleur(n) {
+  if (!n) return { bg:"#888",color:"#fff" };
+  if (n<=25)  return { bg:"#00bb00",color:"#fff" };
+  if (n<=50)  return { bg:"#0066dd",color:"#fff" };
+  if (n<=75)  return { bg:"#dd7700",color:"#fff" };
+  if (n<=100) return { bg:"#dd1111",color:"#fff" };
+  return { bg:"#343a40",color:"#fff" };
+}
+function ibpNiveau(n) {
+  if (!n) return "";
+  if (n<=25)  return "🟢 Facile";
+  if (n<=50)  return "🔵 Assez Facile";
+  if (n<=75)  return "🟡 Peu Difficile";
+  if (n<=100) return "🔴 Assez Difficile";
+  return "⚫ Difficile";
+}
+function parseGPS(g) {
+  if (!g) return null;
+  const m=String(g).trim().match(/(-?\d+\.?\d*)\s*[,;]\s*(-?\d+\.?\d*)/);
+  return m ? { lat:+m[1], lon:+m[2] } : null;
+}
+
+/* ══ MÉTÉO ══ */
+
+function wmoInfo(c) {
+  return ({
+    0:["☀️","Dégagé"],1:["🌤️","Peu nuageux"],2:["⛅","Part. nuageux"],
+    3:["☁️","Couvert"],45:["🌫️","Brouillard"],48:["🌫️","Givre"],
+    51:["🌦️","Bruine"],53:["🌦️","Bruine mod."],55:["🌧️","Bruine forte"],
+    61:["🌧️","Pluie légère"],63:["🌧️","Pluie modérée"],65:["🌧️","Pluie forte"],
+    71:["❄️","Neige légère"],73:["❄️","Neige modérée"],75:["❄️","Neige forte"],
+    77:["🌨️","Grésil"],80:["🌦️","Averses"],81:["🌧️","Averses mod."],
+    82:["⛈️","Av. violentes"],85:["🌨️","Av. neige"],86:["🌨️","Av. neige++"],
+    95:["⛈️","Orage"],96:["⛈️","Orage+grêle"],99:["⛈️","Orage+grêle++"],
+  })[c] ?? null;
+}
+
+const BAD_CODES  = new Set([55,61,63,65,71,73,75,77,80,81,82,85,86,95,96,99]);
+const GOOD_CODES = new Set([0,1,2]);
+
+async function chargerMeteo(gpsStr, dateStr, id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const iso = toISODate(dateStr);
+  if (!iso) { el.innerHTML = '<span class="meteo-loading">Date invalide</span>'; return; }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diffJ = Math.round((new Date(iso + "T00:00:00") - today) / 86400000);
+
+  if (diffJ < 0) { el.innerHTML = '<span class="meteo-loading">Randonnée passée</span>'; return; }
+  if (diffJ > 7) { el.innerHTML = `<span class="meteo-loading">Météo disponible à partir de J-7 (dans ${diffJ - 7} j.)</span>`; return; }
+
+  const c = parseGPS(gpsStr) || { lat: 43.9, lon: 5.4 };
+  const precisionNote = parseGPS(gpsStr) ? "" : " <small style='color:#9ca3af'>(position approchée)</small>";
+
+  try {
+    const r = await fetch(
+      `https://api.open-meteo.com/v1/forecast`
+      + `?latitude=${c.lat}&longitude=${c.lon}`
+      + `&daily=weathercode,temperature_2m_max,temperature_2m_min,`
+      + `precipitation_probability_max,windspeed_10m_max,windgusts_10m_max`
+      + `&timezone=Europe%2FParis&forecast_days=7`
+    );
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const { daily: d } = await r.json();
+    if (!d?.weathercode?.length) throw new Error("vide");
+
+    const idx = d.time ? d.time.indexOf(iso) : 0;
+    if (idx === -1) throw new Error("date absente");
+
+    const code = d.weathercode[idx];
+    const info = wmoInfo(code);
+    if (!info) throw new Error("code WMO inconnu");
+    const [icon, label] = info;
+
+    const tmax  = d.temperature_2m_max[idx];
+    const tmin  = d.temperature_2m_min[idx];
+    const prob  = d.precipitation_probability_max?.[idx] ?? null;
+    const vent  = d.windspeed_10m_max[idx];
+    const raf   = d.windgusts_10m_max?.[idx] ?? null;
+    const degDir = null;
+
+    const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSO","SO","OSO","O","ONO","NO","NNO"];
+    const dirLabel = degDir !== null ? dirs[Math.round(degDir / 22.5) % 16] : "";
+
+    const bloc = el.closest(".meteo-bloc");
+    if (bloc) {
+      if (BAD_CODES.has(code))       bloc.classList.add("meteo-bad");
+      else if (GOOD_CODES.has(code)) bloc.classList.add("meteo-good");
+    }
+
+    const fiabilite = diffJ <= 2
+      ? { txt: "✅ AROME 1,3 km — prévision fiable",      bg: "#e8f5e9", color: "#2e7d32", border: "#a5d6a7" }
+      : diffJ <= 4
+        ? { txt: `🟡 ARPEGE 5 km — bonne (J+${diffJ})`,  bg: "#fff8e1", color: "#f57f17", border: "#ffe082" }
+        : { txt: `⚠️ Indicatif J+${diffJ} — au-delà de l'horizon fiable ARPEGE/AROME (4 j.)`, bg: "#fce4ec", color: "#c62828", border: "#ef9a9a" };
+
+    el.innerHTML = `
+      <div class="meteo-icon-label">
+        <span class="m-icon">${icon}</span>
+        <span class="m-label">${label}${precisionNote}</span>
+      </div>
+      <div class="meteo-grid">
+        <div class="meteo-box" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div class="meteo-lbl">🌡 Temp.</div>
+          <div class="meteo-val" style="display:flex;gap:3px;align-items:baseline;">
+            ${tmax !== null ? `<span>${tmax}°</span>` : ""}
+            ${tmin !== null ? `<span>/ ${tmin}°</span>` : ""}
+          </div>
+          <div style="font-size:8px;color:#9ca3af;">Max / Min</div>
+        </div>
+        ${prob !== null ? `<div class="meteo-box"><div class="meteo-lbl">🌧 Pluie</div><div class="meteo-val">${prob} %</div></div>` : ""}
+        ${vent !== null ? `<div class="meteo-box"><div class="meteo-lbl">💨 Vent${dirLabel ? " " + dirLabel : ""}</div><div class="meteo-val">${vent} km/h${raf !== null ? `<br><span style="font-size:10px;font-weight:400;">raf. ${raf}</span>` : ""}</div></div>` : ""}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:7px;padding:5px 8px;border-radius:6px;font-size:10px;
+                  background:${fiabilite.bg};color:${fiabilite.color};border:1px solid ${fiabilite.border};">
+        <span style="font-weight:600;">${fiabilite.txt}</span>
+        <span style="color:#9ca3af;font-size:9px;">Météo-France via Open-Meteo</span>
+      </div>`;
+
+  } catch(e) {
+    el.innerHTML = `<span class="meteo-err">⚠️ Météo indisponible</span>`;
+  }
+}
+
+
+/* ══ CHARGEMENT ══ */
+async function charger() {
+  const main = document.getElementById("main");
+  let fiche = null, tel = "";
+  if (randoNom) {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/fiches?select=*&nom_rando=eq.${encodeURIComponent(randoNom.trim())}&limit=1`,
+        { headers:{ "apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY } });
+      if (r.ok) { const d=await r.json(); if (d?.length) fiche=d[0]; }
+    } catch(e) { console.warn(e); }
+  }
+  if (animParam) {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/animateurs?select=telephone&nom=eq.${encodeURIComponent(animParam.trim())}`,
+        { headers:{ "apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY } });
+      if (r.ok) { const d=await r.json(); if (d?.length) tel=formatTel(d[0].telephone); }
+    } catch(e) { console.warn(e); }
+  }
+  if (!fiche) {
+    main.innerHTML=`<div class="etat" style="color:var(--brun);">🗺️ Feuille de route non publiée pour le moment,<br>merci de votre patience 🙏</div>`;
+    return;
+  }
+  afficher(fiche, tel, main);
+}
+
+/* ══ RENDU ══ */
+function afficher(f, tel, main) {
+  const annulee = f.statut==="annulée";
+  const { rv, depart } = heureRVCalc(f.heure_rv);
+  const d = parseDate(f.date_rando);
+  const dateAff = d ? d.toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}) : (f.date_rando||"");
+
+  /* Coûts */
+  let coutsHtml = "";
+  if (f.couts) {
+    const total = extraireTotal(f.couts);
+    if (total!==null) {
+      const arr = v => (Math.ceil(v*10)/10).toFixed(2).replace(".",",");
+      coutsHtml = `<div class="couts-bloc">
+        <div class="couts-titre">💶 Coûts trajet</div>
+        <div class="couts-grid">
+          <div class="cout-box total"><div class="cout-lbl">Total</div><div class="cout-val">${total.toFixed(2).replace(".",",")} €</div></div>
+          <div class="cout-box pers4"><div class="cout-lbl">Par pers. (4)</div><div class="cout-val">${arr(total/4)} €</div></div>
+          <div class="cout-box pers5"><div class="cout-lbl">Par pers. (5)</div><div class="cout-val">${arr(total/5)} €</div></div>
+        </div></div>`;
+    } else {
+      coutsHtml = `<div class="ligne"><span class="lbl">💶 Coûts :</span><span class="val">${f.couts}</span></div>`;
+    }
+  }
+
+  /* Badges */
+  let badgesHtml = "";
+  if (f.ibp||f.effort||f.technicite||f.risque) {
+    const c=ibpCouleur(f.ibp), niv=ibpNiveau(f.ibp);
+    badgesHtml=`<div class="badges-row">
+      ${f.ibp?`<span class="badge" style="background:${c.bg};color:${c.color};border-color:${c.bg};">📊 IBP ${f.ibp}</span>`:""}
+      ${niv?`<span class="badge" style="background:${c.bg}22;color:${c.bg};border-color:${c.bg}66;">${niv}</span>`:""}
+      ${f.effort?`<span class="badge" style="background:#1a3a5c22;color:#1a3a5c;border-color:#1a3a5c66;">💪 Effort ${f.effort}/5</span>`:""}
+      ${f.technicite?`<span class="badge" style="background:#2d6a4f22;color:#2d6a4f;border-color:#2d6a4f66;">🧗 Technicité ${f.technicite}/5</span>`:""}
+      ${f.risque?`<span class="badge" style="background:#85640422;color:#856404;border-color:#85640466;">⚠️ Risque ${f.risque}/5</span>`:""}
+    </div>`;
+  }
+
+  /* Animateur */
+  let animHtml = "";
+  if (f.animateur) {
+    animHtml = `<div class="lbl" style="margin-bottom:3px;">👤 Animateur</div>
+      <div class="anim-nom">${f.animateur}</div>`;
+    if (tel) animHtml += `<div class="tel-row">
+      <a href="sms:${tel.replace(/\s/g,'')}" class="tel-btn sms">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>SMS
+      </a>
+      <a href="tel:${tel.replace(/\s/g,'')}" class="tel-btn call">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.07 1.18 2 2 0 012.03 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Appeler
+      </a></div>`;
+  }
+
+  const L = (lbl,val) => val ? `<div class="ligne"><span class="lbl">${lbl} :</span><span class="val">${val}</span></div>` : "";
+  const mid = "meteo-"+(f.id||Math.random().toString(36).slice(2));
+
+  let html = `<div class="fiche">`;
+  if (annulee) html += `<div class="annulee-banner">❌ RANDONNÉE ANNULÉE</div>`;
+  html += `<div class="fiche-titre">${f.nom_rando||"—"}</div>`;
+  html += `<div class="fiche-date">📅 ${dateAff}</div>`;
+  if (f.profil_png) html += `<img src="${f.profil_png}" class="profil-img" alt="Profil altimétrique">`;
+  html += animHtml;
+  if (rv) html += `<div class="ligne" style="margin-top:8px;"><span class="lbl">⏰ RV :</span><span class="val">${rv} → 🏁 Départ ${depart}</span></div>`;
+  html += `<hr class="sep">`;
+  html += L("🅿️ Covoiturage", f.parking_covoit);
+  const kmCovoit = extraireTotal(f.couts) !== null ? Math.round(extraireTotal(f.couts) / 0.3) : null;
+  if (kmCovoit) html += `<div class="ligne"><span class="lbl">📏 Trajet A/R :</span><span class="val" style="font-weight:700;color:#1a3a5c;">≈ ${kmCovoit} km</span></div>`;
+  html += L("🏁 Parking départ", f.parking_depart);
+  if (f.gps) {
+    html += L("📍 GPS", f.gps);
+    html += `<div class="ligne"><a href="https://www.google.com/maps?q=${f.gps}" target="_blank" style="color:#0077cc;font-size:13px;padding:3px 0;display:inline-block;">🗺 Ouvrir Google Maps</a></div>`;
+  }
+  html += `<hr class="sep">`;
+  html += `<div class="stats-grid">
+    <div class="stat-box"><div class="stat-lbl">📏 Distance</div><div class="stat-val">${f.distance?f.distance+" km":"—"}</div></div>
+    <div class="stat-box"><div class="stat-lbl">⛰ Dénivelé</div><div class="stat-val">${f.denivele?f.denivele+" m":"—"}</div></div>
+    <div class="stat-box"><div class="stat-lbl">⏱ Durée</div><div class="stat-val">${f.duree||"—"}</div></div>
+  </div>`;
+  if (badgesHtml) html += badgesHtml;
+  if (!annulee) {
+    html += `<hr class="sep">
+      <div class="meteo-bloc" id="${mid}-bloc">
+        <div class="meteo-titre">🌤 Météo prévue</div>
+        <div id="${mid}"><span class="meteo-loading">Chargement…</span></div>
+      </div>`;
+  }
+  if (coutsHtml) { html += `<hr class="sep">${coutsHtml}`; }
+  if (f.remarques) {
+    html += `<hr class="sep"><div class="remarques-bloc">
+      <div class="remarques-titre">📌 Remarques</div>
+      <div class="remarques-txt">${f.remarques}</div>
+    </div>`;
+  }
+  html += `<footer>Zone membres — accès restreint</footer></div>`;
+
+  main.innerHTML = html;
+  if (!annulee) requestAnimationFrame(() => chargerMeteo(f.gps, f.date_rando, mid));
+}
+
+charger();
+</script>
