@@ -1,6 +1,3 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Visusursite_supabase_notifannulation</title>
@@ -91,16 +88,6 @@ tr.annulee:hover { background: #ffe0e0 !important; }
 }
 .anim-link:hover { color: #003366; }
 
-/* ── MÉTÉO EMOJI ── */
-.meteo-emoji-cell {
-  text-align: center;
-  font-size: 18px;
-  line-height: 1;
-  white-space: nowrap;
-  min-width: 28px;
-}
-.meteo-emoji-cell.loading { opacity: .3; font-size: 11px; color: #bbb; }
-
 /* ── BOUTON PARTAGE ── */
 .share-btn {
   display: inline-flex;
@@ -115,7 +102,6 @@ tr.annulee:hover { background: #ffe0e0 !important; }
   opacity: 0.55;
   vertical-align: middle;
   transition: opacity .15s;
-  /* Empêche le clic de déclencher le onclick de la ligne */
 }
 .share-btn:hover { opacity: 1; background: #e8f4fd; }
 
@@ -172,17 +158,11 @@ tr.annulee:hover { background: #ffe0e0 !important; }
   }
   tr td:nth-child(5)::before { content: "📏 "; }
   tr td:nth-child(6)::before { content: "⛰ "; }
-  /* météo + partage en mobile */
-  tr td.meteo-emoji-cell {
-    display: inline-block; border: none; font-size: 20px; padding: 4px 8px 0 0;
-  }
   tr td.share-cell {
     display: inline-block; border: none; padding: 4px 0 0 0;
   }
 }
 </style>
-</head>
-<body>
 
 <h3>DE BELLES RANDOS ...</h3>
 <button id="toggleBtn">Afficher tout le programme</button>
@@ -192,7 +172,7 @@ tr.annulee:hover { background: #ffe0e0 !important; }
       <tr>
         <th>Date</th><th>Randonnée</th><th>Animateur</th>
         <th>IBP</th><th>Distance</th><th>Dénivelé</th>
-        <th>☁️</th><th>🔗</th>
+        <th>🔗</th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
@@ -206,7 +186,6 @@ const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
 
 const CHEMIN_PAGE_CONTACTS = "https://www.lamarmottechateaurenard.com/goanim/";
-const MAX_FORECAST_DAYS    = 16;
 
 let filterEnabled = true;
 let minDisplay    = null;
@@ -246,17 +225,6 @@ function afficherDate(dateStr) {
   return s;
 }
 
-function toISODate(dateStr) {
-  if (!dateStr) return null;
-  const s = String(dateStr).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-    const [jj, mm, yyyy] = s.split("/");
-    return `${yyyy}-${mm}-${jj}`;
-  }
-  return null;
-}
-
 /* ══ DIVERS ═════════════════════════════════════════════════════════════ */
 function couleurIBP(val) {
   if (!val) return null;
@@ -267,13 +235,6 @@ function couleurIBP(val) {
   if (n <= 75)  return { bg: "#ff8800", color: "#ffffff" };
   if (n <= 100) return { bg: "#ff1a1a", color: "#ffffff" };
   return              { bg: "#343a40", color: "#ffffff" };
-}
-
-function extraireTotal(val) {
-  if (!val) return null;
-  const s = String(val).replace(",", ".").replace(/\s/g, "");
-  const m = s.match(/(\d+(\.\d+)?)/);
-  return m ? parseFloat(m[1]) : null;
 }
 
 function urlContacts(f) {
@@ -298,103 +259,12 @@ function afficherToast() {
 }
 
 function copierLien(event, url) {
-  event.stopPropagation(); /* Empêche le clic de naviguer vers la page contact */
+  event.stopPropagation();
   navigator.clipboard.writeText(url).then(() => {
     afficherToast();
   }).catch(() => {
     prompt("Copiez ce lien :", url);
   });
-}
-
-/* ══ MÉTÉO ══════════════════════════════════════════════════════════════ */
-function wmoInfo(code) {
-  const map = {
-    0:["☀️","Dégagé"],         1:["🌤️","Peu nuageux"],     2:["⛅","Part. nuageux"],
-    3:["☁️","Couvert"],        45:["🌫️","Brouillard"],     48:["🌫️","Givre"],
-    51:["🌦️","Bruine"],       53:["🌦️","Bruine mod."],    55:["🌧️","Bruine forte"],
-    61:["🌧️","Pluie légère"], 63:["🌧️","Pluie modérée"], 65:["🌧️","Pluie forte"],
-    71:["❄️","Neige légère"],  73:["❄️","Neige modérée"],  75:["❄️","Neige forte"],
-    77:["🌨️","Grésil"],
-    80:["🌦️","Averses"],      81:["🌧️","Averses mod."],   82:["⛈️","Av. violentes"],
-    85:["🌨️","Av. neige"],    86:["🌨️","Av. neige++"],
-    95:["⛈️","Orage"],        96:["⛈️","Orage + grêle"],  99:["⛈️","Orage + grêle++"],
-  };
-  return map[code] || ["🌡️","Inconnu"];
-}
-
-function parseGPS(gpsStr) {
-  if (!gpsStr) return null;
-  const m = String(gpsStr).trim().match(/(-?\d+\.?\d*)\s*[,;]\s*(-?\d+\.?\d*)/);
-  return m ? { lat: parseFloat(m[1]), lon: parseFloat(m[2]) } : null;
-}
-
-const BAD_CODES  = new Set([55,61,63,65,71,73,75,77,80,81,82,85,86,95,96,99]);
-const GOOD_CODES = new Set([0,1,2]);
-
-async function remplirEmojiTableau(gpsStr, dateStr, tdCell) {
-  const isoDate = toISODate(dateStr);
-  if (!isoDate) { tdCell.classList.remove("loading"); return; }
-
-  const target   = new Date(isoDate + "T00:00:00");
-  const today    = new Date(); today.setHours(0,0,0,0);
-  const diffDays = Math.round((target - today) / 86400000);
-
-  /* Météo-France (ARPEGE+AROME) fiable jusqu'à J+7 */
-  if (diffDays < 0 || diffDays > 7) {
-    tdCell.textContent = "";
-    tdCell.classList.remove("loading");
-    return;
-  }
-
-  const coords = parseGPS(gpsStr) || { lat: 43.9, lon: 5.4 };
-  const url = `https://api.open-meteo.com/v1/meteofrance`
-    + `?latitude=${coords.lat}&longitude=${coords.lon}`
-    + `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,windgusts_10m_max`
-    + `&timezone=Europe%2FParis&forecast_days=7`;
-
-  try {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error();
-    const data = await r.json();
-    const d = data.daily;
-    if (!d || !d.weathercode || !d.weathercode.length) throw new Error();
-
-    /* Trouver le bon index par date */
-    const idx = d.time ? d.time.indexOf(isoDate) : 0;
-    if (idx === -1) throw new Error();
-
-    const code  = d.weathercode[idx];
-    const tmax  = d.temperature_2m_max[idx];
-    const tmin  = d.temperature_2m_min[idx];
-    const prob  = d.precipitation_probability_max ? d.precipitation_probability_max[idx] : null;
-    const vent  = d.windspeed_10m_max[idx];
-    const raf   = d.windgusts_10m_max ? d.windgusts_10m_max[idx] : null;
-    const [icon, label] = wmoInfo(code);
-
-    /* Fiabilité selon horizon */
-    const fiabilite = diffDays <= 2
-      ? "✅ AROME 1,3km"
-      : diffDays <= 4
-        ? `🟡 ARPEGE J+${diffDays}`
-        : `⚠️ indicatif J+${diffDays}`;
-
-    /* Tooltip complet */
-    let tip = label;
-    if (tmax !== null && tmin !== null) tip += ` · ${tmin}°→${tmax}°C`;
-    if (prob  !== null) tip += ` · 🌧${prob}%`;
-    if (vent  !== null) tip += ` · 💨${vent}km/h`;
-    if (raf   !== null) tip += ` (raf. ${raf}km/h)`;
-    tip += ` · ${fiabilite}`;
-    if (!parseGPS(gpsStr)) tip += " (région)";
-
-    tdCell.textContent = icon;
-    tdCell.title       = tip;
-    tdCell.classList.remove("loading");
-
-  } catch(e) {
-    tdCell.textContent = "";
-    tdCell.classList.remove("loading");
-  }
 }
 
 /* ══ CHARGEMENT ════════════════════════════════════════════════════════ */
@@ -421,7 +291,7 @@ async function charger() {
   } catch(e) {
     console.error("Erreur chargement fiches:", e);
     document.getElementById("tbody").innerHTML =
-      "<tr><td colspan='8'>⚠️ Erreur de chargement : " + e.message + "</td></tr>";
+      "<tr><td colspan='7'>⚠️ Erreur de chargement : " + e.message + "</td></tr>";
     return;
   }
 
@@ -495,26 +365,14 @@ function construireTableau(fiches, today) {
     tdDen.textContent = f.denivele ? f.denivele + " m" : "";
     tr.appendChild(tdDen);
 
-    /* ── Météo emoji ── */
-    const tdMeteo = document.createElement("td");
-    tdMeteo.classList.add("meteo-emoji-cell");
-    if (annulee) {
-      tdMeteo.textContent = "";
-    } else {
-      tdMeteo.classList.add("loading");
-      tdMeteo.textContent = "·";
-      setTimeout(() => remplirEmojiTableau(f.gps, f.date_rando, tdMeteo), 0);
-    }
-    tr.appendChild(tdMeteo);
-
-    /* ── Partage 🔗 ── */
+    /* Partage 🔗 */
     const tdShare = document.createElement("td");
     tdShare.classList.add("share-cell");
     tdShare.style.textAlign = "center";
     if (!annulee) {
-      const lien = urlContacts(f); /* réutilise le même lien que le clic de ligne */
+      const lien = urlContacts(f);
       const btn  = document.createElement("button");
-      btn.className  = "share-btn";
+      btn.className   = "share-btn";
       btn.textContent = "🔗";
       btn.title       = "Copier le lien de cette fiche";
       btn.onclick     = (e) => copierLien(e, lien);
@@ -582,5 +440,3 @@ document.getElementById("toggleBtn").onclick = () => {
 
 charger();
 </script>
-</body>
-</html>
