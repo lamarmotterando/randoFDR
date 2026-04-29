@@ -1,7 +1,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Fiche de route</title>
-<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&amp;family=Source+Sans+3:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --vert:    #2d6a4f;
@@ -251,13 +251,16 @@
   .meteo-icon-label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .m-icon  { font-size: 22px; line-height: 1; }
   .m-label { font-size: 14px; font-weight: 700; color: #1a3a5c; }
-  .meteo-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+  .meteo-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; width: 100%; }
   .meteo-box {
-    border-radius: 7px; padding: 7px 5px; text-align: center;
+    border-radius: 7px; padding: 7px 5px;
+    text-align: center !important;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: rgba(255,255,255,.75); border: 1px solid rgba(191,219,254,.5);
   }
-  .meteo-lbl { font-size: 9px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
-  .meteo-val { font-size: clamp(12px, 3.2vw, 14px); font-weight: 700; color: #1a3a5c; margin-top: 2px; }
+  .meteo-lbl { font-size: 9px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; text-align: center; }
+  .meteo-val { font-size: clamp(12px, 3.2vw, 14px); font-weight: 700; color: #1a3a5c; margin-top: 2px; text-align: center; width: 100%; }
+  .meteo-raf { font-size: clamp(11px, 3vw, 13px); font-weight: 600; color: #4a6fa5; margin-top: 3px; text-align: center; }
   .meteo-bloc.meteo-good { background: linear-gradient(135deg,#f0fdf4,#dcfce7); border-color: #86efac; }
   .meteo-bloc.meteo-good .meteo-titre,.meteo-bloc.meteo-good .meteo-val { color: #166534; }
   .meteo-bloc.meteo-bad  { background: linear-gradient(135deg,#fef2f2,#fee2e2); border-color: #fca5a5; }
@@ -285,14 +288,14 @@
   @media (max-width: 400px) {
     main               { padding: 14px 11px 36px; }
     .couts-grid        { grid-template-columns: 1fr; gap: 6px; }
-    .meteo-grid        { grid-template-columns: repeat(2,1fr); }
+    .meteo-grid        { grid-template-columns: repeat(3,1fr) !important; gap: 5px; }
     .stats-grid        { gap: 5px; }
     .tel-btn           { font-size: 13px; padding: 9px 10px; }
   }
 
   @media (min-width: 401px) and (max-width: 600px) {
     .couts-grid        { grid-template-columns: repeat(3,1fr); }
-    .meteo-grid        { grid-template-columns: repeat(4,1fr); }
+    .meteo-grid        { grid-template-columns: repeat(3,1fr) !important; }
   }
 
   @media (min-width: 601px) {
@@ -496,16 +499,16 @@ async function chargerMeteo(gpsStr, dateStr, id) {
         <span class="m-label">${label}${precisionNote}</span>
       </div>
       <div class="meteo-grid">
-        <div class="meteo-box" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <div class="meteo-box">
           <div class="meteo-lbl">🌡 Temp.</div>
-          <div class="meteo-val" style="display:flex;gap:3px;align-items:baseline;">
+          <div class="meteo-val" style="display:flex;gap:3px;align-items:baseline;justify-content:center;">
             ${tmax !== null ? `<span>${tmax}°</span>` : ""}
             ${tmin !== null ? `<span>/ ${tmin}°</span>` : ""}
           </div>
-          <div style="font-size:8px;color:#9ca3af;">Max / Min</div>
+          <div class="meteo-raf">Max / Min</div>
         </div>
         ${prob !== null ? `<div class="meteo-box"><div class="meteo-lbl">🌧 Pluie</div><div class="meteo-val">${prob} %</div></div>` : ""}
-        ${vent !== null ? `<div class="meteo-box"><div class="meteo-lbl">💨 Vent${dirLabel ? " " + dirLabel : ""}</div><div class="meteo-val">${vent} km/h${raf !== null ? `<br><span style="font-size:10px;font-weight:400;">raf. ${raf}</span>` : ""}</div></div>` : ""}
+        ${vent !== null ? `<div class="meteo-box"><div class="meteo-lbl">💨 Vent${dirLabel ? " " + dirLabel : ""}</div><div class="meteo-val">${vent} km/h</div>${raf !== null ? `<div class="meteo-raf">raf. ${raf} km/h</div>` : ""}</div>` : ""}
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:7px;padding:5px 8px;border-radius:6px;font-size:10px;
                   background:${fiabilite.bg};color:${fiabilite.color};border:1px solid ${fiabilite.border};">
