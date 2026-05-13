@@ -62,9 +62,15 @@ const ibpNiveau = (!ibp || ibp === "—" || isNaN(ibpNum)) ? "" :
   ibpNum <= 100 ? "🔴 N4 — Assez Difficile" :
                   "⚫ N5 — Difficile"
 
-const texte = `Ci-joint la feuille de route que vous venez de créer pour la rando : "${nom} / ${formatDate(date)}".
+const texte = `Bonjour,
 
-En cas de nécessité, vous pouvez modifier ou annuler celle-ci à tout moment en cliquant sur la page suivante : https://bit.ly/4nnwPWW . Le bouton "Annuler" fournit l'état de la rando comme ANNULÉE, elle s'affiche en rouge dans le planning. Ces actions mettront automatiquement à jour le planning sur le site et Google Calendar.
+Merci d'avoir rempli la feuille de route "${nom} / ${formatDate(date)}".
+
+Vous trouverez ci-joint une copie de votre FdR.
+
+En cas de nécessité, vous pouvez modifier l'ensemble des paramètres de la FdR ou annuler celle-ci à tout moment en cliquant sur la page suivante : https://bit.ly/4nnwPWW
+
+Sur cette nouvelle page, le bouton "Annuler" fournit l'état de la rando comme - Annulée -. Ces actions mettront automatiquement à jour le planning sur le site et Google Calendar.
 
 ――――――――――――――――――――――――――――――――――
 
