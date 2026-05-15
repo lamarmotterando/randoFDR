@@ -239,14 +239,8 @@ function couleurIBP(val) {
 
 function urlContacts(f) {
   const p = new URLSearchParams();
-  if (f.animateur)  p.set("animateur", f.animateur.trim());
-  if (f.nom_rando)  p.set("rando", f.nom_rando);
-  if (f.date_rando) {
-    const d = parseDate(f.date_rando);
-    if (d) p.set("date", d.toLocaleDateString("fr-FR", {
-      weekday: "long", day: "2-digit", month: "long", year: "numeric"
-    }));
-  }
+  if (f.animateur) p.set("animateur", f.animateur.trim());
+  if (f.nom_rando) p.set("rando", f.nom_rando.trim());
   return CHEMIN_PAGE_CONTACTS + "?" + p.toString();
 }
 
@@ -312,7 +306,7 @@ function construireTableau(fiches, today) {
 
     tr.style.cursor = "pointer";
     const dest = urlContacts(f);
-    tr.setAttribute("onclick", "location.href='" + dest.replace(/'/g, "%27") + "'");
+    tr.addEventListener("click", () => { location.href = dest; });
 
     if (d !== null) { tr.dataset.dateValue = d.getTime(); tr.dataset.diff = diff; }
     if (annulee)    { tr.classList.add("annulee"); tr.dataset.annulee = "1"; }
