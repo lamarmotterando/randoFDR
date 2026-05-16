@@ -75,6 +75,12 @@ tr.annulee {
 }
 tr.annulee:hover { background: #ffe0e0 !important; }
 
+/* ── LIGNE MODIFIÉE ── */
+tr.modifiee {
+  background: #fffbe6 !important;
+}
+tr.modifiee:hover { background: #fff3cc !important; }
+
 /* ── LIEN ANIMATEUR ── */
 .anim-link {
   color: #0077cc;
@@ -139,6 +145,7 @@ tr.annulee:hover { background: #ffe0e0 !important; }
     border-left: 5px solid #0077cc; position: relative;
   }
   tr.annulee { border-left-color: #c53030 !important; background: #fff0f0 !important; }
+  tr.modifiee { border-left-color: #e67e00 !important; background: #fffbe6 !important; }
   tr td:nth-child(1) {
     font-size: 17px; font-weight: bold; color: #1a1a1a; border: none;
     padding: 0 0 6px 0; border-bottom: 1px solid #eee; margin-bottom: 8px;
@@ -299,17 +306,19 @@ function construireTableau(fiches, today) {
   allRows = [];
 
   fiches.forEach(f => {
-    const tr      = document.createElement("tr");
-    const annulee = f.statut === "annulée";
-    const d       = parseDate(f.date_rando);
-    const diff    = d ? Math.floor((d - today) / 86400000) : null;
+    const tr       = document.createElement("tr");
+    const annulee  = f.statut === "annulée";
+    const modifiee = f.statut === "modifiée";
+    const d        = parseDate(f.date_rando);
+    const diff     = d ? Math.floor((d - today) / 86400000) : null;
 
     tr.style.cursor = "pointer";
     const dest = urlContacts(f);
     tr.addEventListener("click", () => { location.href = dest; });
 
     if (d !== null) { tr.dataset.dateValue = d.getTime(); tr.dataset.diff = diff; }
-    if (annulee)    { tr.classList.add("annulee"); tr.dataset.annulee = "1"; }
+    if (annulee)    { tr.classList.add("annulee");  tr.dataset.annulee  = "1"; }
+    if (modifiee)   { tr.classList.add("modifiee"); tr.dataset.modifiee = "1"; }
 
     /* Date */
     const tdDate = document.createElement("td");
@@ -324,6 +333,8 @@ function construireTableau(fiches, today) {
     tdNom.classList.add("description-col");
     if (annulee) {
       tdNom.innerHTML = `<span style="text-decoration:line-through;color:#aaa">${f.nom_rando || "—"}</span>&nbsp;<span style="color:#c53030;font-weight:700;font-size:11px">❌ ANNULÉE</span>`;
+    } else if (modifiee) {
+      tdNom.innerHTML = `${f.nom_rando || "—"}&nbsp;<span style="color:#e67e00;font-weight:700;font-size:11px">✏️ MODIFIÉE</span>`;
     } else {
       tdNom.textContent = f.nom_rando || "—";
     }
