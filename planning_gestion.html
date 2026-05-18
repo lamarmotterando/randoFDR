@@ -1483,6 +1483,38 @@ async function sauvegarderRattach(randoId, btnOk) {
   }
 }
 
+
+/* ══ EXPOSITION GLOBALE (requis pour type=module) ══ */
+window.creerRando = creerRando;
+window.creerSejour = creerSejour;
+window.switchType = switchType;
+window.calcNbJours = calcNbJours;
+window.sortTable = sortTable;
+window.toggleAll = toggleAll;
+window.updateSelectionToolbar = updateSelectionToolbar;
+window.confirmSupprimerSelection = confirmSupprimerSelection;
+window.toggleOldEvents = toggleOldEvents;
+window.openEdit = openEdit;
+window.saveEdit = saveEdit;
+window.syncNbParticipantsGestion = syncNbParticipantsGestion;
+window.confirmDelete = confirmDelete;
+window.deleteEvent = deleteEvent;
+window.toggleCal = toggleCal;
+window.calNav = calNav;
+window.calReset = calReset;
+window.ouvrirRattach = ouvrirRattach;
+window.fermerRattach = fermerRattach;
+window.sauvegarderRattach = sauvegarderRattach;
+window.closeModal = closeModal;
+window.openModalExport = openModalExport;
+window.closeModalExport = closeModalExport;
+window.exportLoad = exportLoad;
+window.exportCSV = exportCSV;
+window.setBusy = setBusy;
+window.showToast = showToast;
+window.loadEvents = loadEvents;
+window.renderTable = renderTable;
+
 /* Fermer le popup en cliquant en dehors */
 document.addEventListener("click", function(e) {
   const popup = document.getElementById("cal-popup");
