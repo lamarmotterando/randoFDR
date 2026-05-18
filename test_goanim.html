@@ -747,6 +747,10 @@ async function motDePasseOublie() {
 /* ══ DÉCONNEXION (optionnel — accessible via console) ══ */
 window._deconnexion = async () => { await supabase.auth.signOut(); afficherLogin(); };
 
+/* ══ EXPOSITION GLOBALE (requis pour type=module) ══ */
+window.connexion       = connexion;
+window.motDePasseOublie = motDePasseOublie;
+
 /* ══ POINT D'ENTRÉE ══ */
 const { data: { session } } = await supabase.auth.getSession();
 if (session) {
