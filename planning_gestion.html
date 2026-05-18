@@ -1008,7 +1008,7 @@ async function supprimerSelection(ids) {
       }
       const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
         method: "DELETE",
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" }
+        headers: await authHeaders({ "Prefer": "return=minimal" })
       });
       if (!res.ok && res.status !== 204) erreurs++;
     } catch(e) { erreurs++; }
