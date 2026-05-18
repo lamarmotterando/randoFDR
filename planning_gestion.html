@@ -584,6 +584,22 @@ const BASE_URL     = "https://lamarmotterando.github.io/randoFDR/data/";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+/* ══ HELPER HEADERS AUTH ══
+   Retourne les headers avec le JWT de la session courante si disponible,
+   sinon retombe sur la clé anon (pour les lectures publiques) */
+async function authHeaders(extra = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || SUPABASE_KEY;
+  return {
+    "apikey": SUPABASE_KEY,
+    "Authorization": `Bearer ${token}`,
+    ...extra
+  };
+}
+async function authHeadersJson() {
+  return await authHeaders({ "Content-Type": "application/json", "Prefer": "return=minimal" });
+}
+
 /* ══ AUTHENTIFICATION SUPABASE ══ */
 async function tentativeConnexion() {
   const email = document.getElementById("login-email").value.trim();
@@ -703,7 +719,7 @@ async function loadData() {
   try {
     const [a, r, p] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/animateurs?select=nom,email&order=nom`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+        headers: await authHeaders()
       }).then(res => res.json()),
       fetch(BASE_URL + "randos.json").then(res => res.json()),
       fetch(BASE_URL + "parkings.js").then(res => res.text()).then(txt => {
@@ -801,7 +817,7 @@ async function populateSejourSelect() {
   if (!sel) return;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?select=id,nom_rando,date_rando,date_fin_sejour&type=eq.sejour&order=date_rando.asc`, {
-      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      headers: await authHeaders()
     });
     const sejours = await res.json();
     sel.innerHTML = "<option value=''>— Randonnée autonome —</option>";
@@ -828,7 +844,7 @@ async function creerSejour() {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" },
+      headers: await authHeadersJson(),
       body: JSON.stringify({
         date_rando: debut, date_fin_sejour: fin,
         nom_rando: nom, animateur: anim,
@@ -874,7 +890,7 @@ async function creerRando() {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" },
+      headers: await authHeadersJson(),
       body: JSON.stringify({
         date_rando: date, nom_rando: nom, animateur: anim,
         parking_covoit: parking || null,
@@ -930,7 +946,7 @@ async function loadEvents() {
   resetSelection();
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?select=*&order=date_rando.asc`, {
-      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      headers: await authHeaders()
     });
     allRows = await res.json();
     renderTable();
@@ -1208,7 +1224,7 @@ async function saveEdit() {
     };
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" },
+      headers: await authHeadersJson(),
       body: JSON.stringify(patch)
     });
     if (res.ok) {
@@ -1246,7 +1262,7 @@ async function deleteEvent(id, nom, animateur, dateRando) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" },
+      headers: await authHeadersJson(),
       body: JSON.stringify({ statut: "annulée" })
     });
     if (res.ok) {
@@ -1261,7 +1277,7 @@ async function syncCalendar(action, ficheData) {
   try {
     const res  = await fetch(`${SUPABASE_URL}/functions/v1/dynamic-handler`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` },
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
       body: JSON.stringify({ action, fiche: ficheData })
     });
     const data = await res.json().catch(() => ({}));
@@ -1464,7 +1480,7 @@ async function sauvegarderRattach(randoId, btnOk) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${randoId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Prefer": "return=minimal" },
+      headers: await authHeadersJson(),
       body: JSON.stringify({ sejour_id: sejourId })
     });
     if (res.ok) {
@@ -1572,7 +1588,7 @@ async function exportLoad() {
     const url = SUPABASE_URL + "/rest/v1/fiches?select=date_rando,nom_rando,ibp,distance,denivele,animateur"
       + "&date_rando=gte." + from + "&date_rando=lte." + to
       + "&statut=neq.annulée&order=date_rando.asc";
-    const res = await fetch(url, { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } });
+    const res = await fetch(url, { headers: await authHeaders() });
     if (!res.ok) throw new Error("HTTP " + res.status);
     exportData = await res.json();
     renderExportTable(exportData);
