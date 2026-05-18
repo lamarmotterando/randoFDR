@@ -622,6 +622,18 @@ async function tentativeConnexion() {
     return;
   }
 
+  /* ══ VÉRIFICATION RÔLE ADMIN ══ */
+  const role = data?.user?.app_metadata?.role;
+  if (role !== 'admin') {
+    await supabase.auth.signOut();
+    err.textContent = "Accès réservé aux administrateurs.";
+    err.style.color = "#e53e3e";
+    err.style.display = "block";
+    document.getElementById("login-pass").value = "";
+    btn.textContent = "🔓 Se connecter"; btn.disabled = false;
+    return;
+  }
+
   err.style.display = "none";
   document.getElementById("login-screen").classList.add("hidden");
   document.getElementById("app").classList.add("visible");
@@ -670,9 +682,15 @@ document.getElementById("login-email").addEventListener("keydown", e => { if (e.
 /* Vérifier session existante au chargement */
 const { data: { session } } = await supabase.auth.getSession();
 if (session) {
-  document.getElementById("login-screen").classList.add("hidden");
-  document.getElementById("app").classList.add("visible");
-  initApp();
+  const role = session?.user?.app_metadata?.role;
+  if (role === 'admin') {
+    document.getElementById("login-screen").classList.add("hidden");
+    document.getElementById("app").classList.add("visible");
+    initApp();
+  } else {
+    /* Session valide mais pas admin → déconnecter silencieusement */
+    await supabase.auth.signOut();
+  }
 }
 
 let animateurs = [], randos = [], parkings = [], allRows = [];
