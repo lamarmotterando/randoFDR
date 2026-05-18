@@ -616,13 +616,20 @@ function afficher(f, tel, main) {
   if (f.animateur) {
     animHtml = `<div class="lbl" style="margin-bottom:3px;">👤 Animateur</div>
       <div class="anim-nom">${f.animateur}</div>`;
-    if (tel) animHtml += `<div class="tel-row">
-      <a href="sms:${tel.replace(/\s/g,'')}" class="tel-btn sms">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>SMS
-      </a>
-      <a href="tel:${tel.replace(/\s/g,'')}" class="tel-btn call">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.07 1.18 2 2 0 012.03 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Appeler
-      </a></div>`;
+    if (tel) animHtml += `<div class="ligne" style="margin-top:4px;align-items:center;gap:12px;">
+      <span class="lbl">📱 Tél. :</span>
+      <span class="val" style="font-weight:700;font-size:15px;color:#1a3a5c;letter-spacing:.03em;">
+        <a href="tel:${tel.replace(/\s/g,'')}" style="color:#1a3a5c;text-decoration:none;-webkit-tap-highlight-color:transparent;"
+           onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+          ${tel}
+        </a>
+        <a href="sms:${tel.replace(/\s/g,'')}" style="margin-left:10px;font-size:12px;font-weight:600;
+           color:var(--vert);background:var(--vert-cl);padding:3px 10px;border-radius:12px;
+           text-decoration:none;white-space:nowrap;-webkit-tap-highlight-color:transparent;">
+          💬 SMS
+        </a>
+      </span>
+    </div>`;
   }
 
   const L = (lbl,val) => val ? `<div class="ligne"><span class="lbl">${lbl} :</span><span class="val">${val}</span></div>` : "";
