@@ -252,6 +252,24 @@
       </div>
       <div><label>Remarques</label><textarea id="modifRemarques" placeholder="Décrivez les modifications…"></textarea></div>
 
+      <!-- ══ CHAMPS SUPPLÉMENTAIRES ══ -->
+      <div class="form-row">
+        <div><label>IBP</label><input id="modifIbp" type="number" min="0" max="200" placeholder="ex: 45"></div>
+        <div>
+          <label>Coûts trajet</label>
+          <input id="modifCouts" type="text" placeholder="ex: ~4€/pers par 4">
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Effort (1–5)</label><input id="modifEffort" type="number" min="1" max="5" placeholder="1 à 5"></div>
+        <div><label>Technicité (1–5)</label><input id="modifTechnicite" type="number" min="1" max="5" placeholder="1 à 5"></div>
+      </div>
+      <div class="form-row">
+        <div><label>Risque (1–5)</label><input id="modifRisque" type="number" min="1" max="5" placeholder="1 à 5"></div>
+        <div><label>Coordonnées GPS</label><input id="modifGps" type="text" placeholder="ex: 43.9123, 5.4567"></div>
+      </div>
+      <div><label>Itinéraire covoiturage</label><textarea id="modifItineraire" placeholder="Décrivez le trajet covoiturage depuis le parking de RV…" style="min-height:65px"></textarea></div>
+
       <!-- ══ SECTION PARTICIPANTS (visible uniquement si rando passée et non annulée) ══ -->
       <div id="sectionParticipants" style="display:none;border-top:1px solid #e0e8f0;margin-top:12px;padding-top:14px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
@@ -640,6 +658,13 @@ function ouvrirModif(id) {
   const statutInit = (f.statut === "publiée") ? "modifiée" : (f.statut || "publiée");
   document.getElementById("modifStatut").value        = statutInit;
   document.getElementById("modifRemarques").value     = f.remarques      || "";
+  document.getElementById("modifIbp").value           = f.ibp            || "";
+  document.getElementById("modifCouts").value         = f.couts          || "";
+  document.getElementById("modifEffort").value        = f.effort         || "";
+  document.getElementById("modifTechnicite").value    = f.technicite     || "";
+  document.getElementById("modifRisque").value        = f.risque         || "";
+  document.getElementById("modifGps").value           = f.gps            || "";
+  document.getElementById("modifItineraire").value    = f.itineraire     || "";
   document.getElementById("modifErr").style.display   = "none";
 
   /* ══ PARTICIPANTS — visible si rando passée et non annulée ══ */
@@ -793,6 +818,13 @@ async function sauvegarderModif() {
     duree:          document.getElementById("modifDuree").value.trim()         || null,
     statut:            document.getElementById("modifStatut").value,
     remarques:         document.getElementById("modifRemarques").value.trim()              || null,
+    ibp:               parseFloat(document.getElementById("modifIbp").value)               || null,
+    couts:             document.getElementById("modifCouts").value.trim()                  || null,
+    effort:            parseInt(document.getElementById("modifEffort").value)              || null,
+    technicite:        parseInt(document.getElementById("modifTechnicite").value)          || null,
+    risque:            parseInt(document.getElementById("modifRisque").value)              || null,
+    gps:               document.getElementById("modifGps").value.trim()                   || null,
+    itineraire:        document.getElementById("modifItineraire").value.trim()             || null,
     nb_participants:   parseInt(document.getElementById("modifNbParticipants").value)      || null,
     noms_participants: document.getElementById("modifNomsParticipants").value.trim()       || null,
   };
