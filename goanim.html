@@ -122,6 +122,19 @@
     color: #c53030;
     font-size: 14px;
   }
+
+  /* 🆕 v4.4 — Bandeau statut modifiée */
+  .modifiee-banner {
+    background: #fffbea;
+    border-left: 4px solid #d97706;
+    padding: 11px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-weight: 700;
+    color: #92400e;
+    font-size: 14px;
+  }
+
   .fiche-titre {
     font-family: 'Lora', serif;
     font-size: clamp(17px, 5vw, 22px);
@@ -418,7 +431,6 @@ function parseGPS(g) {
 }
 
 /* ══ MÉTÉO ══ */
-
 function wmoInfo(c) {
   return ({
     0:["☀️","Dégagé"],1:["🌤️","Peu nuageux"],2:["⛅","Part. nuageux"],
@@ -531,8 +543,6 @@ async function charger() {
   try {
     if (randoNom) {
       /* Mode direct : nom de rando précis passé en URL (?rando=…) */
-      /* ilike. = insensible à la casse ; normalize(NFC) = accents unifiés */
-      /* order=date_rando.desc : en cas de doublons de nom, prend la fiche la plus récente */
       const nomNorm = randoNom.trim().normalize("NFC");
       const r = await fetch(
         `${SUPABASE_URL}/rest/v1/fiches?select=*&nom_rando=ilike.${encodeURIComponent(nomNorm)}&order=date_rando.desc&limit=1`,
@@ -540,12 +550,12 @@ async function charger() {
       );
       if (r.ok) { const d = await r.json(); if (d?.length) fiche = d[0]; }
     } else {
-      /* Mode automatique : prochaine fiche dont date_rando >= aujourd'hui, triée par date */
+      /* Mode automatique : prochaine fiche publiée ou modifiée dont date_rando >= aujourd'hui */
       const today = new Date();
       today.setHours(0,0,0,0);
-      const iso = today.toISOString().slice(0,10); // "YYYY-MM-DD"
+      const iso = today.toISOString().slice(0,10);
       const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/fiches?select=*&date_rando=gte.${iso}&order=date_rando.asc&limit=1`,
+        `${SUPABASE_URL}/rest/v1/fiches?select=*&date_rando=gte.${iso}&statut=neq.annulée&order=date_rando.asc&limit=1`,
         HDR
       );
       if (r.ok) { const d = await r.json(); if (d?.length) fiche = d[0]; }
@@ -573,7 +583,10 @@ async function charger() {
 
 /* ══ RENDU ══ */
 function afficher(f, tel, main) {
-  const annulee = f.statut==="annulée";
+  /* 🆕 v4.4 — statut modifiée en plus de annulée */
+  const annulee  = f.statut === "annulée";
+  const modifiee = f.statut === "modifiée";
+
   const { rv, depart } = heureRVCalc(f.heure_rv);
   const d = parseDate(f.date_rando);
   const dateAff = d ? d.toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}) : (f.date_rando||"");
@@ -619,7 +632,7 @@ function afficher(f, tel, main) {
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>SMS
       </a>
       <a href="tel:${tel.replace(/\s/g,'')}" class="tel-btn call">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.07 1.18 2 2 0 012.03 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Appeler
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.07 1.18 2 2 0 012.03 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>${tel}
       </a></div>`;
   }
 
@@ -627,7 +640,10 @@ function afficher(f, tel, main) {
   const mid = "meteo-"+(f.id||Math.random().toString(36).slice(2));
 
   let html = `<div class="fiche">`;
-  if (annulee) html += `<div class="annulee-banner">❌ RANDONNÉE ANNULÉE</div>`;
+  /* 🆕 v4.4 — bandeaux statut */
+  if (annulee)  html += `<div class="annulee-banner">❌ RANDONNÉE ANNULÉE</div>`;
+  if (modifiee) html += `<div class="modifiee-banner">✏️ RANDONNÉE MODIFIÉE — des paramètres ont changé, consultez les détails ci-dessous</div>`;
+
   html += `<div class="fiche-titre">${f.nom_rando||"—"}</div>`;
   html += `<div class="fiche-date">📅 ${dateAff}</div>`;
   if (f.profil_png) html += `<img src="${f.profil_png}" class="profil-img" alt="Profil altimétrique">`;
@@ -649,6 +665,7 @@ function afficher(f, tel, main) {
     <div class="stat-box"><div class="stat-lbl">⏱ Durée</div><div class="stat-val">${f.duree||"—"}</div></div>
   </div>`;
   if (badgesHtml) html += badgesHtml;
+  /* Météo uniquement si non annulée (modifiée = on affiche quand même) */
   if (!annulee) {
     html += `<hr class="sep">
       <div class="meteo-bloc" id="${mid}-bloc">
