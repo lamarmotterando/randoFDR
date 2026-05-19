@@ -1193,9 +1193,10 @@ function openEdit(ev) {
   document.getElementById("edit-statut").value    = ev.statut          || "publiée";
   document.getElementById("edit-remarques").value = ev.remarques       || "";
 
-  /* ══ PARTICIPANTS — visible si rando passée et non annulée ══ */
-  const dateRando  = new Date(ev.date_rando);
-  const estPassee  = dateRando < new Date();
+  /* ══ PARTICIPANTS — visible si rando passée et non annulée ══
+     Correction : comparaison ISO string pour éviter décalage UTC Safari */
+  const aujourdHui = new Date().toISOString().split("T")[0];
+  const estPassee  = ev.date_rando < aujourdHui;
   const estAnnulee = (ev.statut === "annulée");
   const secPart = document.getElementById("edit-sectionParticipants");
   secPart.style.display = (estPassee && !estAnnulee) ? "block" : "none";
@@ -1229,6 +1230,12 @@ async function saveEdit() {
   if (!date || !nom || !anim) { showToast("Champs obligatoires manquants.", true); return; }
   if (!dist) { showToast("La distance est obligatoire.", true); return; }
   setBusy("btn-save-edit", true);
+
+  /* Participants : uniquement si la section est visible (rando passée + non annulée)
+     Sinon on écrase silencieusement les données déjà enregistrées */
+  const secPart = document.getElementById("edit-sectionParticipants");
+  const participantsVisibles = secPart.style.display !== "none";
+
   try {
     const patch = {
       date_rando: date, nom_rando: nom, animateur: anim,
@@ -1237,8 +1244,10 @@ async function saveEdit() {
       distance: dist ? parseFloat(dist) : null,
       denivele: den ? parseInt(den) : null,
       statut, remarques: remarques || null,
-      nb_participants:   nbPart ? parseInt(nbPart) : null,
-      noms_participants: nomsPart || null,
+      ...(participantsVisibles && {
+        nb_participants:   nbPart ? parseInt(nbPart) : null,
+        noms_participants: nomsPart || null,
+      }),
     };
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
       method: "PATCH",
