@@ -515,7 +515,7 @@ function voirDetail(id) {
   resumeEl.textContent = _buildLignes("🌤 Météo        : ⏳ chargement…");
   document.getElementById("modalDetail").classList.add("open");
 
-  /* ── Fetch météo Météo-France (ARPEGE + AROME) ── */
+  /* ── Fetch météo Open-Meteo ── */
   (async () => {
     if (!f.date_rando || f.statut === "annulée") return;
 
@@ -548,7 +548,6 @@ function voirDetail(id) {
       const d = data.daily;
       if (!d || !d.weathercode) throw new Error("données invalides");
 
-      /* Trouver l'index du jour */
       const idx = d.time.indexOf(f.date_rando);
       if (idx === -1) throw new Error("date absente");
 
@@ -566,10 +565,7 @@ function voirDetail(id) {
       const tmax  = d.temperature_2m_max[idx];
       const pluie = d.precipitation_probability_max[idx];
       const vent  = d.windspeed_10m_max[idx];
-      const raf = d.windgusts_10m_max?.[idx] ?? null;
-
-      const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSO","SO","OSO","O","ONO","NO","NNO"];
-      const dir = ""; // direction non dispo modèle meteofrance
+      const raf   = d.windgusts_10m_max?.[idx] ?? null;
 
       const fiabilite = diffJours <= 2
         ? "✅ AROME 1,3km — fiable"
@@ -610,7 +606,6 @@ function demanderMdp() {
 
 function fermerMdp() {
   document.getElementById("modalMdp").classList.remove("open");
-  /* Rouvrir le détail */
   if (idEnCours) document.getElementById("modalDetail").classList.add("open");
 }
 
@@ -619,7 +614,6 @@ function validerMdp() {
   if (!f) return;
   const saisi   = document.getElementById("mdpInput").value.trim().toLowerCase();
   const attendu = (f.animateur || "").trim().toLowerCase();
-  /* Insensible à la casse, correspondance partielle */
   const ok = saisi.length > 0 && (attendu.includes(saisi) || saisi.includes(attendu));
   if (!ok) {
     document.getElementById("mdpErr").style.display = "block";
@@ -654,7 +648,6 @@ function ouvrirModif(id) {
   document.getElementById("modifDistance").value      = f.distance       || "";
   document.getElementById("modifDenivele").value      = f.denivele       || "";
   document.getElementById("modifDuree").value         = f.duree          || "";
-  /* Pré-sélectionner "modifiée" si statut actuel = "publiée" */
   const statutInit = (f.statut === "publiée") ? "modifiée" : (f.statut || "publiée");
   document.getElementById("modifStatut").value        = statutInit;
   document.getElementById("modifRemarques").value     = f.remarques      || "";
@@ -667,12 +660,17 @@ function ouvrirModif(id) {
   document.getElementById("modifItineraire").value    = f.itineraire     || "";
   document.getElementById("modifErr").style.display   = "none";
 
-  /* ══ PARTICIPANTS — visible si rando passée et non annulée ══ */
-  const dateRando = new Date(f.date_rando);
-  const estPassee = dateRando < new Date();
+  /* ══ PARTICIPANTS — visible si rando passée et non annulée ══
+     CORRECTION BUG 1 : comparaison en strings ISO (YYYY-MM-DD)
+     pour éviter le décalage UTC/heure locale de new Date("YYYY-MM-DD") */
+  const aujourdHui = new Date().toISOString().split("T")[0]; // "2026-05-19"
+  const estPassee  = f.date_rando < aujourdHui;              // comparaison lexicographique fiable
   const estAnnulee = (f.statut === "annulée");
+
   const sectionPart = document.getElementById("sectionParticipants");
   sectionPart.style.display = (estPassee && !estAnnulee) ? "block" : "none";
+
+  /* Pré-remplir les champs participants avec les valeurs existantes */
   document.getElementById("modifNomsParticipants").value = f.noms_participants || "";
   document.getElementById("modifNbParticipants").value   = f.nb_participants   || "";
 
@@ -702,8 +700,6 @@ async function creerCalendar() {
   if (btn) { btn.disabled = true; btn.textContent = "⏳ Création…"; }
 
   try {
-    /* On appelle dynamic-handler avec action calendarCreate
-       = même payload que calendarUpdate mais force la création */
     const res = await fetch(
       `${SUPABASE_URL}/functions/v1/dynamic-handler`,
       {
@@ -801,11 +797,24 @@ async function resyncCalendar() {
   }
 }
 
+/* ══ SAUVEGARDE MODIFICATION ══ */
 async function sauvegarderModif() {
-  /* Priorité à idEnCours (fiable) plutôt qu'au champ caché */
+
+  /* CORRECTION BUG 3 : forcer le recalcul du compteur avant de lire sa valeur */
+  syncNbParticipants();
+
   const id = idEnCours || Number(document.getElementById("modifId").value);
-  if (!id) { console.error("[Modif] id manquant — idEnCours:", idEnCours, "modifId:", document.getElementById("modifId").value); return; }
+  if (!id) {
+    console.error("[Modif] id manquant — idEnCours:", idEnCours, "modifId:", document.getElementById("modifId").value);
+    return;
+  }
   console.log("[Modif] id utilisé:", id);
+
+  /* CORRECTION BUG 2 : n'inclure nb_participants / noms_participants
+     dans le patch QUE si la section est effectivement affichée.
+     Sinon on écrase silencieusement les données déjà enregistrées. */
+  const sectionPart = document.getElementById("sectionParticipants");
+  const participantsVisibles = sectionPart.style.display !== "none";
 
   const patch = {
     nom_rando:      document.getElementById("modifNom").value.trim()           || null,
@@ -816,20 +825,23 @@ async function sauvegarderModif() {
     distance:       parseFloat(document.getElementById("modifDistance").value) || null,
     denivele:       parseInt(document.getElementById("modifDenivele").value)   || null,
     duree:          document.getElementById("modifDuree").value.trim()         || null,
-    statut:            document.getElementById("modifStatut").value,
-    remarques:         document.getElementById("modifRemarques").value.trim()              || null,
-    ibp:               parseFloat(document.getElementById("modifIbp").value)               || null,
-    couts:             document.getElementById("modifCouts").value.trim()                  || null,
-    effort:            parseInt(document.getElementById("modifEffort").value)              || null,
-    technicite:        parseInt(document.getElementById("modifTechnicite").value)          || null,
-    risque:            parseInt(document.getElementById("modifRisque").value)              || null,
-    gps:               document.getElementById("modifGps").value.trim()                   || null,
-    itineraire:        document.getElementById("modifItineraire").value.trim()             || null,
-    nb_participants:   parseInt(document.getElementById("modifNbParticipants").value)      || null,
-    noms_participants: document.getElementById("modifNomsParticipants").value.trim()       || null,
+    statut:         document.getElementById("modifStatut").value,
+    remarques:      document.getElementById("modifRemarques").value.trim()     || null,
+    ibp:            parseFloat(document.getElementById("modifIbp").value)      || null,
+    couts:          document.getElementById("modifCouts").value.trim()         || null,
+    effort:         parseInt(document.getElementById("modifEffort").value)     || null,
+    technicite:     parseInt(document.getElementById("modifTechnicite").value) || null,
+    risque:         parseInt(document.getElementById("modifRisque").value)     || null,
+    gps:            document.getElementById("modifGps").value.trim()           || null,
+    itineraire:     document.getElementById("modifItineraire").value.trim()    || null,
+
+    /* Participants : uniquement si la section est visible (rando passée + non annulée) */
+    ...(participantsVisibles && {
+      noms_participants: document.getElementById("modifNomsParticipants").value.trim() || null,
+      nb_participants:   parseInt(document.getElementById("modifNbParticipants").value) || null,
+    }),
   };
 
-  /* Sélecteur ciblé sur le modal de modification */
   const btn = document.querySelector("#modalModif .btn-save");
   if (btn) { btn.disabled = true; btn.textContent = "⏳ Enregistrement…"; }
 
@@ -863,26 +875,26 @@ async function sauvegarderModif() {
     /* Sync Google Calendar (best-effort) */
     const ficheActuelle = fiches.find(x => x.id === id) || {};
     syncCalendar("calendarUpdate", {
-      dateRando:    patch.date_rando     || ficheActuelle.date_rando,
-      dateRandoOld: ficheActuelle.date_rando || patch.date_rando,
-      nomRando:     patch.nom_rando      || ficheActuelle.nom_rando,
-      animateur:    patch.animateur      || ficheActuelle.animateur,
-      heureRV:      patch.heure_rv       || ficheActuelle.heure_rv      || "",
-      parking:      patch.parking_covoit || ficheActuelle.parking_covoit || "",
-      parkingDepart:patch.parking_depart || ficheActuelle.parking_depart || "",
-      gps:          ficheActuelle.gps    || "",
-      distance:     patch.distance       || ficheActuelle.distance       || "",
-      denivele:     patch.denivele       || ficheActuelle.denivele       || "",
-      duree:        patch.duree          || ficheActuelle.duree          || "",
-      ibp:          ficheActuelle.ibp    || "",
-      effort:       ficheActuelle.effort || "",
-      technicite:   patch.technicite     || ficheActuelle.technicite     || "",
-      risque:       patch.risque         || ficheActuelle.risque         || "",
-      couts:        ficheActuelle.couts  || "",
+      dateRando:     patch.date_rando      || ficheActuelle.date_rando,
+      dateRandoOld:  ficheActuelle.date_rando || patch.date_rando,
+      nomRando:      patch.nom_rando       || ficheActuelle.nom_rando,
+      animateur:     patch.animateur       || ficheActuelle.animateur,
+      heureRV:       patch.heure_rv        || ficheActuelle.heure_rv       || "",
+      parking:       patch.parking_covoit  || ficheActuelle.parking_covoit  || "",
+      parkingDepart: patch.parking_depart  || ficheActuelle.parking_depart  || "",
+      gps:           ficheActuelle.gps     || "",
+      distance:      patch.distance        || ficheActuelle.distance        || "",
+      denivele:      patch.denivele        || ficheActuelle.denivele        || "",
+      duree:         patch.duree           || ficheActuelle.duree           || "",
+      ibp:           ficheActuelle.ibp     || "",
+      effort:        ficheActuelle.effort  || "",
+      technicite:    patch.technicite      || ficheActuelle.technicite      || "",
+      risque:        patch.risque          || ficheActuelle.risque          || "",
+      couts:         ficheActuelle.couts   || "",
     });
 
     fermerModif();
-    renderLocal(); /* mise à jour locale sans appel réseau */
+    renderLocal();
 
   } catch(e) {
     console.error("[Modif] exception:", e.message);
@@ -919,18 +931,16 @@ async function supprimerFiche() {
 
     if (!res.ok) throw new Error("HTTP " + res.status);
 
-    /* Mettre à jour localement */
     const f = fiches.find(x => x.id === id);
     if (f) f.statut = "annulée";
 
-    /* Sync Google Calendar — marquer comme annulée dans la description */
     if (f) {
       syncCalendar("calendarUpdate", {
-        dateRando:  f.date_rando,
+        dateRando:    f.date_rando,
         dateRandoOld: f.date_rando,
-        nomRando:   `❌ ANNULÉE — ${f.nom_rando}`,
-        animateur:  f.animateur || "",
-        ibp:        f.ibp || "",
+        nomRando:     `❌ ANNULÉE — ${f.nom_rando}`,
+        animateur:    f.animateur || "",
+        ibp:          f.ibp || "",
       });
     }
 
