@@ -545,7 +545,7 @@ async function charger() {
       /* Mode direct : nom de rando précis passé en URL (?rando=…) */
       const nomNorm = randoNom.trim().normalize("NFC");
       const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/fiches?select=*&nom_rando=ilike.${encodeURIComponent(nomNorm)}&order=date_rando.desc&limit=1`,
+        `${SUPABASE_URL}/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,heure_rv,statut,profil_png,parking_covoit,parking_depart,gps,distance,denivele,duree,ibp,effort,technicite,risque,couts,remarques&nom_rando=ilike.${encodeURIComponent(nomNorm)}&order=date_rando.desc&limit=1`,
         HDR
       );
       if (r.ok) { const d = await r.json(); if (d?.length) fiche = d[0]; }
@@ -555,7 +555,7 @@ async function charger() {
       today.setHours(0,0,0,0);
       const iso = today.toISOString().slice(0,10);
       const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/fiches?select=*&date_rando=gte.${iso}&statut=neq.annulée&order=date_rando.asc&limit=1`,
+        `${SUPABASE_URL}/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,heure_rv,statut,profil_png,parking_covoit,parking_depart,gps,distance,denivele,duree,ibp,effort,technicite,risque,couts,remarques&date_rando=gte.${iso}&statut=neq.annulée&order=date_rando.asc&limit=1`,
         HDR
       );
       if (r.ok) { const d = await r.json(); if (d?.length) fiche = d[0]; }
@@ -579,6 +579,18 @@ async function charger() {
     return;
   }
   afficher(fiche, tel, main);
+}
+
+/* ══ ÉCHAPPEMENT XSS ══
+   Protège contre l'injection HTML/JS dans les données venant de Supabase */
+function esc(s) {
+  if (!s) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 /* ══ RENDU ══ */
@@ -626,7 +638,7 @@ function afficher(f, tel, main) {
   let animHtml = "";
   if (f.animateur) {
     animHtml = `<div class="lbl" style="margin-bottom:3px;">👤 Animateur</div>
-      <div class="anim-nom">${f.animateur}</div>`;
+      <div class="anim-nom">${esc(f.animateur)}</div>`;
     if (tel) animHtml += `<div class="tel-row">
       <a href="sms:${tel.replace(/\s/g,'')}" class="tel-btn sms">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>SMS
@@ -636,7 +648,7 @@ function afficher(f, tel, main) {
       </a></div>`;
   }
 
-  const L = (lbl,val) => val ? `<div class="ligne"><span class="lbl">${lbl} :</span><span class="val">${val}</span></div>` : "";
+  const L = (lbl,val) => val ? `<div class="ligne"><span class="lbl">${lbl} :</span><span class="val">${esc(val)}</span></div>` : "";
   const mid = "meteo-"+(f.id||Math.random().toString(36).slice(2));
 
   let html = `<div class="fiche">`;
@@ -644,7 +656,7 @@ function afficher(f, tel, main) {
   if (annulee)  html += `<div class="annulee-banner">❌ RANDONNÉE ANNULÉE</div>`;
   if (modifiee) html += `<div class="modifiee-banner">✏️ RANDONNÉE MODIFIÉE — des paramètres ont changé, consultez les détails ci-dessous</div>`;
 
-  html += `<div class="fiche-titre">${f.nom_rando||"—"}</div>`;
+  html += `<div class="fiche-titre">${esc(f.nom_rando)||"—"}</div>`;
   html += `<div class="fiche-date">📅 ${dateAff}</div>`;
   if (f.profil_png) html += `<img src="${f.profil_png}" class="profil-img" alt="Profil altimétrique">`;
   html += animHtml;
@@ -656,7 +668,7 @@ function afficher(f, tel, main) {
   html += L("🏁 Parking départ", f.parking_depart);
   if (f.gps) {
     html += L("📍 GPS", f.gps);
-    html += `<div class="ligne"><a href="https://www.google.com/maps?q=${f.gps}" target="_blank" style="color:#0077cc;font-size:13px;padding:3px 0;display:inline-block;">🗺 Ouvrir Google Maps</a></div>`;
+    html += `<div class="ligne"><a href="https://www.google.com/maps?q=${encodeURIComponent(f.gps)}" target="_blank" style="color:#0077cc;font-size:13px;padding:3px 0;display:inline-block;">🗺 Ouvrir Google Maps</a></div>`;
   }
   html += `<hr class="sep">`;
   html += `<div class="stats-grid">
@@ -677,7 +689,7 @@ function afficher(f, tel, main) {
   if (f.remarques) {
     html += `<hr class="sep"><div class="remarques-bloc">
       <div class="remarques-titre">📌 Remarques</div>
-      <div class="remarques-txt">${f.remarques}</div>
+      <div class="remarques-txt">${esc(f.remarques)}</div>
     </div>`;
   }
   html += `<footer>Zone membres — accès restreint</footer></div>`;
