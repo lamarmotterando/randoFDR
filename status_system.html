@@ -469,9 +469,10 @@ const checks = [
     name: 'IBP Proxy (Vercel)',
     detail: 'Calcul indice difficulté',
     run: async () => {
-      const r = await ping('https://ibp-proxy.vercel.app/api/ping', {}, 6000);
-      const ok = r.ok || r.status === 404; // 404 = proxy actif mais route /ping absente
-      return { ok, ms: r.ms, detail: ok ? `Proxy actif · ${r.ms}ms` : `Hors ligne ${r.status}` };
+      const r = await ping('https://ibp-proxy.vercel.app/', {}, 8000);
+      /* Le proxy répond "IBP Proxy actif" en texte → HTTP 200 */
+      const ok = r.ok || r.status === 200;
+      return { ok, ms: r.ms, detail: ok ? `Actif · ${r.ms}ms` : `Hors ligne · HTTP ${r.status}` };
     }
   },
 
