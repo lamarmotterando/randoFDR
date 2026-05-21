@@ -13,18 +13,12 @@
   --cream: #fff8ee; --sand: #f5ead8; --stone: #8a7560; --ink: #2c1a0e;
   --blue: #1a3a5c; --blue-mid: #2d6a9f; --blue-light: #4a9fd4;
 }
-body {
-  font-family: 'Outfit', sans-serif;
-  background: var(--sand);
-  color: var(--ink);
-  min-height: 100vh;
-}
+body { font-family: 'Outfit', sans-serif; background: var(--sand); color: var(--ink); min-height: 100vh; }
 
 /* ── HEADER ── */
 .topbar {
   background: linear-gradient(135deg, var(--ember), var(--flame), var(--amber));
-  padding: 14px 20px;
-  box-shadow: 0 3px 12px rgba(193,68,14,0.3);
+  padding: 14px 20px; box-shadow: 0 3px 12px rgba(193,68,14,0.3);
 }
 .topbar h1 { font-size: 18px; font-weight: 700; color: white; }
 .topbar p  { font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 2px; }
@@ -35,70 +29,100 @@ body {
 .filters {
   background: white; border-radius: 12px;
   padding: 18px 20px; margin-bottom: 18px;
-  box-shadow: 0 2px 10px rgba(44,26,14,0.08);
-  border: 1.5px solid #e8d8c4;
+  box-shadow: 0 2px 10px rgba(44,26,14,0.08); border: 1.5px solid #e8d8c4;
 }
 .filters-titre {
   font-size: 13px; font-weight: 700; color: var(--stone);
-  text-transform: uppercase; letter-spacing: .05em;
-  margin-bottom: 12px;
+  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px;
 }
 .filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px;
 }
 .filters-grid input {
-  padding: 8px 12px;
-  border: 1.5px solid #e8d8c4;
-  border-radius: 8px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 13px;
-  color: var(--ink);
-  background: var(--cream);
-  transition: border-color .15s;
+  padding: 8px 12px; border: 1.5px solid #e8d8c4; border-radius: 8px;
+  font-family: 'Outfit', sans-serif; font-size: 13px; color: var(--ink);
+  background: var(--cream); transition: border-color .15s; width: 100%;
 }
-.filters-grid input:focus {
-  outline: none; border-color: var(--blue-light);
-}
+.filters-grid input:focus { outline: none; border-color: var(--blue-light); }
 .btn-reset {
-  padding: 8px 16px;
-  background: var(--sand);
-  border: 1.5px solid #e8d8c4;
-  border-radius: 8px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 13px; font-weight: 600;
-  color: var(--stone); cursor: pointer;
+  padding: 8px 16px; background: var(--sand); border: 1.5px solid #e8d8c4;
+  border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 13px;
+  font-weight: 600; color: var(--stone); cursor: pointer;
 }
 .btn-reset:hover { border-color: var(--flame); color: var(--flame); }
 
-/* ── STATS + RADAR ── */
-.stats-wrap {
-  display: flex; align-items: center; gap: 20px;
+/* ── PÉRIODE + STATS + RADAR ── */
+.bottom-filters {
+  display: flex; gap: 16px; align-items: flex-start;
   margin-top: 14px; flex-wrap: wrap;
 }
-.stats-text {
-  font-size: 13px; font-weight: 600; color: var(--blue);
-  flex: 1; min-width: 200px;
+
+/* Sélecteur période */
+.periode-bloc {
+  background: var(--cream); border: 1.5px solid #e8d8c4;
+  border-radius: 10px; padding: 12px 14px; flex-shrink: 0;
 }
-.radar-wrap {
-  width: 220px; height: 160px; flex-shrink: 0;
+.periode-titre {
+  font-size: 11px; font-weight: 700; color: var(--stone);
+  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px;
 }
+.periode-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.periode-row label { font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.periode-row input[type="date"] {
+  padding: 6px 10px; border: 1.5px solid #e8d8c4; border-radius: 7px;
+  font-family: 'Outfit', sans-serif; font-size: 12px; color: var(--ink);
+  background: white; cursor: pointer;
+}
+.periode-row input[type="date"]:focus { outline: none; border-color: var(--blue-light); }
+.btn-periode {
+  padding: 6px 12px; border-radius: 7px; font-family: 'Outfit', sans-serif;
+  font-size: 11px; font-weight: 700; border: none; cursor: pointer;
+  transition: all .15s; white-space: nowrap;
+}
+.btn-periode.active { background: var(--flame); color: white; }
+.btn-periode:not(.active) { background: var(--sand); color: var(--stone); border: 1.5px solid #e8d8c4; }
+.btn-periode:hover:not(.active) { border-color: var(--flame); color: var(--flame); }
+.btns-rapides { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+
+.stats-text { font-size: 13px; font-weight: 600; color: var(--blue); flex: 1; min-width: 200px; }
+.radar-wrap { width: 220px; height: 160px; flex-shrink: 0; }
+
+/* ── HISTOGRAMME ── */
+.histo-bloc {
+  background: white; border-radius: 12px;
+  padding: 20px; margin-bottom: 18px;
+  box-shadow: 0 2px 10px rgba(44,26,14,0.08); border: 1.5px solid #e8d8c4;
+  display: none;
+}
+.histo-bloc.visible { display: block; animation: fadeUp .3s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+.histo-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
+}
+.histo-titre { font-size: 14px; font-weight: 700; color: var(--blue); }
+.histo-stats-row {
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+.histo-stat {
+  background: var(--cream); border: 1.5px solid #e8d8c4;
+  border-radius: 8px; padding: 7px 13px; text-align: center;
+}
+.histo-stat-lbl { font-size: 10px; font-weight: 700; color: var(--stone); text-transform: uppercase; letter-spacing: .04em; }
+.histo-stat-val { font-size: 18px; font-weight: 700; color: var(--blue); margin-top: 2px; }
+.histo-canvas-wrap { position: relative; height: 220px; }
 
 /* ── TABLE ── */
 .table-wrap {
-  background: white; border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(44,26,14,0.08);
-  border: 1.5px solid #e8d8c4;
+  background: white; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 2px 10px rgba(44,26,14,0.08); border: 1.5px solid #e8d8c4;
 }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead th {
   background: linear-gradient(135deg, var(--ember), var(--flame));
-  color: white; padding: 10px 12px;
-  text-align: left; font-weight: 700;
-  cursor: pointer; user-select: none;
-  white-space: nowrap;
+  color: white; padding: 10px 12px; text-align: left; font-weight: 700;
+  cursor: pointer; user-select: none; white-space: nowrap;
 }
 thead th:hover { background: var(--ember); }
 thead th .sort-icon { font-size: 10px; margin-left: 4px; opacity: .7; }
@@ -111,11 +135,8 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 .td-anim { color: var(--stone); white-space: nowrap; }
 .td-num  { text-align: right; color: var(--ink); }
 
-/* ── IBP PASTILLES ── */
-.ibp-pill {
-  display: inline-block; font-size: 11px; font-weight: 700;
-  padding: 2px 8px; border-radius: 20px; white-space: nowrap;
-}
+/* ── IBP ── */
+.ibp-pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
 .ibp-n1 { background: #d4edda; color: #155724; }
 .ibp-n2 { background: #cce5ff; color: #004085; }
 .ibp-n3 { background: #fff3cd; color: #856404; }
@@ -130,11 +151,11 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 .tr-ann td  { opacity: .6; }
 .td-nom.barre { text-decoration: line-through; color: var(--stone); }
 
-/* ── MODAL DÉTAIL ── */
+/* ── MODAL ── */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
-  background: rgba(44,26,14,0.55);
-  z-index: 9999; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(44,26,14,0.55); z-index: 9999;
+  align-items: center; justify-content: center; padding: 16px;
 }
 .modal-overlay.open { display: flex; }
 .modal-box {
@@ -142,62 +163,38 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
   max-width: 580px; width: 100%; max-height: 88vh; overflow-y: auto;
   box-shadow: 0 8px 40px rgba(0,0,0,0.25);
 }
-.modal-head {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  margin-bottom: 16px; gap: 10px;
-}
+.modal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; gap: 10px; }
 .modal-titre { font-size: 16px; font-weight: 700; color: var(--blue); }
 .modal-close {
-  background: var(--sand); border: 1.5px solid #e8d8c4;
-  border-radius: 8px; padding: 6px 12px;
-  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
-  cursor: pointer; color: var(--ink); flex-shrink: 0;
+  background: var(--sand); border: 1.5px solid #e8d8c4; border-radius: 8px;
+  padding: 6px 12px; font-family: 'Outfit', sans-serif; font-size: 13px;
+  font-weight: 600; cursor: pointer; color: var(--ink); flex-shrink: 0;
 }
 .modal-profil { width: 100%; border-radius: 8px; margin-bottom: 14px; }
-
-/* ── SECTIONS DÉTAIL ── */
-.detail-section {
-  margin-bottom: 14px;
-  border: 1.5px solid #e8d8c4;
-  border-radius: 10px;
-  overflow: hidden;
-}
+.detail-section { margin-bottom: 14px; border: 1.5px solid #e8d8c4; border-radius: 10px; overflow: hidden; }
 .detail-section-titre {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .06em; color: white;
   background: linear-gradient(135deg, var(--ember), var(--flame));
   padding: 6px 12px;
 }
-.detail-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 0;
-}
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
 .detail-grid.full { grid-template-columns: 1fr; }
-.detail-item {
-  padding: 8px 12px; border-bottom: 1px solid #f0e8dc;
-}
+.detail-item { padding: 8px 12px; border-bottom: 1px solid #f0e8dc; }
 .detail-item:last-child { border-bottom: none; }
 .detail-item.span2 { grid-column: 1 / -1; }
-.detail-label {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .05em; color: var(--stone); margin-bottom: 2px;
-}
-.detail-value {
-  font-size: 13px; font-weight: 600; color: var(--ink);
-  word-break: break-word;
-}
+.detail-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--stone); margin-bottom: 2px; }
+.detail-value { font-size: 13px; font-weight: 600; color: var(--ink); word-break: break-word; }
 .detail-value a { color: var(--blue-mid); text-decoration: none; }
 .detail-value a:hover { text-decoration: underline; }
-.detail-value.remarques {
-  font-size: 13px; font-weight: 400; white-space: pre-wrap; line-height: 1.5;
-}
-
+.detail-value.remarques { font-size: 13px; font-weight: 400; white-space: pre-wrap; line-height: 1.5; }
 .empty { text-align: center; padding: 40px; color: var(--stone); font-style: italic; }
 
 @media (max-width: 600px) {
   .col-anim, .col-stats { display: none; }
   .filters-grid { grid-template-columns: 1fr 1fr; }
   .radar-wrap { width: 160px; height: 120px; }
+  .histo-canvas-wrap { height: 180px; }
 }
 </style>
 </head>
@@ -222,9 +219,40 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
       <input type="number" id="fDenMax"    placeholder="Dénivelé max" min="0">
       <button class="btn-reset" onclick="resetFiltres()">✕ Réinitialiser</button>
     </div>
-    <div class="stats-wrap">
-      <div class="stats-text" id="statsText">—</div>
-      <div class="radar-wrap"><canvas id="radarCanvas"></canvas></div>
+
+    <div class="bottom-filters">
+      <!-- Sélecteur de période -->
+      <div class="periode-bloc">
+        <div class="periode-titre">📅 Période d'analyse</div>
+        <div class="periode-row">
+          <label>Du</label>
+          <input type="date" id="periodeDebut" onchange="onPeriodeChange()">
+          <label>au</label>
+          <input type="date" id="periodeFin" onchange="onPeriodeChange()">
+        </div>
+        <div class="btns-rapides">
+          <button class="btn-periode active" id="btn-tout"    onclick="setPeriode('tout')">Tout</button>
+          <button class="btn-periode"        id="btn-an1"     onclick="setPeriode('an1')">Cette saison</button>
+          <button class="btn-periode"        id="btn-an2"     onclick="setPeriode('an2')">Saison préc.</button>
+          <button class="btn-periode"        id="btn-3ans"    onclick="setPeriode('3ans')">3 ans</button>
+        </div>
+      </div>
+
+      <div style="flex:1; min-width:200px;">
+        <div class="stats-text" id="statsText">—</div>
+        <div class="radar-wrap"><canvas id="radarCanvas"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTOGRAMME PARTICIPANTS -->
+  <div class="histo-bloc" id="histoBloc">
+    <div class="histo-header">
+      <div class="histo-titre">👥 Participants par randonnée</div>
+      <div class="histo-stats-row" id="histoStats"></div>
+    </div>
+    <div class="histo-canvas-wrap">
+      <canvas id="histoCanvas"></canvas>
     </div>
   </div>
 
@@ -265,12 +293,14 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
 
-let toutes  = [];
-let filtrées = [];
-let colTri  = "date_rando";
-let sensTri = -1; // plus récent en premier par défaut
+let toutes    = [];
+let filtrées  = [];
+let colTri    = "date_rando";
+let sensTri   = -1;
 let radarChart = null;
-let idEnCours = null;
+let histoChart = null;
+let idEnCours  = null;
+let periodeMode = "tout";
 
 /* ══ CHARGEMENT ══ */
 async function charger() {
@@ -280,26 +310,72 @@ async function charger() {
       { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
     );
     toutes = await res.json();
-    document.getElementById("topbarSub").textContent =
-      `${toutes.length} randonnées archivées`;
+    document.getElementById("topbarSub").textContent = `${toutes.length} randonnées archivées`;
     filtrer();
   } catch(e) {
     document.getElementById("tableBody").innerHTML =
-      `<tr><td colspan="7" class="empty">⚠️ Erreur de chargement : ${e.message}</td></tr>`;
+      `<tr><td colspan="7" class="empty">⚠️ Erreur : ${e.message}</td></tr>`;
   }
+}
+
+/* ══ PÉRIODE ══ */
+function getSaisonBornes(offset = 0) {
+  // Saison rando : septembre → août de l'année suivante
+  const now = new Date();
+  let annee = now.getFullYear() - offset;
+  // Si on est avant septembre, la saison courante a démarré l'année précédente
+  if (now.getMonth() < 8) annee--;
+  return {
+    debut: `${annee}-09-01`,
+    fin:   `${annee + 1}-08-31`
+  };
+}
+
+function setPeriode(mode) {
+  periodeMode = mode;
+  document.querySelectorAll(".btn-periode").forEach(b => b.classList.remove("active"));
+  document.getElementById("btn-" + mode)?.classList.add("active");
+
+  const dInput = document.getElementById("periodeDebut");
+  const fInput = document.getElementById("periodeFin");
+
+  if (mode === "tout") {
+    dInput.value = ""; fInput.value = "";
+  } else if (mode === "an1") {
+    const b = getSaisonBornes(0);
+    dInput.value = b.debut; fInput.value = b.fin;
+  } else if (mode === "an2") {
+    const b = getSaisonBornes(1);
+    dInput.value = b.debut; fInput.value = b.fin;
+  } else if (mode === "3ans") {
+    const b0 = getSaisonBornes(0);
+    const b2 = getSaisonBornes(2);
+    dInput.value = b2.debut; fInput.value = b0.fin;
+  }
+  filtrer();
+}
+
+function onPeriodeChange() {
+  // Désactiver les boutons rapides si dates modifiées manuellement
+  periodeMode = "custom";
+  document.querySelectorAll(".btn-periode").forEach(b => b.classList.remove("active"));
+  filtrer();
+}
+
+function periodeActive() {
+  const d = document.getElementById("periodeDebut").value;
+  const f = document.getElementById("periodeFin").value;
+  return { debut: d || null, fin: f || null };
 }
 
 /* ══ FILTRES ══ */
 document.querySelectorAll(".filters-grid input").forEach(i => i.addEventListener("input", filtrer));
 
 function resetFiltres() {
-  document.getElementById("fDate").value      = "";
-  document.getElementById("fNom").value       = "";
-  document.getElementById("fAnimateur").value = "";
-  document.getElementById("fIbpMax").value    = "";
-  document.getElementById("fKmMax").value     = "";
-  document.getElementById("fDenMax").value    = "";
-  filtrer();
+  ["fDate","fNom","fAnimateur","fIbpMax","fKmMax","fDenMax"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  setPeriode("tout");
 }
 
 function filtrer() {
@@ -309,40 +385,40 @@ function filtrer() {
   const ibp  = parseFloat(document.getElementById("fIbpMax").value) || null;
   const km   = parseFloat(document.getElementById("fKmMax").value)  || null;
   const den  = parseFloat(document.getElementById("fDenMax").value) || null;
+  const { debut, fin } = periodeActive();
 
-  filtrées = toutes.filter(r =>
-    (!date || r.date_rando === date) &&
-    (!nom  || (r.nom_rando  || "").toLowerCase().includes(nom)) &&
-    (!anim || (r.animateur  || "").toLowerCase().includes(anim)) &&
-    (!ibp  || (r.ibp  !== null && r.ibp  <= ibp)) &&
-    (!km   || (r.distance !== null && r.distance <= km)) &&
-    (!den  || (r.denivele !== null && r.denivele <= den))
-  );
+  filtrées = toutes.filter(r => {
+    if (date   && r.date_rando !== date) return false;
+    if (nom    && !(r.nom_rando  || "").toLowerCase().includes(nom))  return false;
+    if (anim   && !(r.animateur  || "").toLowerCase().includes(anim)) return false;
+    if (ibp    && !(r.ibp  !== null && r.ibp  <= ibp))  return false;
+    if (km     && !(r.distance !== null && r.distance <= km)) return false;
+    if (den    && !(r.denivele !== null && r.denivele <= den)) return false;
+    if (debut  && r.date_rando < debut) return false;
+    if (fin    && r.date_rando > fin)   return false;
+    return true;
+  });
 
   trierEtAfficher();
 }
 
 /* ══ TRI ══ */
 function trier(col) {
-  if (colTri === col) { sensTri *= -1; }
+  if (colTri === col) sensTri *= -1;
   else { colTri = col; sensTri = 1; }
   trierEtAfficher();
 }
 
 function trierEtAfficher() {
   filtrées.sort((a, b) => {
-    let vA = a[colTri] ?? "";
-    let vB = b[colTri] ?? "";
+    let vA = a[colTri] ?? ""; let vB = b[colTri] ?? "";
     if (colTri === "date_rando") return (new Date(vA) - new Date(vB)) * sensTri;
     if (!isNaN(vA) && !isNaN(vB) && vA !== "" && vB !== "") return (vA - vB) * sensTri;
     return vA.toString().localeCompare(vB.toString()) * sensTri;
   });
-
-  /* Mettre à jour les icônes de tri */
   document.querySelectorAll(".sort-icon").forEach(el => el.textContent = "");
   const icon = document.getElementById("sort-" + colTri);
   if (icon) icon.textContent = sensTri === 1 ? "▲" : "▼";
-
   afficher();
 }
 
@@ -356,7 +432,6 @@ function ibpPill(v) {
   if (n <= 100) return `<span class="ibp-pill ibp-n4">🔴 ${n}</span>`;
   return              `<span class="ibp-pill ibp-n5">⚫ ${n}</span>`;
 }
-
 function ibpLabel(v) {
   const n = parseFloat(v);
   if (!v || isNaN(n)) return "";
@@ -370,13 +445,10 @@ function ibpLabel(v) {
 /* ══ AFFICHAGE TABLE ══ */
 function afficher() {
   const tbody = document.getElementById("tableBody");
-
   if (!filtrées.length) {
     tbody.innerHTML = `<tr><td colspan="7" class="empty">Aucune randonnée ne correspond aux filtres.</td></tr>`;
-    majStats();
-    return;
+    majStats(); majHisto(); return;
   }
-
   tbody.innerHTML = filtrées.map(f => {
     const dateAff = f.date_rando
       ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", { day:"2-digit", month:"2-digit", year:"numeric" })
@@ -389,9 +461,7 @@ function afficher() {
       : `<span class="badge badge-pub">✅ Publiée</span>`;
     const trClass  = statut === "annulée" ? "tr-ann" : "";
     const nomClass = statut === "annulée" ? "td-nom barre" : "td-nom";
-
-    return `
-    <tr class="${trClass}" onclick="voirDetail(${f.id})">
+    return `<tr class="${trClass}" onclick="voirDetail(${f.id})">
       <td class="td-date">${dateAff}</td>
       <td class="${nomClass}" title="${f.nom_rando || ''}">${f.nom_rando || "—"}</td>
       <td>${ibpPill(f.ibp)}</td>
@@ -402,16 +472,151 @@ function afficher() {
       <td>${badgeHtml}</td>
     </tr>`;
   }).join("");
-
   majStats();
+  majHisto();
+}
+
+/* ══ HISTOGRAMME PARTICIPANTS ══ */
+function majHisto() {
+  // Seulement les randos passées non annulées avec nb_participants
+  const donnees = filtrées
+    .filter(r => {
+      const d = new Date(r.date_rando + "T12:00:00");
+      return d <= new Date() && r.statut !== "annulée" && r.nb_participants > 0;
+    })
+    .sort((a, b) => new Date(a.date_rando) - new Date(b.date_rando));
+
+  const bloc = document.getElementById("histoBloc");
+  if (donnees.length < 2) { bloc.classList.remove("visible"); return; }
+  bloc.classList.add("visible");
+
+  const labels = donnees.map(r => {
+    const d = new Date(r.date_rando + "T12:00:00");
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  });
+  const valeurs = donnees.map(r => r.nb_participants);
+  const noms    = donnees.map(r => r.nom_rando || "");
+
+  const moy = valeurs.reduce((s, v) => s + v, 0) / valeurs.length;
+  const max = Math.max(...valeurs);
+  const min = Math.min(...valeurs);
+  const total = valeurs.reduce((s, v) => s + v, 0);
+
+  // Couleurs : au-dessus de la moyenne → vert, en-dessous → orange
+  const couleurs = valeurs.map(v =>
+    v >= moy ? "rgba(45,106,79,0.75)" : "rgba(193,68,14,0.65)"
+  );
+  const bordures = valeurs.map(v =>
+    v >= moy ? "#2d6a4f" : "#c1440e"
+  );
+
+  // Stats
+  document.getElementById("histoStats").innerHTML = `
+    <div class="histo-stat">
+      <div class="histo-stat-lbl">Randos</div>
+      <div class="histo-stat-val">${donnees.length}</div>
+    </div>
+    <div class="histo-stat">
+      <div class="histo-stat-lbl">Moyenne</div>
+      <div class="histo-stat-val" style="color:var(--blue-mid)">${moy.toFixed(1)}</div>
+    </div>
+    <div class="histo-stat">
+      <div class="histo-stat-lbl">Maximum</div>
+      <div class="histo-stat-val" style="color:#2d6a4f">${max}</div>
+    </div>
+    <div class="histo-stat">
+      <div class="histo-stat-lbl">Minimum</div>
+      <div class="histo-stat-val" style="color:#c1440e">${min}</div>
+    </div>
+    <div class="histo-stat">
+      <div class="histo-stat-lbl">Total pers.</div>
+      <div class="histo-stat-val">${total}</div>
+    </div>
+  `;
+
+  if (histoChart) { histoChart.destroy(); histoChart = null; }
+
+  const ctx = document.getElementById("histoCanvas").getContext("2d");
+  histoChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Participants",
+          data: valeurs,
+          backgroundColor: couleurs,
+          borderColor: bordures,
+          borderWidth: 1.5,
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+        {
+          label: `Moyenne (${moy.toFixed(1)})`,
+          data: Array(valeurs.length).fill(moy),
+          type: "line",
+          borderColor: "#1a3a5c",
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: "index" },
+      plugins: {
+        legend: {
+          position: "top",
+          labels: { boxWidth: 12, font: { size: 11, family: "Outfit" }, padding: 10 }
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => noms[items[0].dataIndex] || labels[items[0].dataIndex],
+            label: (item) => {
+              if (item.datasetIndex === 0)
+                return ` ${item.raw} participant${item.raw > 1 ? "s" : ""}`;
+              return ` Moyenne : ${parseFloat(item.raw).toFixed(1)}`;
+            },
+            afterLabel: (item) => {
+              if (item.datasetIndex === 0) {
+                const diff = item.raw - moy;
+                return diff >= 0
+                  ? ` ▲ +${diff.toFixed(1)} vs moy.`
+                  : ` ▼ ${diff.toFixed(1)} vs moy.`;
+              }
+            }
+          },
+          backgroundColor: "#2c1a0e",
+          titleFont: { size: 12, family: "Outfit", weight: "700" },
+          bodyFont: { size: 11, family: "Outfit" },
+          padding: 10,
+          cornerRadius: 8,
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 10, family: "Outfit" }, maxRotation: 45 }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "rgba(0,0,0,0.05)" },
+          ticks: { font: { size: 11, family: "Outfit" }, stepSize: 1 },
+          title: { display: true, text: "Nb participants", font: { size: 11, family: "Outfit" }, color: "#8a7560" }
+        }
+      }
+    }
+  });
 }
 
 /* ══ STATS + RADAR ══ */
 function majStats() {
   const n = filtrées.length;
   const animFiltré = document.getElementById("fAnimateur").value.toLowerCase().trim();
-
-  /* Stats globales (toutes les fiches) */
   let totalKm = 0, totalDen = 0, totalIBP = 0, nbIBP = 0;
   toutes.forEach(r => {
     totalKm  += Number(r.distance) || 0;
@@ -420,9 +625,8 @@ function majStats() {
   });
   const moyKm  = toutes.length ? totalKm  / toutes.length : 0;
   const moyDen = toutes.length ? totalDen / toutes.length : 0;
-  const moyIBP = nbIBP         ? totalIBP / nbIBP         : 0;
+  const moyIBP = nbIBP ? totalIBP / nbIBP : 0;
 
-  /* Stats animateur filtré */
   let aKm = 0, aDen = 0, aIBP = 0, aNbIBP = 0, aNb = 0;
   if (animFiltré) {
     filtrées.forEach(r => {
@@ -434,38 +638,33 @@ function majStats() {
       }
     });
   }
-
-  /* Calcul stats animateur AVANT d'écrire le HTML */
-  let aMoyKm = 0, aMoyDen = 0, aMoyIBP = 0;
-  if (animFiltré && aNb > 0) {
-    aMoyKm  = aKm  / aNb;
-    aMoyDen = aDen / aNb;
-    aMoyIBP = aNbIBP ? aIBP / aNbIBP : 0;
-  }
-
+  const aMoyKm  = aNb ? aKm  / aNb : 0;
+  const aMoyDen = aNb ? aDen / aNb : 0;
+  const aMoyIBP = aNbIBP ? aIBP / aNbIBP : 0;
   const animNom = animFiltré
     ? (filtrées.find(r => (r.animateur || "").toLowerCase().includes(animFiltré))?.animateur || animFiltré)
     : "";
 
+  const { debut, fin } = periodeActive();
+  const periodeLabel = (debut || fin)
+    ? ` · période : ${debut ? debut.split("-").reverse().join("/") : "…"} → ${fin ? fin.split("-").reverse().join("/") : "…"}`
+    : "";
+
   document.getElementById("statsText").innerHTML =
-    `📊 <strong>${n}</strong> randonnée(s) affichée(s) sur ${toutes.length}<br>` +
+    `📊 <strong>${n}</strong> randonnée(s) affichée(s) sur ${toutes.length}${periodeLabel}<br>` +
     `<span style="color:var(--stone);font-size:12px;">Club —</span> ` +
     `Moy. Distance : <strong>${moyKm.toFixed(1)} km</strong> · ` +
     `Moy. D+ : <strong>${moyDen.toFixed(0)} m</strong> · ` +
     `Moy. IBP : <strong>${moyIBP.toFixed(0)}</strong>` +
     (animFiltré && aNb > 0
-      ? `<br><span style="color:var(--blue);font-size:12px;">👤 ${animNom} (${aNb} rando${aNb > 1 ? "s" : ""}) —</span> ` +
+      ? `<br><span style="color:var(--blue);font-size:12px;">👤 ${animNom} (${aNb} rando${aNb>1?"s":""}) —</span> ` +
         `Moy. Distance : <strong style="color:var(--blue);">${aMoyKm.toFixed(1)} km</strong> · ` +
         `Moy. D+ : <strong style="color:var(--blue);">${aMoyDen.toFixed(0)} m</strong> · ` +
         `Moy. IBP : <strong style="color:var(--blue);">${aMoyIBP.toFixed(0)}</strong>`
-      : animFiltré
-      ? `<br><span style="color:var(--stone);font-size:12px;">👤 Aucune randonnée trouvée pour ce filtre.</span>`
-      : "");
+      : animFiltré ? `<br><span style="color:var(--stone);font-size:12px;">👤 Aucune randonnée trouvée.</span>` : "");
 
-  /* Radar chart */
   const ctx = document.getElementById("radarCanvas");
   if (radarChart) { radarChart.destroy(); radarChart = null; }
-
   const datasets = [{
     label: "Club",
     data: [
@@ -474,37 +673,27 @@ function majStats() {
       Math.min((moyDen / 1200) * 100, 100),
       Math.min((moyIBP / 80)   * 100, 100),
     ],
-    backgroundColor: "rgba(193,68,14,0.2)",
-    borderColor: "#c1440e",
-    borderWidth: 2,
-    pointBackgroundColor: "#c1440e",
+    backgroundColor: "rgba(193,68,14,0.2)", borderColor: "#c1440e",
+    borderWidth: 2, pointBackgroundColor: "#c1440e",
   }];
-
   if (aNb > 0) {
     datasets.push({
       label: "Animateur",
       data: [
-        Math.min((aNb      / 300)  * 100, 100),
-        Math.min((aMoyKm   / 25)   * 100, 100),
-        Math.min((aMoyDen  / 1200) * 100, 100),
-        Math.min((aMoyIBP  / 80)   * 100, 100),
+        Math.min((aNb / 300) * 100, 100),
+        Math.min((aMoyKm / 25) * 100, 100),
+        Math.min((aMoyDen / 1200) * 100, 100),
+        Math.min((aMoyIBP / 80) * 100, 100),
       ],
-      backgroundColor: "rgba(26,58,92,0.2)",
-      borderColor: "#1a3a5c",
-      borderWidth: 2,
-      pointBackgroundColor: "#1a3a5c",
+      backgroundColor: "rgba(26,58,92,0.2)", borderColor: "#1a3a5c",
+      borderWidth: 2, pointBackgroundColor: "#1a3a5c",
     });
   }
-
   radarChart = new Chart(ctx, {
     type: "radar",
-    data: {
-      labels: ["Activité", "Distance", "Dénivelé", "Difficulté"],
-      datasets,
-    },
+    data: { labels: ["Activité", "Distance", "Dénivelé", "Difficulté"], datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: "top", labels: { boxWidth: 10, font: { size: 10 } } } },
       scales: { r: { min: 0, max: 100, ticks: { display: false }, pointLabels: { font: { size: 10 } } } },
     },
@@ -516,195 +705,83 @@ function voirDetail(id) {
   const f = toutes.find(x => x.id === id);
   if (!f) return;
   idEnCours = id;
-
   const statut = f.statut || "publiée";
   const badgeTitre = statut === "annulée"
     ? ' <span class="badge badge-ann" style="vertical-align:middle">❌ Annulée</span>'
     : statut === "modifiée"
     ? ' <span class="badge badge-mod" style="vertical-align:middle">✏️ Modifiée</span>'
     : '';
-
   const dateAff = f.date_rando
     ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" })
     : "—";
-
   const mapsUrl = f.gps ? `https://www.google.com/maps?q=${f.gps}` : null;
-
-  document.getElementById("modalTitre").innerHTML =
-    (f.nom_rando || "—") + badgeTitre;
+  document.getElementById("modalTitre").innerHTML = (f.nom_rando || "—") + badgeTitre;
 
   let html = "";
+  if (f.profil_png) html += `<img src="${f.profil_png}" alt="Profil altitude" class="modal-profil">`;
 
-  /* ── Profil altimétrique ── */
-  if (f.profil_png) {
-    html += `<img src="${f.profil_png}" alt="Profil altitude" class="modal-profil">`;
-  }
-
-  /* ── Général ── */
-  html += `
-  <div class="detail-section">
-    <div class="detail-section-titre">📅 Général</div>
+  html += `<div class="detail-section"><div class="detail-section-titre">📅 Général</div>
     <div class="detail-grid">
-      <div class="detail-item">
-        <div class="detail-label">Date</div>
-        <div class="detail-value">${dateAff}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-label">Animateur</div>
-        <div class="detail-value">👤 ${f.animateur || "—"}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-label">Heure RV</div>
-        <div class="detail-value">⏰ ${f.heure_rv || "—"}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-label">Statut</div>
-        <div class="detail-value">${
-          statut === "annulée"  ? '<span class="badge badge-ann">❌ Annulée</span>' :
-          statut === "modifiée" ? '<span class="badge badge-mod">✏️ Modifiée</span>' :
-                                  '<span class="badge badge-pub">✅ Publiée</span>'
-        }</div>
-      </div>
-    </div>
-  </div>`;
+      <div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">${dateAff}</div></div>
+      <div class="detail-item"><div class="detail-label">Animateur</div><div class="detail-value">👤 ${f.animateur || "—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Heure RV</div><div class="detail-value">⏰ ${f.heure_rv || "—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Statut</div><div class="detail-value">${
+        statut === "annulée" ? '<span class="badge badge-ann">❌ Annulée</span>' :
+        statut === "modifiée" ? '<span class="badge badge-mod">✏️ Modifiée</span>' :
+        '<span class="badge badge-pub">✅ Publiée</span>'}</div></div>
+    </div></div>`;
 
-  /* ── Logistique ── */
-  html += `
-  <div class="detail-section">
-    <div class="detail-section-titre">🅿️ Logistique</div>
+  html += `<div class="detail-section"><div class="detail-section-titre">🅿️ Logistique</div>
     <div class="detail-grid">
-      <div class="detail-item span2">
-        <div class="detail-label">Parking covoiturage</div>
-        <div class="detail-value">${f.parking_covoit || "—"}</div>
-      </div>
-      <div class="detail-item span2">
-        <div class="detail-label">Parking départ randonnée</div>
-        <div class="detail-value">${f.parking_depart || "—"}</div>
-      </div>
-      ${f.lieu ? `
-      <div class="detail-item span2">
-        <div class="detail-label">Lieu</div>
-        <div class="detail-value">📍 ${f.lieu}</div>
-      </div>` : ""}
-      ${f.gps ? `
-      <div class="detail-item">
-        <div class="detail-label">GPS</div>
-        <div class="detail-value">${f.gps}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-label">Carte</div>
-        <div class="detail-value"><a href="${mapsUrl}" target="_blank">🗺 Ouvrir Maps</a></div>
-      </div>` : ""}
-    </div>
-  </div>`;
+      <div class="detail-item span2"><div class="detail-label">Parking covoiturage</div><div class="detail-value">${f.parking_covoit || "—"}</div></div>
+      <div class="detail-item span2"><div class="detail-label">Parking départ</div><div class="detail-value">${f.parking_depart || "—"}</div></div>
+      ${f.lieu ? `<div class="detail-item span2"><div class="detail-label">Lieu</div><div class="detail-value">📍 ${f.lieu}</div></div>` : ""}
+      ${f.gps ? `<div class="detail-item"><div class="detail-label">GPS</div><div class="detail-value">${f.gps}</div></div>
+        <div class="detail-item"><div class="detail-label">Carte</div><div class="detail-value"><a href="${mapsUrl}" target="_blank">🗺 Ouvrir Maps</a></div></div>` : ""}
+    </div></div>`;
 
-  /* ── Parcours ── */
-  html += `
-  <div class="detail-section">
-    <div class="detail-section-titre">📏 Parcours</div>
+  html += `<div class="detail-section"><div class="detail-section-titre">📏 Parcours</div>
     <div class="detail-grid">
-      <div class="detail-item">
-        <div class="detail-label">Distance</div>
-        <div class="detail-value">${f.distance ? f.distance + " km" : "—"}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-label">Dénivelé +</div>
-        <div class="detail-value">${f.denivele ? f.denivele + " m" : "—"}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-label">Durée</div>
-        <div class="detail-value">⏱ ${f.duree || "—"}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-label">IBP</div>
-        <div class="detail-value">${f.ibp ? ibpPill(f.ibp) + " " + ibpLabel(f.ibp) : "—"}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-label">Effort</div>
-        <div class="detail-value">${f.effort ? f.effort + " / 5" : "—"}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-label">Technicité</div>
-        <div class="detail-value">${f.technicite ? f.technicite + " / 5" : "—"}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-label">Risque</div>
-        <div class="detail-value">${f.risque ? f.risque + " / 5" : "—"}</div>
-      </div>
-    </div>
-  </div>`;
+      <div class="detail-item"><div class="detail-label">Distance</div><div class="detail-value">${f.distance ? f.distance + " km" : "—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Dénivelé +</div><div class="detail-value">${f.denivele ? f.denivele + " m" : "—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Durée</div><div class="detail-value">⏱ ${f.duree || "—"}</div></div>
+      <div class="detail-item"><div class="detail-label">IBP</div><div class="detail-value">${f.ibp ? ibpPill(f.ibp) + " " + ibpLabel(f.ibp) : "—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Effort</div><div class="detail-value">${f.effort ? f.effort + " / 5" : "—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Technicité</div><div class="detail-value">${f.technicite ? f.technicite + " / 5" : "—"}</div></div>
+      <div class="detail-item"><div class="detail-label">Risque</div><div class="detail-value">${f.risque ? f.risque + " / 5" : "—"}</div></div>
+    </div></div>`;
 
-  /* ── Coûts ── */
-  if (f.couts) {
-    html += `
-  <div class="detail-section">
-    <div class="detail-section-titre">💶 Coûts trajet</div>
-    <div class="detail-grid full">
-      <div class="detail-item">
-        <div class="detail-label">Détail des coûts</div>
-        <div class="detail-value">${f.couts}</div>
-      </div>
-    </div>
-  </div>`;
-  }
+  if (f.couts) html += `<div class="detail-section"><div class="detail-section-titre">💶 Coûts trajet</div>
+    <div class="detail-grid full"><div class="detail-item"><div class="detail-label">Détail</div><div class="detail-value">${f.couts}</div></div></div></div>`;
 
-  /* ── Remarques ── */
-  if (f.remarques) {
-    html += `
-  <div class="detail-section">
-    <div class="detail-section-titre">📌 Remarques</div>
-    <div class="detail-grid full">
-      <div class="detail-item">
-        <div class="detail-value remarques">${f.remarques}</div>
-      </div>
-    </div>
-  </div>`;
-  }
+  if (f.remarques) html += `<div class="detail-section"><div class="detail-section-titre">📌 Remarques</div>
+    <div class="detail-grid full"><div class="detail-item"><div class="detail-value remarques">${f.remarques}</div></div></div></div>`;
 
-  /* ── Participants ── */
   if (f.nb_participants || f.noms_participants) {
     const dateRando = new Date(f.date_rando + "T12:00:00");
-    const estPassee = dateRando < new Date();
-    if (estPassee && f.statut !== "annulée") {
-
-      /* Construire la liste des noms avec avertissement si ? présent */
+    if (dateRando < new Date() && f.statut !== "annulée") {
       let listeHtml = "";
       let nbInconnus = 0;
       if (f.noms_participants) {
         const lignes = f.noms_participants.split("\n").filter(l => l.trim());
         nbInconnus = lignes.filter(l => l.includes("?")).length;
         listeHtml = lignes.map(l => {
-          const inconnu = l.includes("?");
-          return `<div style="padding:3px 0;border-bottom:1px solid #f0e8dc;font-size:13px;${inconnu ? "color:var(--stone);font-style:italic;" : ""}">
-            ${inconnu ? "⚠️ " : ""}${l.trim()}
-          </div>`;
+          const inc = l.includes("?");
+          return `<div style="padding:3px 0;border-bottom:1px solid #f0e8dc;font-size:13px;${inc?"color:var(--stone);font-style:italic;":""}">
+            ${inc ? "⚠️ " : ""}${l.trim()}</div>`;
         }).join("");
       }
-
-      html += `
-  <div class="detail-section">
-    <div class="detail-section-titre">👥 Participants</div>
-    <div class="detail-grid">
-      <div class="detail-item">
-        <div class="detail-label">Nombre</div>
-        <div class="detail-value" style="font-size:20px;font-weight:700;color:var(--blue);">
-          ${f.nb_participants || "—"}
-        </div>
-      </div>
-      ${nbInconnus > 0 ? `
-      <div class="detail-item">
-        <div class="detail-label">Avertissement</div>
-        <div class="detail-value" style="color:#856404;font-size:12px;">
-          ⚠️ ${nbInconnus} participant${nbInconnus > 1 ? "s" : ""} sans nom identifié
-        </div>
-      </div>` : "<div class='detail-item'></div>"}
-      ${listeHtml ? `
-      <div class="detail-item span2" style="padding:0;">
-        <div class="detail-label" style="padding:8px 12px 4px;">Liste</div>
-        <div style="padding:0 12px 8px;">${listeHtml}</div>
-      </div>` : ""}
-    </div>
-  </div>`;
+      html += `<div class="detail-section"><div class="detail-section-titre">👥 Participants</div>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="detail-label">Nombre</div>
+            <div class="detail-value" style="font-size:20px;font-weight:700;color:var(--blue);">${f.nb_participants || "—"}</div></div>
+          ${nbInconnus > 0 ? `<div class="detail-item"><div class="detail-label">Avertissement</div>
+            <div class="detail-value" style="color:#856404;font-size:12px;">⚠️ ${nbInconnus} sans nom identifié</div></div>`
+            : "<div class='detail-item'></div>"}
+          ${listeHtml ? `<div class="detail-item span2" style="padding:0;">
+            <div class="detail-label" style="padding:8px 12px 4px;">Liste</div>
+            <div style="padding:0 12px 8px;">${listeHtml}</div></div>` : ""}
+        </div></div>`;
     }
   }
 
@@ -712,44 +789,8 @@ function voirDetail(id) {
   document.getElementById("modalDetail").classList.add("open");
 }
 
-function fermerDetail() {
-  document.getElementById("modalDetail").classList.remove("open");
-}
-document.getElementById("modalDetail").addEventListener("click", function(e) {
-  if (e.target === this) fermerDetail();
-});
-
-/* ══ OUVRIR FORMULAIRE FDR ══ */
-function ouvrirModif() {
-  if (!idEnCours) return;
-  const f = toutes.find(x => x.id === idEnCours);
-  if (!f) return;
-
-  const payload = {
-    nomRando:      f.nom_rando      || "",
-    animateur:     f.animateur      || "",
-    parkingCovoit: f.parking_covoit || "",
-    heureRV:       f.heure_rv       || "",
-    distance:      f.distance       || "",
-    denivele:      f.denivele       || "",
-    duree:         f.duree          || "",
-    effort:        f.effort         || "",
-    technicite:    f.technicite     || "",
-    risque:        f.risque         || "",
-    remarques:     f.remarques      || "",
-  };
-
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-
-  /* Ouvre index.html directement sur GitHub Pages dans un nouvel onglet.
-     Contourne le CMS de lamarmottechateaurenard.com qui intercepterait
-     toute navigation vers index.html#fiche=...                          */
-  window.open(
-    "https://dbizcyber.github.io/randoFDR/index.html#fiche=" + encoded,
-    "_blank"
-  );
-  fermerDetail();
-}
+function fermerDetail() { document.getElementById("modalDetail").classList.remove("open"); }
+document.getElementById("modalDetail").addEventListener("click", function(e) { if (e.target === this) fermerDetail(); });
 
 charger();
 </script>
