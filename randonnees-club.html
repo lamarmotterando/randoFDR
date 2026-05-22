@@ -196,13 +196,110 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
   .radar-wrap { width: 160px; height: 120px; }
   .histo-canvas-wrap { height: 180px; }
 }
+
+  /* ══ AUTH OVERLAY ══ */
+  #auth-overlay {
+    position: fixed; inset: 0; z-index: 99999;
+    display: flex; align-items: center; justify-content: center;
+    background: #0d1117;
+    font-family: 'DM Mono', monospace;
+  }
+  #auth-overlay.hidden { display: none; }
+  .auth-box {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 14px;
+    padding: 32px 28px;
+    width: 100%; max-width: 360px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+  .auth-logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px; font-weight: 800;
+    color: #e6edf3; margin-bottom: 4px;
+    letter-spacing: -.02em;
+  }
+  .auth-logo span { color: #39d353; }
+  .auth-sub {
+    font-size: 11px; color: #484f58;
+    margin-bottom: 24px; letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .auth-field { margin-bottom: 14px; }
+  .auth-field label {
+    display: block; font-size: 10px; font-weight: 500;
+    color: #8b949e; text-transform: uppercase;
+    letter-spacing: .08em; margin-bottom: 6px;
+  }
+  .auth-field input {
+    width: 100%; padding: 10px 14px;
+    background: #0d1117; border: 1px solid #21262d;
+    border-radius: 8px; color: #e6edf3;
+    font-family: 'DM Mono', monospace; font-size: 13px;
+    transition: border-color .2s;
+  }
+  .auth-field input:focus { outline: none; border-color: #39d353; }
+  .auth-btn {
+    width: 100%; padding: 11px;
+    background: #238636; border: 1px solid #2ea043;
+    border-radius: 8px; color: white;
+    font-family: 'DM Mono', monospace; font-size: 13px;
+    font-weight: 500; cursor: pointer;
+    transition: background .2s; margin-top: 4px;
+  }
+  .auth-btn:hover { background: #2ea043; }
+  .auth-btn:disabled { background: #21262d; border-color: #21262d; color: #484f58; cursor: not-allowed; }
+  .auth-err {
+    margin-top: 12px; font-size: 11px; color: #f85149;
+    text-align: center; min-height: 16px;
+    letter-spacing: .02em;
+  }
+  .auth-checking {
+    text-align: center; color: #484f58;
+    font-size: 12px; padding: 8px 0;
+  }
+  /* Bouton logout dans header */
+  .logout-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: #484f58;
+    background: none; border: 1px solid #21262d;
+    border-radius: 6px; padding: 5px 12px;
+    cursor: pointer; transition: all .2s;
+    white-space: nowrap;
+  }
+  .logout-btn:hover { border-color: #f85149; color: #f85149; }
+
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<!-- ══ AUTH OVERLAY ══ -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">🥾 Rando<span>FDR</span></div>
+    <div class="auth-sub">Accès restreint — Admin</div>
+    <div id="auth-checking" class="auth-checking">Vérification de la session…</div>
+    <div id="auth-form" style="display:none">
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="auth-email" placeholder="votre@email.com" autocomplete="username">
+      </div>
+      <div class="auth-field">
+        <label>Mot de passe</label>
+        <input type="password" id="auth-pwd" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="auth-btn" id="auth-submit" onclick="authLogin()">Connexion</button>
+      <div class="auth-err" id="auth-err"></div>
+    </div>
+  </div>
+</div>
+
 
 <div class="topbar">
   <h1>🥾 Randonnées du club — La Marmotte</h1>
   <p id="topbarSub">Chargement…</p>
+  <div id="auth-logout-zone" style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;"></div>
 </div>
 
 <div class="container">
@@ -792,7 +889,86 @@ function voirDetail(id) {
 function fermerDetail() { document.getElementById("modalDetail").classList.remove("open"); }
 document.getElementById("modalDetail").addEventListener("click", function(e) { if (e.target === this) fermerDetail(); });
 
-charger();
+function appInit() { charger(); }
+</script>
+
+<script>
+
+/* ══ SUPABASE AUTH — PROTECTION ADMIN ══════════════════════════
+   Accès réservé aux comptes avec raw_app_meta_data.role = "admin"
+   SDK : Supabase JS v2 via CDN
+═══════════════════════════════════════════════════════════════ */
+const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function authInit() {
+  /* Vérifier session existante */
+  const { data: { session } } = await _supa.auth.getSession();
+  if (session) {
+    await authVerifierRole(session.user);
+  } else {
+    document.getElementById('auth-checking').style.display = 'none';
+    document.getElementById('auth-form').style.display = 'block';
+    document.getElementById('auth-email').focus();
+  }
+}
+
+async function authVerifierRole(user) {
+  const role = user?.app_metadata?.role || user?.user_metadata?.role || '';
+  if (role === 'admin') {
+    authOuvrir(user);
+  } else {
+    await _supa.auth.signOut();
+    document.getElementById('auth-checking').style.display = 'none';
+    document.getElementById('auth-form').style.display = 'block';
+    document.getElementById('auth-err').textContent = '⛔ Accès réservé aux administrateurs';
+  }
+}
+
+async function authLogin() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pwd   = document.getElementById('auth-pwd').value;
+  const btn   = document.getElementById('auth-submit');
+  const err   = document.getElementById('auth-err');
+  if (!email || !pwd) { err.textContent = 'Email et mot de passe requis'; return; }
+  btn.disabled = true; btn.textContent = 'Connexion…'; err.textContent = '';
+  const { data, error } = await _supa.auth.signInWithPassword({ email, password: pwd });
+  if (error) {
+    err.textContent = '❌ ' + (error.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect' : error.message);
+    btn.disabled = false; btn.textContent = 'Connexion';
+    return;
+  }
+  await authVerifierRole(data.user);
+  btn.disabled = false; btn.textContent = 'Connexion';
+}
+
+function authOuvrir(user) {
+  document.getElementById('auth-overlay').classList.add('hidden');
+  /* Ajouter bouton logout + email dans le header */
+  const logoutZone = document.getElementById('auth-logout-zone');
+  if (logoutZone) {
+    logoutZone.innerHTML = `
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--txt3);">${user.email}</span>
+      <button class="logout-btn" onclick="authLogout()">Déconnexion</button>`;
+  }
+  /* Lancer l'application */
+  if (typeof appInit === 'function') appInit();
+}
+
+async function authLogout() {
+  await _supa.auth.signOut();
+  location.reload();
+}
+
+/* Entrée clavier sur le formulaire */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !document.getElementById('auth-overlay').classList.contains('hidden')) {
+    authLogin();
+  }
+});
+
+/* Démarrer l'auth au chargement */
+authInit();
+
 </script>
 </body>
 </html>
