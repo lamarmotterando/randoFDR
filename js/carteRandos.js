@@ -5,7 +5,7 @@
 
 var randosCoords = window.randosCoords || [];
 
-var TF_KEY = '0ffff5950d8a4019bcede9aaeeecb57f';
+var TF_KEY = '......';
 
 /* ══ INIT CARTE ══ */
 var map = L.map('map', { center: [43.9, 5.0], zoom: 9 });
