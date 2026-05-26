@@ -912,15 +912,15 @@ async function authInit() {
   }
 }
 
+// APRÈS
 async function authVerifierRole(user) {
   const role = user?.app_metadata?.role || user?.user_metadata?.role || '';
-  if (role === 'admin') {
+  const ROLES_AUTORISES = ['admin', 'user'];
+  if (ROLES_AUTORISES.includes(role)) {
     authOuvrir(user);
   } else {
     await _supa.auth.signOut();
-    document.getElementById('auth-checking').style.display = 'none';
-    document.getElementById('auth-form').style.display = 'block';
-    document.getElementById('auth-err').textContent = '⛔ Accès réservé aux administrateurs';
+    document.getElementById('auth-err').textContent = '⛔ Accès réservé aux membres du club.';
   }
 }
 
