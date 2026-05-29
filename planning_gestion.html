@@ -603,7 +603,7 @@ async function authHeadersJson() {
 /* ══ AUTHENTIFICATION SUPABASE ══ */
 async function tentativeConnexion() {
   const email = document.getElementById("login-email").value.trim();
-  const pass  = document.getElementById("login-pass").value.trim();
+  const pass  = document.getElementById("login-pass").value;
   const err   = document.getElementById("login-err");
   const btn   = document.getElementById("btn-login");
 
@@ -734,11 +734,20 @@ function niveauIBP(v) {
 }
 
 async function loadData() {
+  /* ✅ Animateurs via dynamic-handler (pas de clé exposée) */
+  async function callHandler(body) {
+    const res = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error("Handler " + res.status);
+    return res.json();
+  }
+
   try {
     const [a, r, p] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/animateurs?select=nom,email&order=nom`, {
-        headers: await authHeaders()
-      }).then(res => res.json()),
+      callHandler({ action: "getAnimateurs" }),
       fetch(BASE_URL + "randos.json").then(res => res.json()),
       fetch(BASE_URL + "parkings.js").then(res => res.text()).then(txt => {
         const m = txt.match(/\[([^\]]+)\]/s);
@@ -746,9 +755,10 @@ async function loadData() {
         return m[1].split(",").map(s => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
       })
     ]);
-    animateurs = a.filter(x => x.nom && x.nom !== "");
+    animateurs = Array.isArray(a) ? a.filter(x => x.nom && x.nom !== "") : [];
     randos = r; parkings = p;
     initAutocomplete();
+    console.log("[Animateurs] " + animateurs.length + " animateurs chargés via dynamic-handler");
   } catch(e) { console.error("Erreur chargement:", e); }
 }
 
