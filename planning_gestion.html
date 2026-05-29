@@ -603,7 +603,7 @@ async function authHeadersJson() {
 /* ══ AUTHENTIFICATION SUPABASE ══ */
 async function tentativeConnexion() {
   const email = document.getElementById("login-email").value.trim();
-  const pass  = document.getElementById("login-pass").value;
+  const pass  = document.getElementById("login-pass").value.trim();
   const err   = document.getElementById("login-err");
   const btn   = document.getElementById("btn-login");
 
