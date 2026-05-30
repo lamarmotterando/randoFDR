@@ -304,9 +304,8 @@
 </div>
 
 <script>
-/* SUPABASE_URL et SUPABASE_KEY déclarés par les scripts externes (envoiRando.js / menuAnimateurs.js) */
-if (typeof SUPABASE_URL === "undefined") { window.SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co"; }
-if (typeof SUPABASE_KEY === "undefined") { window.SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE"; }
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+/* ✅ SUPABASE_KEY supprimée — toutes les requêtes passent par dynamic-handler */
 
 let fiches = [];
 let idEnCours = null;
@@ -315,14 +314,10 @@ let idEnCours = null;
 async function syncCalendar(action, ficheData) {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/functions/v1/dynamic-handler`,
+      "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler",
       {
         method: "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "apikey":        SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, fiche: ficheData })
       }
     );
@@ -397,10 +392,12 @@ async function charger() {
   try {
     const aujourd = new Date().toISOString().split("T")[0];
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,heure_rv,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque,nb_participants,noms_participants,itineraire&order=date_rando.asc`,
-      { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
+      "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler",
+      { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "getFiches", select: "id,date_rando,nom_rando,animateur,heure_rv,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque,nb_participants,noms_participants,itineraire", order: "date_rando.asc" }) }
     );
-    fiches = await res.json();
+    const resData = await res.json();
+    fiches = Array.isArray(resData) ? resData : [];
     const avenir  = fiches.filter(f => f.date_rando && f.date_rando >= aujourd);
     const passees = fiches.filter(f => !f.date_rando || f.date_rando < aujourd).reverse();
 
@@ -701,14 +698,10 @@ async function creerCalendar() {
 
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/functions/v1/dynamic-handler`,
+      "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler",
       {
         method: "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "apikey":        SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "calendarCreate",
           fiche: {
@@ -849,43 +842,20 @@ async function sauvegarderModif() {
   console.log("[Modif] PATCH id=", id, patch);
 
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type":  "application/json",
-        "apikey":        SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        /* return=representation : Supabase retourne les lignes modifiées.
-           Si le tableau est vide → 0 lignes affectées (RLS bloque ou id inexistant). */
-        "Prefer":        "return=representation"
-      },
-      body: JSON.stringify(patch)
+    /* ✅ Migration vers dynamic-handler — plus de clé exposée */
+    const handlerRes = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "updateFiche", id, fiche: patch })
     });
 
-    console.log("[Modif] réponse HTTP:", res.status, res.ok);
-
-    /* Lire le corps dans tous les cas pour le diagnostic */
-    const responseText = await res.text();
-    console.log("[Modif] réponse body:", responseText);
-
-    if (!res.ok) {
-      console.error("[Modif] erreur Supabase:", responseText);
-      throw new Error("HTTP " + res.status + " — " + responseText);
+    if (!handlerRes.ok) {
+      const errText = await handlerRes.text();
+      console.error("[Modif] erreur handler:", errText);
+      throw new Error("HTTP " + handlerRes.status + " — " + errText);
     }
 
-    /* Vérifier que Supabase a bien modifié au moins 1 ligne.
-       Avec return=representation, le body est un tableau JSON.
-       Un tableau vide [] signifie que le PATCH n'a touché aucune ligne
-       (RLS anon bloquant les UPDATE, ou id introuvable). */
-    let rowsAffected = [];
-    try { rowsAffected = JSON.parse(responseText); } catch(_) {}
-
-    if (!Array.isArray(rowsAffected) || rowsAffected.length === 0) {
-      console.error("[Modif] ⚠️ 0 lignes modifiées — vérifiez les politiques RLS Supabase (UPDATE pour anon)");
-      throw new Error("Aucune ligne modifiée. Vérifiez les droits RLS sur la table fiches (UPDATE pour anon).");
-    }
-
-    console.log("[Modif] ✅", rowsAffected.length, "ligne(s) modifiée(s)");
+    console.log("[Modif] ✅ fiche mise à jour via dynamic-handler");
 
     /* Mettre à jour localement */
     const f = fiches.find(x => x.id === id);
@@ -937,15 +907,11 @@ async function supprimerFiche() {
   if (btn) { btn.disabled = true; btn.textContent = "⏳ Annulation…"; }
 
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type":  "application/json",
-        "apikey":        SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Prefer":        "return=minimal"
-      },
-      body: JSON.stringify({ statut: "annulée" })
+    /* ✅ Migration vers dynamic-handler — plus de clé exposée */
+    const res = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "updateFiche", id, fiche: { statut: "annulée" } })
     });
 
     if (!res.ok) throw new Error("HTTP " + res.status);
