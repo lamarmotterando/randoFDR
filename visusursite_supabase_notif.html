@@ -280,13 +280,14 @@ async function charger() {
   let fiches = [];
   try {
     const resFiches = await fetch(
-      SUPABASE_URL + "/rest/v1/fiches" +
-      "?select=id,date_rando,nom_rando,animateur,ibp,distance,denivele,statut," +
-      "heure_rv,parking_covoit,parking_depart,gps,duree,effort,technicite,risque,couts,remarques,profil_png" +
-      "&date_rando=gte." + todayStr +
-      "&order=date_rando.asc",
-      { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
-    );
+  SUPABASE_URL + "/rest/v1/fiches" +
+  "?select=id,date_rando,nom_rando,animateur,ibp,distance,denivele,statut," +
+  "heure_rv,parking_covoit,parking_depart,gps,duree,effort,technicite,risque,couts,remarques,profil_png" +
+  "&date_rando=gte." + todayStr +
+  "&date_rando=lte." + maxDate +
+  "&order=date_rando.asc",
+  { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
+);
     if (!resFiches.ok) {
       const txt = await resFiches.text();
       throw new Error("fiches HTTP " + resFiches.status + " — " + txt);
