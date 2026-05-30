@@ -194,6 +194,9 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const CHEMIN_PAGE_CONTACTS = "https://www.lamarmottechateaurenard.com/goanim/";
 
+const params  = new URLSearchParams(window.location.search);
+const maxDate = params.get("maxDate") || "2099-12-31";
+  
 let filterEnabled = true;
 let minDisplay    = null;
 let maxDisplay    = null;
