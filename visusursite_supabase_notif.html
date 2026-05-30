@@ -318,7 +318,7 @@ function construireTableau(fiches, today) {
 
     tr.style.cursor = "pointer";
     const dest = urlContacts(f);
-    tr.addEventListener("click", () => { location.href = dest; });
+    tr.addEventListener("click", () => { window.top.location.href = dest; });
 
     if (d !== null) { tr.dataset.dateValue = d.getTime(); tr.dataset.diff = diff; }
     if (annulee)    { tr.classList.add("annulee");  tr.dataset.annulee  = "1"; }
