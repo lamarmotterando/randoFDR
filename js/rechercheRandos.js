@@ -1,17 +1,47 @@
-import { randos } from "../data/randos.js";
+/* rechercheRandos.js — autocomplétion depuis Supabase via dynamic-handler */
 
-export function activerRecherche() {
+const HANDLER = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
 
-  const input = document.getElementById("rechercheRando");
+/* Cache local pour éviter de recharger à chaque frappe */
+let _randosCache = null;
+
+async function getRandos() {
+  if (_randosCache) return _randosCache;
+  try {
+    const res = await fetch(HANDLER, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ action: "getFiches", select: "nom_rando", order: "nom_rando.asc" })
+    });
+    const data = await res.json();
+    /* Dédupliquer + trier + ajouter option manuelle en tête */
+    const noms = [...new Set(
+      Array.isArray(data) ? data.map(x => x.nom_rando).filter(Boolean) : []
+    )].sort();
+    _randosCache = ["Autre… (saisir manuellement)", ...noms];
+    console.log("[Randos] " + noms.length + " noms chargés depuis Supabase");
+  } catch(e) {
+    console.warn("[Randos] Erreur chargement:", e.message);
+    _randosCache = ["Autre… (saisir manuellement)"];
+  }
+  return _randosCache;
+}
+
+export async function activerRecherche() {
+
+  const input        = document.getElementById("rechercheRando");
   const suggestionsDiv = document.getElementById("suggestions");
-  const nomRando = document.getElementById("nomRando");
+  const nomRando     = document.getElementById("nomRando");
 
   if (!input || !suggestionsDiv || !nomRando) {
     console.error("Éléments de recherche introuvables !");
     return;
   }
 
-  // Si "Autre" sélectionné : mettre à jour nomRando en temps réel
+  /* Précharger les randos dès l'activation */
+  const randos = await getRandos();
+
+  /* Si "Autre" sélectionné : mettre à jour nomRando en temps réel */
   const selectRando = document.getElementById("rando");
   if (selectRando) {
     input.addEventListener("input", () => {
@@ -23,48 +53,39 @@ export function activerRecherche() {
     });
   }
 
-  // Filtrer et afficher les suggestions à chaque frappe
+  /* Filtrer et afficher les suggestions à chaque frappe */
   input.addEventListener("input", () => {
     const filtre = input.value.toLowerCase().trim();
-
-    // Effacer les anciennes suggestions
     suggestionsDiv.innerHTML = "";
-
     if (filtre === "") return;
 
-    // Créer les suggestions filtrées
-    const matches = randos.filter(r => r.toLowerCase().includes(filtre));
+    const matches = randos.filter(r => r.toLowerCase().includes(filtre)).slice(0, 15);
 
     matches.forEach(r => {
       const div = document.createElement("div");
       div.className = "suggestion";
       div.textContent = r;
-
-      // Cliquer sur une suggestion remplit le nom et vide les suggestions
       div.addEventListener("click", () => {
         nomRando.value = r;
-        input.value = r; // si tu veux garder le texte tapé
+        input.value = r;
         suggestionsDiv.innerHTML = "";
       });
-
       suggestionsDiv.appendChild(div);
     });
   });
 
-  // Clic en dehors de la zone pour cacher les suggestions
+  /* Clic en dehors pour masquer */
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".search-rando")) {
       suggestionsDiv.innerHTML = "";
     }
   });
 
-  // Optionnel : navigation au clavier (flèches + Enter)
+  /* Navigation clavier (flèches + Enter) */
   let index = -1;
-
   input.addEventListener("keydown", (e) => {
     const suggestions = Array.from(suggestionsDiv.children);
     if (suggestions.length === 0) return;
-
     if (e.key === "ArrowDown") {
       e.preventDefault();
       index = (index + 1) % suggestions.length;
