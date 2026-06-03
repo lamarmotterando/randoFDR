@@ -54,7 +54,7 @@
   .main-content { max-width: 1600px; margin: 0 auto; padding: 20px 8px 40px; display: flex; flex-direction: column; gap: 20px; }
 
   .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 14px 16px; }
-  .card-title { font-size: 1.05rem; color: #2d6a4f; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .card-title { font-size: 1.05rem; color: #2d6a4f; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-weight: 700; }
 
   .section-divider { display: flex; align-items: center; gap: 14px; }
   .section-divider::before, .section-divider::after {
@@ -67,13 +67,13 @@
     background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 20px;
   }
 
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .form-group { display: flex; flex-direction: column; gap: 3px; }
   .form-group.full { grid-column: 1 / -1; }
-  label { font-size: .82rem; font-weight: 600; color: #4a5568; }
+  label { font-size: .78rem; font-weight: 600; color: #4a5568; }
   input[type=text], input[type=date], input[type=number], input[type=time], select, textarea {
-    padding: 9px 13px; border: 1.5px solid #e2e8f0; border-radius: 8px;
-    font-size: .93rem; transition: border-color .2s; width: 100%; font-family: inherit;
+    padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 7px;
+    font-size: .88rem; transition: border-color .2s; width: 100%; font-family: inherit;
   }
   input:focus, select:focus, textarea:focus { outline: none; border-color: #52b788; }
   .input-unit { position: relative; }
@@ -94,7 +94,7 @@
   .btn-edit    { background: #3182ce; color: #fff; font-size: .70rem; padding: 3px 6px; } .btn-edit:hover { background: #2c5282; }
   .btn-delete  { background: #e53e3e; color: #fff; font-size: .70rem; padding: 3px 6px; } .btn-delete:hover { background: #c53030; }
   .btn-cancel  { background: #e2e8f0; color: #4a5568; } .btn-cancel:hover { background: #cbd5e0; }
-  .form-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .form-actions { display: flex; gap: 10px; margin-top: 10px; }
 
   .gestion-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
   .sel-toolbar { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
@@ -107,7 +107,7 @@
   #toast.show { opacity: 1; } #toast.error { background: #e53e3e; }
 
   .table-wrap { overflow-x: auto; width: 100%; }
-  table { width: 100%; border-collapse: collapse; font-size: .79rem; } #events-table { table-layout: fixed; } #events-table th:nth-child(1) { width: 30px; } #events-table th:nth-child(2) { width: 148px; } #events-table th:nth-child(3) { width: auto; } #events-table th:nth-child(4) { width: 100px; } #events-table th:nth-child(5) { width: 48px; } #events-table th:nth-child(6) { width: 60px; } #events-table th:nth-child(7) { width: 60px; } #events-table th:nth-child(8) { width: 120px; } #events-table th:nth-child(9) { width: 185px; }
+  table { width: 100%; border-collapse: collapse; font-size: .79rem; } #events-table { table-layout: fixed; } #events-table th:nth-child(1) { width: 30px; } #events-table th:nth-child(2) { width: 148px; } #events-table th:nth-child(3) { width: 160px; } #events-table th:nth-child(4) { width: 100px; } #events-table th:nth-child(5) { width: 70px; } #events-table th:nth-child(6) { width: 60px; } #events-table th:nth-child(7) { width: 60px; } #events-table th:nth-child(8) { width: 150px; }
   thead th { background: #2d6a4f; color: #fff; padding: 6px 7px; text-align: left; white-space: nowrap; user-select: none; font-size: .78rem; }
   thead th.sortable { cursor: pointer; } thead th.sortable:hover { background: #1b4332; }
   thead th .sort-icon { display: inline-block; margin-left: 5px; font-size: .78rem; opacity: .45; }
@@ -119,6 +119,8 @@
   .badge       { display: inline-block; font-size: .70rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; padding: 1px 6px; font-weight: 600; }
   .badge.green { background: #f0fff4; color: #276749; }
   .date-cell { white-space: nowrap; font-size: .78rem; }
+  #events-table tbody td:nth-child(8),
+  #events-table thead th:nth-child(8) { border-left: 2px solid #b5d4f4; }
   .date-cell .jour { font-weight: 700; text-transform: capitalize; color: #2d6a4f; margin-right: 4px; }
   .date-cell .date { color: #4a5568; }
   .chk-col { width: 34px; text-align: center; }
@@ -164,6 +166,8 @@
   .cal-day.empty { visibility: hidden; }
   .cal-day.has-rando { background: #c6f6d5; color: #1b4332; font-weight: 700; cursor: pointer; }
   .cal-day.has-rando:hover { background: #9ae6b4; }
+  .cal-day.has-double { background: #ff8c00 !important; color: #fff !important; font-weight: 700; cursor: pointer; }
+  .cal-day.has-double:hover { background: #e67c00 !important; }
   .cal-day.today { outline: 2px solid #2d6a4f; outline-offset: -2px; }
   .cal-day.annulee { background: #fed7d7; color: #742a2a; text-decoration: line-through; }
   .cal-legend { display: flex; gap: 16px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: .76rem; color: #718096; align-items: center; }
@@ -220,7 +224,7 @@
   .sejour-dates-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
   /* ══ RATTACHEMENT SÉJOUR (dans formulaire rando) ══ */
-  .rattach-sejour-bloc { background: #f0f7ff; border: 1.5px solid #b5d4f4; border-radius: 9px; padding: 11px 14px; margin-bottom: 14px; }
+  .rattach-sejour-bloc { background: #f0f7ff; border: 1.5px solid #b5d4f4; border-radius: 9px; padding: 7px 10px; margin-bottom: 8px; }
   .rattach-sejour-titre { font-size: .8rem; font-weight: 700; color: #185fa5; margin-bottom: 7px; }
   .rattach-sejour-bloc select { border-color: #85b7eb; font-size: .88rem; }
 
@@ -233,7 +237,24 @@
   .tr-dans-sejour:hover td { background: #e8f4fd !important; }
 
   /* ══ DROPDOWN RATTACHEMENT INLINE ══ */
-  .rattach-dropdown { position: absolute; z-index: 200; background: #fff; border: 1.5px solid #b5d4f4; border-radius: 9px; box-shadow: 0 4px 18px rgba(0,0,0,.13); padding: 10px 12px; min-width: 260px; margin-top: 4px; }
+  .rattach-dropdown {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: #fff;
+    border: 1.5px solid #b5d4f4;
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.25);
+    padding: 20px 20px 16px;
+    min-width: 320px;
+    max-width: 90vw;
+  }
+  .rattach-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.3);
+    z-index: 999;
+  }
   .rattach-dropdown label { font-size: .78rem; font-weight: 700; color: #185fa5; display: block; margin-bottom: 6px; }
   .rattach-dropdown select { width: 100%; font-size: .86rem; padding: 7px 10px; border: 1.5px solid #b5d4f4; border-radius: 7px; margin-bottom: 8px; }
   .rattach-dropdown .rattach-actions { display: flex; gap: 8px; }
@@ -323,31 +344,26 @@
               <div class="autocomplete-list" id="nom-list"></div>
             </div>
           </div>
-          <div class="form-group full">
-            <label for="parking-input">Parking covoiturage</label>
-            <div class="autocomplete-wrap">
-              <input type="text" id="parking-input" placeholder="Tapez ou saisissez un parking…" autocomplete="off">
-              <div class="autocomplete-list" id="parking-list"></div>
+
+          <div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <div class="form-group">
+              <label for="ibp">Indice IBP</label>
+              <input type="number" id="ibp" placeholder="Ex : 45" min="0">
+              <span class="ibp-badge" id="ibp-badge"></span>
             </div>
-          </div>
-          <div class="form-group">
-            <label for="ibp">Indice IBP</label>
-            <input type="number" id="ibp" placeholder="Ex : 45" min="0">
-            <span class="ibp-badge" id="ibp-badge"></span>
-          </div>
-          <div class="form-group"></div>
-          <div class="form-group">
-            <label for="distance">Distance *</label>
-            <div class="input-unit">
-              <input type="number" id="distance" placeholder="Ex : 18" min="0" step="0.1" required="">
-              <span>km</span>
+            <div class="form-group">
+              <label for="distance">Distance *</label>
+              <div class="input-unit">
+                <input type="number" id="distance" placeholder="Ex : 18" min="0" step="0.1" required="">
+                <span>km</span>
+              </div>
             </div>
-          </div>
-          <div class="form-group">
-            <label for="denivele">Dénivelé +</label>
-            <div class="input-unit">
-              <input type="number" id="denivele" placeholder="Ex : 850" min="0" step="1">
-              <span>m</span>
+            <div class="form-group">
+              <label for="denivele">Dénivelé +</label>
+              <div class="input-unit">
+                <input type="number" id="denivele" placeholder="Ex : 850" min="0" step="1">
+                <span>m</span>
+              </div>
             </div>
           </div>
         </div>
@@ -399,6 +415,25 @@
     <!-- ══ SÉPARATEUR ══ -->
     <div class="section-divider"><span>📋 Événements planifiés</span></div>
 
+    <!-- ══ FILTRE DATES ══ -->
+    <div class="card" style="padding:10px 16px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:.82rem;font-weight:600;color:#4a5568;">🗓 Période :</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label for="filtre-debut" style="font-size:.78rem;color:#718096;">Du</label>
+          <input type="date" id="filtre-debut" style="padding:5px 8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.83rem;font-family:inherit;"
+            onchange="appliquerFiltreDates()">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label for="filtre-fin" style="font-size:.78rem;color:#718096;">Au</label>
+          <input type="date" id="filtre-fin" style="padding:5px 8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.83rem;font-family:inherit;"
+            onchange="appliquerFiltreDates()">
+        </div>
+        <button onclick="reinitialiserFiltre()" style="padding:5px 12px;background:#e2e8f0;border:none;border-radius:7px;font-size:.78rem;font-weight:600;color:#4a5568;cursor:pointer;">✕ Réinitialiser</button>
+        <span id="filtre-count" style="font-size:.78rem;color:#718096;margin-left:4px;"></span>
+      </div>
+    </div>
+
     <!-- ══ GESTION ══ -->
     <div class="card">
       <div class="gestion-header">
@@ -424,11 +459,11 @@
               <th>Distance</th>
               <th>Dénivelé +</th>
               <th>Séjour</th>
-              <th>Actions</th>
+
             </tr>
           </thead>
           <tbody id="events-body">
-            <tr><td colspan="8" class="empty-state">Chargement…</td></tr>
+            <tr><td colspan="7" class="empty-state">Chargement…</td></tr>
           </tbody>
         </table>
       </div>
@@ -442,6 +477,11 @@
   <div class="modal" style="width:580px">
     <h3>✏️ Modifier l'événement</h3>
     <input type="hidden" id="edit-rowIndex">
+    <input type="hidden" id="edit-statut-original">
+    <input type="hidden" id="edit-sejour-id">
+    <input type="hidden" id="edit-nom-original">
+    <input type="hidden" id="edit-anim-original">
+    <input type="hidden" id="edit-date-original">
     <div class="form-grid">
       <div class="form-group"><label>Date *</label><input type="date" id="edit-date"></div>
       <div class="form-group">
@@ -508,9 +548,15 @@
       </div>
 
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-cancel" onclick="closeModal('modal-edit')">Annuler</button>
-      <button class="btn btn-primary" id="btn-save-edit" onclick="saveEdit()">💾 Enregistrer</button>
+    <div class="modal-actions" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-delete" id="btn-modal-annuler" onclick="confirmerDepuisModal()" style="display:none;">❌ Annuler la rando</button>
+        <button class="btn-rattach" id="btn-modal-rattacher" onclick="rattacherDepuisModal()" style="display:none;padding:6px 12px;font-size:.8rem;">🏕 Rattacher</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-cancel" onclick="closeModal('modal-edit')">Fermer</button>
+        <button class="btn btn-primary" id="btn-save-edit" onclick="saveEdit()">💾 Enregistrer</button>
+      </div>
     </div>
   </div>
 </div>
@@ -583,6 +629,16 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const BASE_URL     = "https://lamarmotterando.github.io/randoFDR/data/";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ══ VARIABLES GLOBALES — déclarées en haut pour éviter TDZ ══ */
+let animateurs   = [];
+let randos       = [];
+let parkings     = [];
+let allRows      = [];
+let sortCol      = "date";
+let sortDir      = "desc";
+let filtreDebut  = null;
+let filtreFin    = null;
 
 /* ══ HELPER HEADERS AUTH ══
    Retourne les headers avec le JWT de la session courante si disponible,
@@ -693,13 +749,34 @@ if (session) {
   }
 }
 
-let animateurs = [], randos = [], parkings = [], allRows = [];
-let sortCol = "date", sortDir = "desc";
+/* Variables déclarées en haut du module */
+
+function appliquerFiltreDates() {
+  filtreDebut = document.getElementById("filtre-debut").value || null;
+  filtreFin   = document.getElementById("filtre-fin").value   || null;
+  renderTable();
+}
+
+function reinitialiserFiltre() {
+  document.getElementById("filtre-debut").value = "";
+  document.getElementById("filtre-fin").value   = "";
+  filtreDebut = null;
+  filtreFin   = null;
+  renderTable();
+}
 
 function initApp() {
   loadData();
   loadEvents();
   populateSejourSelect();
+  /* Initialiser le filtre sur le mois courant + 3 mois */
+  const now = new Date();
+  const debut = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fin   = new Date(now.getFullYear(), now.getMonth() + 4, 0);
+  document.getElementById("filtre-debut").value = debut.toISOString().split("T")[0];
+  document.getElementById("filtre-fin").value   = fin.toISOString().split("T")[0];
+  filtreDebut = debut.toISOString().split("T")[0];
+  filtreFin   = fin.toISOString().split("T")[0];
   const d0 = new Date();
   const dow0 = d0.getDay();
   const diff0 = dow0 === 0 ? 1 : dow0 === 1 ? 7 : (8 - dow0);
@@ -726,10 +803,10 @@ function jourSemaine(val) {
 function niveauIBP(v) {
   const n = parseFloat(v);
   if (isNaN(n) || v === "") return null;
-  if (n <= 25)  return { label: "🟢 N1 — Facile",          bg: "#d4edda", color: "#155724" };
-  if (n <= 50)  return { label: "🔵 N2 — Assez Facile",    bg: "#cce5ff", color: "#004085" };
-  if (n <= 75)  return { label: "🟡 N3 — Peu Difficile",   bg: "#fff3cd", color: "#856404" };
-  if (n <= 100) return { label: "🔴 N4 — Assez Difficile", bg: "#f8d7da", color: "#721c24" };
+  if (n <= 25)  return { label: "🟢 N1 — Facile",          bg: "#00dd00", color: "#ffffff" };
+  if (n <= 50)  return { label: "🔵 N2 — Assez Facile",    bg: "#0077ff", color: "#ffffff" };
+  if (n <= 75)  return { label: "🟡 N3 — Peu Difficile",   bg: "#ff8800", color: "#ffffff" };
+  if (n <= 100) return { label: "🔴 N4 — Assez Difficile", bg: "#ff1a1a", color: "#ffffff" };
   return              { label: "⚫ N5 — Difficile",         bg: "#343a40", color: "#ffffff" };
 }
 
@@ -748,7 +825,7 @@ async function loadData() {
   try {
     const [a, r, p] = await Promise.all([
       callHandler({ action: "getAnimateurs" }),
-      fetch(BASE_URL + "randos.json").then(res => res.json()),
+      callHandler({ action: "getFiches", select: "nom_rando", order: "nom_rando.asc" }),
       fetch(BASE_URL + "parkings.js").then(res => res.text()).then(txt => {
         const m = txt.match(/\[([^\]]+)\]/s);
         if (!m) return [];
@@ -756,7 +833,8 @@ async function loadData() {
       })
     ]);
     animateurs = Array.isArray(a) ? a.filter(x => x.nom && x.nom !== "") : [];
-    randos = r; parkings = p;
+    randos = Array.isArray(r) ? [...new Set(r.map(x => x.nom_rando).filter(Boolean))].sort() : [];
+    parkings = p;
     initAutocomplete();
     console.log("[Animateurs] " + animateurs.length + " animateurs chargés via dynamic-handler");
   } catch(e) { console.error("Erreur chargement:", e); }
@@ -765,7 +843,6 @@ async function loadData() {
 function initAutocomplete() {
   setupAutocomplete("animateur-input", "animateur-list", () => animateurs.map(a => a.nom));
   setupAutocomplete("nom-input",       "nom-list",       () => randos);
-  setupAutocomplete("parking-input",   "parking-list",   () => parkings);
   setupAutocomplete("edit-animateur",  "edit-animateur-list", () => animateurs.map(a => a.nom));
   setupAutocomplete("edit-nom",        "edit-nom-list",       () => randos);
   setupAutocomplete("edit-parking",    "edit-parking-list",   () => parkings);
@@ -908,7 +985,7 @@ async function creerRando() {
   const date    = document.getElementById("date").value;
   const nom     = document.getElementById("nom-input").value.trim();
   const anim    = document.getElementById("animateur-input").value.trim();
-  const parking = document.getElementById("parking-input").value.trim();
+  const parking = "";
   const ibp     = document.getElementById("ibp").value.trim();
   const dist    = document.getElementById("distance").value.trim();
   const den     = document.getElementById("denivele").value.trim();
@@ -954,7 +1031,7 @@ async function creerRando() {
       });
       showToast(calOk ? "✅ Randonnée créée et ajoutée au Calendar !" : "✅ Randonnée créée (Calendar non mis à jour)", !calOk);
       ["ibp","distance","denivele"].forEach(id => document.getElementById(id).value = "");
-      ["nom-input","animateur-input","parking-input"].forEach(id => document.getElementById(id).value = "");
+      ["nom-input","animateur-input"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("ibp-badge").className = "ibp-badge";
       const last = new Date(date + "T12:00:00");
       const dow  = last.getDay();
@@ -1067,9 +1144,13 @@ function buildEventRow(ev, extraClass) {
       <td colspan="5"><span class="tr-sejour-nom">🏕 ${ev.nom_rando || "—"}</span>
         <span style="font-size:.76rem;color:#2a6496;margin-left:10px">${nbJours ? nbJours + " jours" : ""} · ${ev.animateur || "—"} · ${nbRandos} rando${nbRandos > 1 ? "s" : ""}</span>
       </td>
-      <td class="actions-cell">
-        <button class="btn btn-edit" onclick='openEdit(${JSON.stringify(ev).replace(/'/g,"&#39;")})'>✏️ Modifier</button>
-      </td>`;
+`;
+  /* Clic sur ligne séjour → ouvrir modal */
+  tr.style.cursor = "pointer";
+  tr.addEventListener("click", (e) => {
+    if (e.target.closest("input[type=checkbox]")) return;
+    openEdit(ev);
+  });
     return tr;
   }
 
@@ -1089,7 +1170,12 @@ function buildEventRow(ev, extraClass) {
     <td>${dateHtml}</td>
     <td><strong style="${annulee ? 'text-decoration:line-through' : ''}">${ev.nom_rando||"—"}</strong>${annulee ? " <span style='color:#e53e3e;font-size:.73rem'>❌ Annulée</span>" : ""}</td>
     <td>${ev.animateur||"—"}</td>
-    <td>${ev.ibp      ? "<span class='badge'>"+ev.ibp+"</span>"             : "—"}</td>
+    <td style="text-align:center;font-weight:700;">${(() => {
+      if (!ev.ibp) return "—";
+      const n = parseFloat(ev.ibp);
+      const bg = n <= 25 ? "#00dd00" : n <= 50 ? "#0077ff" : n <= 75 ? "#ff8800" : n <= 100 ? "#ff1a1a" : "#343a40";
+      return "<span style=\"background:"+bg+";color:#fff;border-radius:4px;padding:2px 7px;font-size:.75rem;font-weight:700;\">"+ev.ibp+"</span>";
+    })()}</td>
     <td>${ev.distance ? "<span class='badge green'>"+ev.distance+" km</span>": "—"}</td>
     <td>${ev.denivele ? "<span class='badge green'>"+ev.denivele+" m</span>" : "—"}</td>
     <td style="white-space:nowrap">${(() => {
@@ -1098,11 +1184,13 @@ function buildEventRow(ev, extraClass) {
       return s ? "<span style='background:#ddeef8;color:#0c4472;border-radius:5px;padding:2px 7px;font-size:.76rem;font-weight:700'>🏕 "+s.nom_rando+"</span>" : "<span style='color:#aaa;font-size:.8rem'>—</span>";
     })()}</td>
 
-    <td class="actions-cell" style="position:relative">
-      <button class="btn btn-edit" onclick='openEdit(${ej})'>✏️ Modifier</button>
-      ${!annulee ? `<button class="btn btn-delete btn-annuler" data-id="${ev.id}" data-nom="${(ev.nom_rando||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}" data-anim="${(ev.animateur||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}" data-date="${ev.date_rando||''}">❌ Annuler</button>` : ""}
-      ${!annulee ? `<button class="btn-rattach${ev.sejour_id ? ' rattache' : ''}" data-id="${ev.id}" data-sejour="${ev.sejour_id||''}" onclick="ouvrirRattach(event, this, ${ev.id}, ${ev.sejour_id||'null'})">${ev.sejour_id ? '↩ Changer' : '🏕 Rattacher'}</button>` : ""}
-    </td>`;
+`;
+  /* Clic sur la ligne → ouvrir modal */
+  tr.style.cursor = "pointer";
+  tr.addEventListener("click", (e) => {
+    if (e.target.closest("input[type=checkbox]")) return; /* Ne pas ouvrir si case à cocher */
+    openEdit(ev);
+  });
   return tr;
 }
 
@@ -1119,7 +1207,7 @@ function renderTable() {
   const tbody = document.getElementById("events-body");
   tbody.innerHTML = "";
   if (!allRows.length) {
-    tbody.innerHTML = "<tr><td colspan='8' class='empty-state'>Aucun événement trouvé.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='7' class='empty-state'>Aucun événement trouvé.</td></tr>";
     updateSortIcons(); return;
   }
 
@@ -1135,14 +1223,32 @@ function renderTable() {
     return 0;
   });
 
+  /* Appliquer filtre dates si actif */
+  const rowsAfterFilter = sorted.filter(ev => {
+    const d = ev.date_rando || "";
+    if (filtreDebut && d < filtreDebut) return false;
+    if (filtreFin   && d > filtreFin)   return false;
+    return true;
+  });
+
+  /* Mettre à jour le compteur */
+  const countEl = document.getElementById("filtre-count");
+  if (countEl) {
+    if (filtreDebut || filtreFin) {
+      countEl.textContent = rowsAfterFilter.length + " événement" + (rowsAfterFilter.length > 1 ? "s" : "");
+    } else {
+      countEl.textContent = "";
+    }
+  }
+
   /* Séparer futurs (>= aujourd'hui) et passés (< aujourd'hui) */
-  const futurs = sorted.filter(ev => (ev.date_rando||"") >= todayISO);
-  const passes = sorted.filter(ev => (ev.date_rando||"") <  todayISO);
+  const futurs = rowsAfterFilter.filter(ev => (ev.date_rando||"") >= todayISO);
+  const passes = rowsAfterFilter.filter(ev => (ev.date_rando||"") <  todayISO);
 
   /* ── Lignes futures ── */
   if (futurs.length === 0) {
     const tr = document.createElement("tr");
-    tr.innerHTML = "<td colspan='8' class='empty-state'>Aucun événement à venir.</td>";
+    tr.innerHTML = "<td colspan='7' class='empty-state'>Aucun événement à venir.</td>";
     tbody.appendChild(tr);
   } else {
     futurs.forEach(ev => tbody.appendChild(buildEventRow(ev, "")));
@@ -1152,7 +1258,7 @@ function renderTable() {
   if (passes.length > 0) {
     const trSep = document.createElement("tr");
     trSep.className = "tr-separator";
-    trSep.innerHTML = `<td colspan="8">
+    trSep.innerHTML = `<td colspan="7">
       <button class="tr-separator-btn" onclick="toggleOldEvents()">
         <span class="tr-separator-arrow">▶</span>
         <span id="old-events-label" data-label="Afficher les ${passes.length} ancien${passes.length > 1 ? 's' : ''} événement${passes.length > 1 ? 's' : ''}">Afficher les ${passes.length} ancien${passes.length > 1 ? 's' : ''} événement${passes.length > 1 ? 's' : ''}</span>
@@ -1212,6 +1318,22 @@ function openEdit(ev) {
   secPart.style.display = (estPassee && !estAnnulee) ? "block" : "none";
   document.getElementById("edit-noms-participants").value  = ev.noms_participants || "";
   document.getElementById("edit-nb-participants").value    = ev.nb_participants   || "";
+
+  /* Stocker données pour Annuler + Rattacher */
+  document.getElementById("edit-statut-original").value = ev.statut  || "publiée";
+  document.getElementById("edit-sejour-id").value       = ev.sejour_id != null ? ev.sejour_id : "";
+  document.getElementById("edit-nom-original").value    = ev.nom_rando   || "";
+  document.getElementById("edit-anim-original").value   = ev.animateur   || "";
+  document.getElementById("edit-date-original").value   = ev.date_rando  || "";
+
+  /* Afficher/masquer boutons contextuels */
+  const btnAnnuler   = document.getElementById("btn-modal-annuler");
+  const btnRattacher = document.getElementById("btn-modal-rattacher");
+  const isSejour     = ev.type === "sejour";
+  const isAnnulee    = (ev.statut === "annulée");
+  btnAnnuler.style.display   = (!isAnnulee && !isSejour) ? "inline-flex" : "none";
+  btnRattacher.style.display = (!isAnnulee && !isSejour) ? "inline-flex" : "none";
+  btnRattacher.textContent   = ev.sejour_id ? "🏕 Changer séjour" : "🏕 Rattacher";
 
   document.getElementById("modal-edit").classList.add("open");
 }
@@ -1283,6 +1405,25 @@ async function saveEdit() {
     }
   } catch(e) { showToast("Erreur réseau.", true); }
   setBusy("btn-save-edit", false);
+}
+
+function confirmerDepuisModal() {
+  const id        = document.getElementById("edit-rowIndex").value;
+  const nom       = document.getElementById("edit-nom-original").value;
+  const animateur = document.getElementById("edit-anim-original").value;
+  const dateRando = document.getElementById("edit-date-original").value;
+  closeModal("modal-edit");
+  confirmDelete(id, nom, animateur, dateRando);
+}
+
+function rattacherDepuisModal() {
+  const randoId       = parseInt(document.getElementById("edit-rowIndex").value);
+  const sejourIdActuel = document.getElementById("edit-sejour-id").value
+                         ? parseInt(document.getElementById("edit-sejour-id").value) : null;
+  closeModal("modal-edit");
+  /* Créer un faux bouton pour ouvrirRattach */
+  const fakeEvent = { stopPropagation: () => {} };
+  ouvrirRattach(fakeEvent, document.body, randoId, sejourIdActuel);
 }
 
 function confirmDelete(id, nom, animateur, dateRando) {
@@ -1365,7 +1506,7 @@ function renderCal() {
   if (label) label.textContent = labelDebut + " – " + labelFin;
 
   /* Sets de dates */
-  const randoDates   = new Set();
+  const randoDates   = new Map(); /* iso → [fiche, fiche, ...] */
   const annuleeDates = new Set();
   const sejourPeriodes = []; /* { debut, fin, nom } */
   const sejourDates  = new Map(); /* iso → { nom, isDebut, isFin } */
@@ -1380,7 +1521,8 @@ function renderCal() {
     } else if ((ev.statut || "") === "annulée") {
       annuleeDates.add(iso);
     } else {
-      randoDates.add(iso);
+      if (!randoDates.has(iso)) randoDates.set(iso, []);
+      randoDates.get(iso).push(ev);
     }
   });
 
@@ -1436,12 +1578,29 @@ function renderCal() {
         cell.classList.add("annulee");
         cell.title = "Rando annulée";
       } else if (randoDates.has(iso)) {
-        cell.classList.add("has-rando");
-        const ev = allRows.find(r => r.date_rando && r.date_rando.substring(0,10) === iso);
-        cell.title = ev ? ev.nom_rando + (ev.animateur ? " — " + ev.animateur : "") : "Rando";
+        const evList = randoDates.get(iso);
+        const isDouble = evList.length >= 2;
+        cell.classList.add(isDouble ? "has-double" : "has-rando");
+        cell.title = evList.map(e => e.nom_rando + (e.animateur ? " — " + e.animateur : "")).join(" | ");
         cell.addEventListener("click", () => {
           toggleCal();
-          document.querySelector("#events-body").closest(".card").scrollIntoView({ behavior: "smooth" });
+          /* Scroll vers la première rando du jour dans le tableau */
+          setTimeout(() => {
+            const id = evList[0]?.id;
+            if (id) {
+              const row = document.querySelector(`[data-id="${id}"]`);
+              if (row) {
+                const tr = row.closest("tr");
+                if (tr) {
+                  tr.scrollIntoView({ behavior: "smooth", block: "center" });
+                  tr.style.outline = "2px solid #ff8c00";
+                  setTimeout(() => { tr.style.outline = ""; }, 2000);
+                }
+              }
+            } else {
+              document.querySelector("#events-body").closest(".card").scrollIntoView({ behavior: "smooth" });
+            }
+          }, 300);
         });
       }
       if (sejourDates.has(iso)) {
@@ -1459,6 +1618,7 @@ function renderCal() {
 
 /* ══ RATTACHEMENT INLINE ══ */
 let _dropdownActif = null;
+let _overlayActif  = null;
 
 function ouvrirRattach(event, btn, randoId, sejourIdActuel) {
   event.stopPropagation();
@@ -1488,23 +1648,22 @@ function ouvrirRattach(event, btn, randoId, sejourIdActuel) {
       <button class="btn-rattach-ok" onclick="sauvegarderRattach(${randoId}, this)">✔ Enregistrer</button>
     </div>`;
 
-  /* Positionner sous le bouton */
-  btn.parentElement.appendChild(div);
+  /* Ajouter overlay + centrer à l'écran */
+  const overlay = document.createElement("div");
+  overlay.className = "rattach-overlay";
+  overlay.addEventListener("click", fermerRattach);
+  document.body.appendChild(overlay);
+  document.body.appendChild(div);
   _dropdownActif = div;
-
-  /* Fermer si clic ailleurs */
-  setTimeout(() => {
-    document.addEventListener("click", fermerRattachExterieur, { once: true });
-  }, 10);
+  _overlayActif  = overlay;
 }
 
 function fermerRattach() {
   if (_dropdownActif) { _dropdownActif.remove(); _dropdownActif = null; }
+  if (_overlayActif)  { _overlayActif.remove();  _overlayActif  = null; }
 }
 
-function fermerRattachExterieur(e) {
-  if (_dropdownActif && !_dropdownActif.contains(e.target)) fermerRattach();
-}
+/* fermerRattachExtérieur remplacé par overlay */
 
 async function sauvegarderRattach(randoId, btnOk) {
   const sel = document.getElementById(`rattach-sel-${randoId}`);
@@ -1538,6 +1697,10 @@ async function sauvegarderRattach(randoId, btnOk) {
 
 
 /* ══ EXPOSITION GLOBALE (requis pour type=module) ══ */
+window.appliquerFiltreDates  = appliquerFiltreDates;
+window.confirmerDepuisModal  = confirmerDepuisModal;
+window.rattacherDepuisModal  = rattacherDepuisModal;
+window.reinitialiserFiltre  = reinitialiserFiltre;
 window.creerRando = creerRando;
 window.creerSejour = creerSejour;
 window.switchType = switchType;
@@ -1568,30 +1731,14 @@ window.showToast = showToast;
 window.loadEvents = loadEvents;
 window.renderTable = renderTable;
 
-/* Fermer le popup en cliquant en dehors */
-document.addEventListener("click", function(e) {
-  const popup = document.getElementById("cal-popup");
-  const btn   = document.getElementById("btn-cal");
-  if (popup && popup.classList.contains("open") && !popup.contains(e.target) && e.target !== btn) {
-    popup.classList.remove("open");
-  }
-});
+/* Popup calendrier fermé uniquement via toggleCal() */
 
 function closeModal(id) { document.getElementById(id).classList.remove("open"); }
 document.querySelectorAll(".modal-overlay").forEach(o => {
   o.addEventListener("click", function(e) { if (e.target === this) this.classList.remove("open"); });
 });
 
-/* Délégation pour bouton Annuler — évite les bugs avec apostrophes/guillemets */
-document.getElementById("events-body").addEventListener("click", function(e) {
-  const btn = e.target.closest(".btn-annuler");
-  if (!btn) return;
-  const id   = btn.dataset.id;
-  const nom  = btn.dataset.nom;
-  const anim = btn.dataset.anim;
-  const date = btn.dataset.date;
-  confirmDelete(id, nom, anim, date);
-});
+/* Délégation btn-annuler supprimée — bouton déplacé dans la modal */
 
 /* ══ EXPORT CSV ══ */
 let exportData = [];
