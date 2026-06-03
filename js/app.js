@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   /* randonnées */
   remplirMenu();
-  activerRecherche();
+  await activerRecherche(); /* ✅ async — charge depuis Supabase */
   initHoraires();
   /* animateurs — chargement async depuis Supabase */
   await remplirMenuAnimateurs();
