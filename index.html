@@ -673,24 +673,34 @@ sections.forEach(s => obs.observe(s));
 ═══════════════════════════════════════════════════════════════ */
 if (window.self !== window.top) {
 
-  /* 1. Neutraliser scrollIntoView sur tous les inputs/select/textarea */
+  /* Approche CSS : bloquer tout scroll sur html/body en mode iframe
+     Le scroll interne de la page est géré par overflow sur les sections */
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.overflow = "hidden";
+  document.body.style.height   = "auto";
+
+  /* Neutraliser scrollIntoView sur TOUS les éléments */
+  const _noop = function() {};
+  Element.prototype.scrollIntoView = _noop;
+  window.scroll     = _noop;
+  window.scrollTo   = _noop;
+  window.scrollBy   = _noop;
+
+  /* Intercepter focus pour empêcher le scroll natif */
   document.addEventListener("focusin", function(e) {
+    e.preventDefault && e.stopPropagation && e.stopPropagation();
     const el = e.target;
-    if (el && (el.tagName === "INPUT" || el.tagName === "SELECT" ||
-               el.tagName === "TEXTAREA" || el.isContentEditable)) {
-      el.scrollIntoView = function() {};
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView = _noop;
     }
   }, true);
 
-  /* 2. Bloquer les scrollTo intempestifs vers 0
-        (reset formulaire, chargement fiche via postMessage) */
-  const _origScrollTo = window.scrollTo.bind(window);
-  window.scrollTo = function(x, y) {
-    /* Autoriser le scroll interne à la page (onglets, navigation)
-       mais bloquer les remontées en haut (top:0) */
-    if ((typeof x === "object" && x.top === 0) || y === 0) return;
-    _origScrollTo(x, y);
-  };
+  /* Bloquer les événements scroll sur le document */
+  document.addEventListener("scroll", function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    window.scrollTo(0, 0);
+  }, { passive: false, capture: true });
 }
 </script>
 
