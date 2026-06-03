@@ -2,8 +2,7 @@ console.log("envoiRando.js chargé");
 
 import { chartProfil } from "./profilAltitude.js"
 
-const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+/* ✅ Clé Supabase supprimée — requêtes via dynamic-handler */
 
 export function initEnvoi() {
   const btn = document.getElementById("btnEnvoyer");
@@ -102,14 +101,7 @@ async function chercherFicheExistante(date_rando, animateur) {
       date_rando: "eq." + date_rando,
       order:      "id.asc"
     });
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?${params}`, {
-      headers: {
-        "apikey":        SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`
-      }
-    });
-    if (!res.ok) return null;
-    const rows = await res.json();
+
     if (!rows.length) return null;
 
     const normaliser = str => (str || "")
@@ -140,44 +132,40 @@ async function chercherFicheExistante(date_rando, animateur) {
   }
 }
 
+const HANDLER = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
+
+async function callHandler(body) {
+  const res = await fetch(HANDLER, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Handler error: ${res.status}`);
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
 async function sauvegarderFiche(fiche) {
   try {
     const idExistant = await chercherFicheExistante(fiche.date_rando, fiche.animateur);
 
     if (idExistant) {
-      // PATCH — met à jour la fiche prévisionnelle existante
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${idExistant}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type":  "application/json",
-          "apikey":        SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
-          "Prefer":        "return=minimal"
-        },
-        body: JSON.stringify(fiche)
-      });
-      if (!res.ok) {
-        console.warn("[Supabase] Erreur PATCH fiche:", res.status, await res.text());
-        return false;
-      }
+      /* ✅ PATCH — filtrer les valeurs null pour ne pas écraser
+         les données prévisionnelles déjà en base
+         (ex: heure_rv, itineraire saisis dans planning_gestion) */
+      const patch = Object.fromEntries(
+        Object.entries(fiche).filter(([, v]) => v !== null && v !== "" && v !== undefined)
+      );
+      /* Toujours forcer le statut et profil_png même si null */
+      patch.statut = fiche.statut || "publiée";
+      if (fiche.profil_png) patch.profil_png = fiche.profil_png;
+
+      await callHandler({ action: "updateFiche", id: idExistant, fiche: patch });
       console.log("[Supabase] Fiche prévisionnelle mise à jour ✅ id:", idExistant);
       return true;
     } else {
-      // POST — aucune fiche prévisionnelle, création
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches`, {
-        method: "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "apikey":        SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
-          "Prefer":        "return=minimal"
-        },
-        body: JSON.stringify(fiche)
-      });
-      if (!res.ok) {
-        console.warn("[Supabase] Erreur POST fiche:", res.status, await res.text());
-        return false;
-      }
+      /* POST — aucune fiche prévisionnelle, création complète */
+      await callHandler({ action: "saveFiche", fiche });
       console.log("[Supabase] Nouvelle fiche créée ✅");
       return true;
     }
@@ -191,21 +179,9 @@ async function sauvegarderFiche(fiche) {
 ══════════════════════════════════════ */
 async function envoyerEmail(resume, emailUser, profilPNG) {
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/functions/v1/dynamic-handler`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "apikey":        SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`
-        },
-        body: JSON.stringify({ resume, emailUser, profilPNG })
-      }
-    );
-    const data = await res.json();
+    const data = await callHandler({ action: "sendEmail", resume, emailUser, profilPNG });
     console.log("[Email] réponse:", data);
-    return data.success === true;
+    return data?.success === true;
   } catch(e) {
     console.warn("[Email] Erreur réseau:", e.message);
     return false;
@@ -252,13 +228,12 @@ async function mettreAJourCalendar(fiche) {
 
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/functions/v1/dynamic-handler`,
+      "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler",
       {
         method: "POST",
         headers: {
           "Content-Type":  "application/json",
-          "apikey":        SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`
+          "Content-Type":  "application/json"
         },
         body: JSON.stringify({ action: "calendarUpdate", fiche: ficheCalendar })
       }
