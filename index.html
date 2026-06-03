@@ -666,42 +666,6 @@ const obs = new IntersectionObserver(entries => {
   });
 }, { threshold:0.3 });
 sections.forEach(s => obs.observe(s));
-
-/* ══ ANTI-SCROLL IFRAME ══════════════════════════════════════
-   Quand index.html est dans un iframe, empêche le navigateur
-   de remonter la page parente au focus sur un champ.
-═══════════════════════════════════════════════════════════════ */
-if (window.self !== window.top) {
-
-  /* Approche CSS : bloquer tout scroll sur html/body en mode iframe
-     Le scroll interne de la page est géré par overflow sur les sections */
-  document.documentElement.style.overflow = "hidden";
-  document.body.style.overflow = "hidden";
-  document.body.style.height   = "auto";
-
-  /* Neutraliser scrollIntoView sur TOUS les éléments */
-  const _noop = function() {};
-  Element.prototype.scrollIntoView = _noop;
-  window.scroll     = _noop;
-  window.scrollTo   = _noop;
-  window.scrollBy   = _noop;
-
-  /* Intercepter focus pour empêcher le scroll natif */
-  document.addEventListener("focusin", function(e) {
-    e.preventDefault && e.stopPropagation && e.stopPropagation();
-    const el = e.target;
-    if (el && typeof el.scrollIntoView === "function") {
-      el.scrollIntoView = _noop;
-    }
-  }, true);
-
-  /* Bloquer les événements scroll sur le document */
-  document.addEventListener("scroll", function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    window.scrollTo(0, 0);
-  }, { passive: false, capture: true });
-}
 </script>
 
 </body>
