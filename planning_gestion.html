@@ -268,6 +268,23 @@
 </head>
 <body>
 
+<!-- ══ DÉTECTION PKCE RECOVERY — doit être avant le module ══ -->
+<script>
+/* Supabase PKCE : après clic sur le lien de reset, l'URL contient ?code=...
+   Le SDK l'échange automatiquement et déclenche PASSWORD_RECOVERY.
+   On stocke le fait qu'on attend un recovery pour que le module le sache. */
+window._attendRecovery = new URLSearchParams(window.location.search).has('code') &&
+  document.referrer.includes('supabase.co') ||
+  window.location.href.includes('type=recovery') ||
+  sessionStorage.getItem('supabase_recovery') === '1';
+
+/* Backup : si on vient d'un lien Supabase, stocker en sessionStorage */
+if (new URLSearchParams(window.location.search).has('code')) {
+  sessionStorage.setItem('supabase_recovery', '1');
+  window._attendRecovery = true;
+}
+</script>
+
 <!-- ══ ÉCRAN DE CONNEXION ══ -->
 <div id="login-screen">
   <div class="login-box">
@@ -649,7 +666,13 @@ const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
 const BASE_URL     = "https://lamarmotterando.github.io/randoFDR/data/";
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    persistSession: true,
+  }
+});
 
 /* ══ VARIABLES GLOBALES — déclarées en haut pour éviter TDZ ══ */
 let animateurs   = [];
@@ -791,14 +814,31 @@ document.getElementById("login-email").addEventListener("keydown", e => { if (e.
    onAuthStateChange doit être déclaré EN PREMIER pour intercepter
    l'événement PASSWORD_RECOVERY dès le chargement.
 ══════════════════════════════════════════════════════════════════ */
+/* ══ AUTH STATE CHANGE — enregistré en premier dans le module ══ */
 supabase.auth.onAuthStateChange(async (event, session) => {
+  console.log("[Auth] event:", event, "recovery attendu:", window._attendRecovery);
+
   if (event === 'PASSWORD_RECOVERY') {
+    sessionStorage.removeItem('supabase_recovery');
+    window._attendRecovery = false;
     history.replaceState(null, '', window.location.pathname);
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('visible');
     document.getElementById('modal-reset-pwd').classList.add('open');
+    return;
   }
+
   if (event === 'SIGNED_IN' && session) {
+    /* Si on attendait un recovery → c'est le SIGNED_IN post-recovery, montrer la modal */
+    if (window._attendRecovery || sessionStorage.getItem('supabase_recovery') === '1') {
+      sessionStorage.removeItem('supabase_recovery');
+      window._attendRecovery = false;
+      history.replaceState(null, '', window.location.pathname);
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app').classList.remove('visible');
+      document.getElementById('modal-reset-pwd').classList.add('open');
+      return;
+    }
     const role = session?.user?.app_metadata?.role;
     if (role === 'admin') {
       document.getElementById("login-screen").classList.add("hidden");
@@ -814,7 +854,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 
 /* Vérifier session existante au chargement */
 const { data: { session } } = await supabase.auth.getSession();
-if (session) {
+if (session && !window._attendRecovery && sessionStorage.getItem('supabase_recovery') !== '1') {
   const role = session?.user?.app_metadata?.role;
   if (role === 'admin') {
     document.getElementById("login-screen").classList.add("hidden");
