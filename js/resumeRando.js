@@ -84,6 +84,7 @@ En cas de nécessité, vous pouvez modifier l'ensemble des paramètres de la FdR
 
 Sur cette nouvelle page, le bouton "Annuler" fournit l'état de la rando comme - Annulée -. Ces actions mettront automatiquement à jour le planning sur le site et Google Calendar.
 
+Nous vous souhaitons une belle rando !
 ――――――――――――――――――――――――――――――――――
 
 Feuille de route : ${formatDate(date)} — ${nom}
