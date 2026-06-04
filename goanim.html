@@ -473,7 +473,7 @@ async function chargerMeteo(gpsStr, dateStr, id) {
     );
     if (!r.ok) throw new Error("HTTP " + r.status);
     const { daily: d } = await r.json();
-    if (!d?.weathercode?.length) throw new Error("vide");
+    if (!d?.weather_code?.length) throw new Error("vide");
 
     const idx = d.time ? d.time.indexOf(iso) : 0;
     if (idx === -1) throw new Error("date absente");
