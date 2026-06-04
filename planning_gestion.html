@@ -623,6 +623,7 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
   <div class="cal-grid" id="cal-grid"></div>
   <div class="cal-legend">
     <div class="cal-legend-dot" style="background:#c6f6d5;outline:1.5px solid #68d391;outline-offset:0"></div><span>Rando programmée</span>
+    <div class="cal-legend-dot" style="background:#ff8c00"></div><span>2 randos</span>
     <div class="cal-legend-dot" style="background:#fed7d7"></div><span>Annulée</span>
     <div class="cal-legend-dot" style="background:#fff;outline:2px solid #2d6a4f;outline-offset:0"></div><span>Aujourd'hui</span>
     <div class="cal-legend-dot" style="background:#ddeef8;border:1.5px solid #185fa5"></div><span>Séjour</span>
@@ -632,7 +633,7 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
 <div id="toast"></div>
 
 <!-- ══ MODAL RESET MOT DE PASSE ══ -->
-<div class="modal-overlay" id="modal-reset-pwd" style="z-index:10000;">
+<div class="modal-overlay" id="modal-reset-pwd" style="z-index:10000;background:rgba(0,0,0,0.85);cursor:default;">
   <div class="modal" style="max-width:400px;text-align:center;">
     <div style="font-size:2rem;margin-bottom:10px;">🔑</div>
     <h3 style="color:#2d6a4f;">Nouveau mot de passe</h3>
@@ -788,9 +789,12 @@ async function enregistrerNouveauMdp() {
     document.getElementById("modal-reset-pwd").classList.remove("open");
     document.getElementById("login-screen").classList.remove("hidden");
     const loginErr = document.getElementById("login-err");
+    document.getElementById('app').style.display = '';
+    document.getElementById('login-screen').classList.remove('hidden');
     loginErr.textContent = "✅ Mot de passe mis à jour. Connectez-vous avec votre nouveau mot de passe.";
     loginErr.style.color = "#2d6a4f";
     loginErr.style.display = "block";
+    await supabase.auth.signOut();
   }
 }
 
@@ -828,6 +832,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
       history.replaceState(null, '', window.location.pathname);
       document.getElementById('login-screen').classList.add('hidden');
       document.getElementById('app').classList.remove('visible');
+      document.getElementById('app').style.display = 'none';
       document.getElementById('modal-reset-pwd').classList.add('open');
       console.log("[Auth] Modal reset affichée ✅");
       return;
@@ -1845,6 +1850,8 @@ window.renderTable = renderTable;
 
 function closeModal(id) { document.getElementById(id).classList.remove("open"); }
 document.querySelectorAll(".modal-overlay").forEach(o => {
+  /* Ne pas fermer la modal reset-pwd au clic extérieur */
+  if (o.id === "modal-reset-pwd") return;
   o.addEventListener("click", function(e) { if (e.target === this) this.classList.remove("open"); });
 });
 
