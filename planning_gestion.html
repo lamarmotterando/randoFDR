@@ -787,32 +787,42 @@ document.getElementById("login-pass").addEventListener("keydown", e => { if (e.k
 document.getElementById("login-email").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("login-pass").focus(); });
 
 /* ══ GESTION RETOUR RESET MOT DE PASSE ══
-   Supabase ajoute #access_token=...&type=recovery dans l'URL
-   après clic sur le lien de réinitialisation ══════════════════ */
-const hashParams = new URLSearchParams(window.location.hash.replace('#', '?').slice(1));
-if (hashParams.get('type') === 'recovery') {
-  /* Nettoyer l'URL sans recharger */
-  history.replaceState(null, '', window.location.pathname);
-  /* Écouter le changement d'état auth pour récupérer la session recovery */
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'PASSWORD_RECOVERY') {
-      /* Afficher la modal de nouveau mot de passe */
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('modal-reset-pwd').classList.add('open');
-    }
-  });
-} else {
-  /* Vérifier session existante au chargement */
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
+   Supabase v2 consomme le token avant qu'on puisse lire le hash.
+   onAuthStateChange doit être déclaré EN PREMIER pour intercepter
+   l'événement PASSWORD_RECOVERY dès le chargement.
+══════════════════════════════════════════════════════════════════ */
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    history.replaceState(null, '', window.location.pathname);
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('visible');
+    document.getElementById('modal-reset-pwd').classList.add('open');
+  }
+  if (event === 'SIGNED_IN' && session) {
     const role = session?.user?.app_metadata?.role;
     if (role === 'admin') {
       document.getElementById("login-screen").classList.add("hidden");
+      document.getElementById("modal-reset-pwd").classList.remove("open");
       document.getElementById("app").classList.add("visible");
-      initApp();
-    } else {
-      await supabase.auth.signOut();
+      if (!document.getElementById("app").dataset.initialized) {
+        document.getElementById("app").dataset.initialized = "1";
+        initApp();
+      }
     }
+  }
+});
+
+/* Vérifier session existante au chargement */
+const { data: { session } } = await supabase.auth.getSession();
+if (session) {
+  const role = session?.user?.app_metadata?.role;
+  if (role === 'admin') {
+    document.getElementById("login-screen").classList.add("hidden");
+    document.getElementById("app").classList.add("visible");
+    document.getElementById("app").dataset.initialized = "1";
+    initApp();
+  } else {
+    await supabase.auth.signOut();
   }
 }
 
