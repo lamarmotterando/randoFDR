@@ -621,6 +621,27 @@
 
 <div id="toast"></div>
 
+<!-- ══ MODAL RESET MOT DE PASSE ══ -->
+<div class="modal-overlay" id="modal-reset-pwd" style="z-index:10000;">
+  <div class="modal" style="max-width:400px;text-align:center;">
+    <div style="font-size:2rem;margin-bottom:10px;">🔑</div>
+    <h3 style="color:#2d6a4f;">Nouveau mot de passe</h3>
+    <p style="font-size:.85rem;color:#718096;margin-bottom:20px;">Saisissez votre nouveau mot de passe</p>
+    <div class="form-group" style="text-align:left;margin-bottom:16px;">
+      <label for="new-pwd">Nouveau mot de passe</label>
+      <input type="password" id="new-pwd" placeholder="Minimum 8 caractères" autocomplete="new-password">
+    </div>
+    <div class="form-group" style="text-align:left;margin-bottom:20px;">
+      <label for="new-pwd-confirm">Confirmer le mot de passe</label>
+      <input type="password" id="new-pwd-confirm" placeholder="Répétez le mot de passe" autocomplete="new-password">
+    </div>
+    <div id="reset-pwd-err" style="color:#e53e3e;font-size:.83rem;margin-bottom:12px;display:none;"></div>
+    <button class="btn btn-primary" onclick="enregistrerNouveauMdp()" style="width:100%;padding:12px;">
+      💾 Enregistrer le mot de passe
+    </button>
+  </div>
+</div>
+
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -728,6 +749,36 @@ async function motDePasseOublie() {
 }
 
 /* Exposer les fonctions au HTML (nécessaire avec type="module") */
+/* ══ ENREGISTRER NOUVEAU MOT DE PASSE ══ */
+async function enregistrerNouveauMdp() {
+  const pwd     = document.getElementById("new-pwd").value;
+  const confirm = document.getElementById("new-pwd-confirm").value;
+  const err     = document.getElementById("reset-pwd-err");
+
+  if (pwd.length < 8) {
+    err.textContent = "Le mot de passe doit faire au moins 8 caractères.";
+    err.style.display = "block"; return;
+  }
+  if (pwd !== confirm) {
+    err.textContent = "Les deux mots de passe ne correspondent pas.";
+    err.style.display = "block"; return;
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: pwd });
+  if (error) {
+    err.textContent = "Erreur : " + error.message;
+    err.style.display = "block";
+  } else {
+    document.getElementById("modal-reset-pwd").classList.remove("open");
+    document.getElementById("login-screen").classList.remove("hidden");
+    const loginErr = document.getElementById("login-err");
+    loginErr.textContent = "✅ Mot de passe mis à jour. Connectez-vous avec votre nouveau mot de passe.";
+    loginErr.style.color = "#2d6a4f";
+    loginErr.style.display = "block";
+  }
+}
+
+window.enregistrerNouveauMdp = enregistrerNouveauMdp;
 window.tentativeConnexion = tentativeConnexion;
 window.deconnecter        = deconnecter;
 window.motDePasseOublie   = motDePasseOublie;
@@ -735,17 +786,33 @@ window.motDePasseOublie   = motDePasseOublie;
 document.getElementById("login-pass").addEventListener("keydown", e => { if (e.key === "Enter") tentativeConnexion(); });
 document.getElementById("login-email").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("login-pass").focus(); });
 
-/* Vérifier session existante au chargement */
-const { data: { session } } = await supabase.auth.getSession();
-if (session) {
-  const role = session?.user?.app_metadata?.role;
-  if (role === 'admin') {
-    document.getElementById("login-screen").classList.add("hidden");
-    document.getElementById("app").classList.add("visible");
-    initApp();
-  } else {
-    /* Session valide mais pas admin → déconnecter silencieusement */
-    await supabase.auth.signOut();
+/* ══ GESTION RETOUR RESET MOT DE PASSE ══
+   Supabase ajoute #access_token=...&type=recovery dans l'URL
+   après clic sur le lien de réinitialisation ══════════════════ */
+const hashParams = new URLSearchParams(window.location.hash.replace('#', '?').slice(1));
+if (hashParams.get('type') === 'recovery') {
+  /* Nettoyer l'URL sans recharger */
+  history.replaceState(null, '', window.location.pathname);
+  /* Écouter le changement d'état auth pour récupérer la session recovery */
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      /* Afficher la modal de nouveau mot de passe */
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('modal-reset-pwd').classList.add('open');
+    }
+  });
+} else {
+  /* Vérifier session existante au chargement */
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    const role = session?.user?.app_metadata?.role;
+    if (role === 'admin') {
+      document.getElementById("login-screen").classList.add("hidden");
+      document.getElementById("app").classList.add("visible");
+      initApp();
+    } else {
+      await supabase.auth.signOut();
+    }
   }
 }
 
