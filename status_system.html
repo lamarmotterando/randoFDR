@@ -326,9 +326,12 @@ async function chargerMetriques() {
     document.getElementById("m-animateurs").textContent = nbAnim;
 
     /* Prochaine rando */
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date();
+    const dans7j = new Date(today); dans7j.setDate(today.getDate() + 7);
+    const todayISO = today.toISOString().split("T")[0];
+    const dans7jISO = dans7j.toISOString().split("T")[0];
     const prochaine = Array.isArray(fiches)
-      ? fiches.find(f => f.date_rando >= today && f.statut !== "annulée" && f.type !== "sejour")
+      ? fiches.find(f => f.date_rando >= todayISO && f.date_rando <= dans7jISO && f.statut !== "annulée" && f.type !== "sejour")
       : null;
     const elProch = document.getElementById("m-prochaine");
     if (prochaine) {
