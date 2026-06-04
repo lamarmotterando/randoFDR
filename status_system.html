@@ -312,7 +312,7 @@ async function chargerMetriques() {
   try {
     const [fiches, animateurs] = await Promise.all([
       fetch(HANDLER, { method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ action:"getFiches", select:"id,statut", order:"date_rando.asc" }) }).then(r=>r.json()),
+        body: JSON.stringify({ action:"getFiches", select:"id,date_rando,nom_rando,animateur,statut,type", order:"date_rando.asc" }) }).then(r=>r.json()),
       fetch(HANDLER, { method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ action:"getAnimateurs" }) }).then(r=>r.json()),
     ]);
