@@ -270,19 +270,12 @@
 
 <!-- ══ DÉTECTION PKCE RECOVERY — doit être avant le module ══ -->
 <script>
-/* Supabase PKCE : après clic sur le lien de reset, l'URL contient ?code=...
-   Le SDK l'échange automatiquement et déclenche PASSWORD_RECOVERY.
-   On stocke le fait qu'on attend un recovery pour que le module le sache. */
-window._attendRecovery = new URLSearchParams(window.location.search).has('code') &&
-  document.referrer.includes('supabase.co') ||
-  window.location.href.includes('type=recovery') ||
-  sessionStorage.getItem('supabase_recovery') === '1';
-
-/* Backup : si on vient d'un lien Supabase, stocker en sessionStorage */
-if (new URLSearchParams(window.location.search).has('code')) {
-  sessionStorage.setItem('supabase_recovery', '1');
-  window._attendRecovery = true;
-}
+/* Supabase PKCE redirige vers planning_gestion.html?code=XXXX
+   On détecte le ?code= dans l'URL dès le chargement de la page
+   et on stocke dans window._attendRecovery AVANT que le module
+   ne s'exécute et que le SDK n'échange le code. */
+window._attendRecovery = new URLSearchParams(window.location.search).has('code');
+console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.search);
 </script>
 
 <!-- ══ ÉCRAN DE CONNEXION ══ -->
@@ -830,13 +823,13 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 
   if (event === 'SIGNED_IN' && session) {
     /* Si on attendait un recovery → c'est le SIGNED_IN post-recovery, montrer la modal */
-    if (window._attendRecovery || sessionStorage.getItem('supabase_recovery') === '1') {
-      sessionStorage.removeItem('supabase_recovery');
+    if (window._attendRecovery) {
       window._attendRecovery = false;
       history.replaceState(null, '', window.location.pathname);
       document.getElementById('login-screen').classList.add('hidden');
       document.getElementById('app').classList.remove('visible');
       document.getElementById('modal-reset-pwd').classList.add('open');
+      console.log("[Auth] Modal reset affichée ✅");
       return;
     }
     const role = session?.user?.app_metadata?.role;
@@ -854,7 +847,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 
 /* Vérifier session existante au chargement */
 const { data: { session } } = await supabase.auth.getSession();
-if (session && !window._attendRecovery && sessionStorage.getItem('supabase_recovery') !== '1') {
+if (session && !window._attendRecovery) {
   const role = session?.user?.app_metadata?.role;
   if (role === 'admin') {
     document.getElementById("login-screen").classList.add("hidden");
