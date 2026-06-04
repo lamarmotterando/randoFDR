@@ -62,11 +62,23 @@ const ibpNiveau = (!ibp || ibp === "—" || isNaN(ibpNum)) ? "" :
   ibpNum <= 100 ? "🔴 N4 — Assez Difficile" :
                   "⚫ N5 — Difficile"
 
-const texte = `Bonjour,
+const texte = `Bonjour ${prenomAnim},
 
 Merci d'avoir rempli la feuille de route "${nom} / ${formatDate(date)}".
 
 Vous trouverez ci-joint une copie de votre FdR.
+
+✅ VÉRIFICATION IMPORTANTE — Consultez votre fiche sur le site :
+👉 https://www.lamarmottechateaurenard.com/goanim/?animateur=${encodeURIComponent(animateur)}&rando=${encodeURIComponent(nom)}
+
+Vérifiez que les informations suivantes sont bien affichées :
+  • Heure de rendez-vous
+  • Parking de covoiturage
+  • Parking départ randonnée + coordonnées GPS
+  • Distance, dénivelé, durée
+  • Coûts de covoiturage
+
+Si des informations manquent, contactez l'administrateur ou renvoyez votre FdR complétée.
 
 En cas de nécessité, vous pouvez modifier l'ensemble des paramètres de la FdR ou annuler celle-ci à tout moment en cliquant sur la page suivante : https://bit.ly/4nnwPWW
 
