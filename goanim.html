@@ -464,16 +464,22 @@ async function chargerMeteo(gpsStr, dateStr, id) {
   const precisionNote = parseGPS(gpsStr) ? "" : " <small style='color:#9ca3af'>(position approchée)</small>";
 
   try {
-    const r = await fetch(
-      `https://api.open-meteo.com/v1/forecast`
+    /* Retry x3 car Open-Meteo peut retourner des 502 intermittents */
+    let r, tentatives = 0;
+    const url = `https://api.open-meteo.com/v1/forecast`
       + `?latitude=${c.lat}&longitude=${c.lon}`
       + `&daily=weather_code,temperature_2m_max,temperature_2m_min,`
       + `precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max`
-      + `&timezone=Europe%2FParis&forecast_days=7`
-    );
+      + `&timezone=Europe%2FParis&forecast_days=7`;
+    while (tentatives < 3) {
+      r = await fetch(url);
+      if (r.ok) break;
+      tentatives++;
+      if (tentatives < 3) await new Promise(res => setTimeout(res, 1500 * tentatives));
+    }
     if (!r.ok) throw new Error("HTTP " + r.status);
     const { daily: d } = await r.json();
-    if (!d?.weather_code?.length) throw new Error("vide");
+    if (!d?.weathercode?.length) throw new Error("vide");
 
     const idx = d.time ? d.time.indexOf(iso) : 0;
     if (idx === -1) throw new Error("date absente");
