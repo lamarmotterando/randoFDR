@@ -1087,7 +1087,14 @@ document.addEventListener("DOMContentLoaded", function() {
 /* Auth uses same constants defined in main script */
 const _supaURL = "https://whlxbfnmyqdflmxosfse.supabase.co";
 const _supaKEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
-const _supa = window.supabase.createClient(_supaURL, _supaKEY);
+const _supa = window.supabase.createClient(_supaURL, _supaKEY, {
+  auth: {
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    persistSession: true,
+    storage: window.localStorage,
+  }
+});
 
 async function authInit() {
   /* ══ PKCE Recovery handler — enregistré en PREMIER ══ */
