@@ -1,7 +1,10 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Randonnées du club — La Marmotte</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -316,8 +319,8 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-
+</head>
+<body>
 
 <!-- ══ DÉTECTION PKCE RECOVERY ══ -->
 <script>
@@ -345,7 +348,8 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
       </form>
       <div class="auth-err" id="auth-err"></div>
       <div style="text-align:center;margin-top:12px;">
-        <a href="#" onclick="motDePasseOublie();return false;" style="font-size:11px;color:#8a7560;text-decoration:underline dotted;">
+        <a href="#" onclick="motDePasseOublie();return false;"
+          style="font-size:11px;color:#8a7560;text-decoration:underline dotted;">
           Mot de passe oublié ?
         </a>
       </div>
@@ -366,12 +370,12 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
   <div class="filters">
     <div class="filters-titre">🔍 Filtres</div>
     <div class="filters-grid">
-      <input type="date" id="fDate" placeholder="Date">
-      <input type="text" id="fNom" placeholder="Nom randonnée">
-      <input type="text" id="fAnimateur" placeholder="Animateur">
-      <input type="number" id="fIbpMax" placeholder="IBP max" min="0">
-      <input type="number" id="fKmMax" placeholder="Km max" min="0" step="0.1">
-      <input type="number" id="fDenMax" placeholder="Dénivelé max" min="0">
+      <input type="date"   id="fDate"      placeholder="Date">
+      <input type="text"   id="fNom"       placeholder="Nom randonnée">
+      <input type="text"   id="fAnimateur" placeholder="Animateur">
+      <input type="number" id="fIbpMax"    placeholder="IBP max" min="0">
+      <input type="number" id="fKmMax"     placeholder="Km max"  min="0" step="0.1">
+      <input type="number" id="fDenMax"    placeholder="Dénivelé max" min="0">
       <button class="btn-reset" onclick="resetFiltres()">✕ Réinitialiser</button>
       <button class="btn-export" onclick="ouvrirExport()">⬇️ Export CSV</button>
     </div>
@@ -387,10 +391,10 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
           <input type="date" id="periodeFin" onchange="onPeriodeChange()">
         </div>
         <div class="btns-rapides">
-          <button class="btn-periode active" id="btn-tout" onclick="setPeriode('tout')">Tout</button>
-          <button class="btn-periode" id="btn-an1" onclick="setPeriode('an1')">Cette saison</button>
-          <button class="btn-periode" id="btn-an2" onclick="setPeriode('an2')">Saison préc.</button>
-          <button class="btn-periode" id="btn-3ans" onclick="setPeriode('3ans')">3 ans</button>
+          <button class="btn-periode active" id="btn-tout"    onclick="setPeriode('tout')">Tout</button>
+          <button class="btn-periode"        id="btn-an1"     onclick="setPeriode('an1')">Cette saison</button>
+          <button class="btn-periode"        id="btn-an2"     onclick="setPeriode('an2')">Saison préc.</button>
+          <button class="btn-periode"        id="btn-3ans"    onclick="setPeriode('3ans')">3 ans</button>
         </div>
       </div>
 
@@ -1023,8 +1027,7 @@ function telechargerCSV() {
   const esc = v => {
     if (v === null || v === undefined) return "";
     const s = String(v).replace(/"/g, '""');
-    return s.includes(sep) || s.includes('"') || s.includes("
-") ? `"${s}"` : s;
+    return s.includes(sep) || s.includes('"') || s.includes("\n") ? `"${s}"` : s;
   };
 
   const headers = ["Jour", "Date", "Randonnée", "Animateur", "IBP", "Distance (km)", "Dénivelé (m)", "Durée", "Participants", "Statut"];
@@ -1244,7 +1247,7 @@ authInit();
     <div class="export-preview" id="exportPreview">Sélectionnez une période…</div>
     <div class="export-actions">
       <button class="btn-export-cancel" onclick="fermerExport()">Annuler</button>
-      <button class="btn-export-dl" id="btnDlCsv" onclick="telechargerCSV()" disabled="">⬇️ Télécharger</button>
+      <button class="btn-export-dl" id="btnDlCsv" onclick="telechargerCSV()" disabled>⬇️ Télécharger</button>
     </div>
   </div>
 </div>
@@ -1257,14 +1260,17 @@ authInit();
     <p style="text-align:center;font-size:13px;color:#8a7560;margin-bottom:20px;">Saisissez votre nouveau mot de passe</p>
     <div style="margin-bottom:14px;">
       <label style="display:block;font-size:12px;font-weight:600;color:#8a7560;margin-bottom:5px;">Nouveau mot de passe</label>
-      <input type="password" id="new-pwd" placeholder="Minimum 8 caractères" autocomplete="new-password" style="width:100%;padding:10px 14px;border:1.5px solid #e8d8c4;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;">
+      <input type="password" id="new-pwd" placeholder="Minimum 8 caractères" autocomplete="new-password"
+        style="width:100%;padding:10px 14px;border:1.5px solid #e8d8c4;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;">
     </div>
     <div style="margin-bottom:20px;">
       <label style="display:block;font-size:12px;font-weight:600;color:#8a7560;margin-bottom:5px;">Confirmer</label>
-      <input type="password" id="new-pwd-confirm" placeholder="Répétez le mot de passe" autocomplete="new-password" style="width:100%;padding:10px 14px;border:1.5px solid #e8d8c4;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;">
+      <input type="password" id="new-pwd-confirm" placeholder="Répétez le mot de passe" autocomplete="new-password"
+        style="width:100%;padding:10px 14px;border:1.5px solid #e8d8c4;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;">
     </div>
     <div id="reset-pwd-err" style="color:#c1440e;font-size:13px;margin-bottom:12px;display:none;text-align:center;"></div>
-    <button onclick="enregistrerNouveauMdp()" style="width:100%;padding:12px;background:#1a3a5c;border:none;border-radius:8px;color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;">
+    <button onclick="enregistrerNouveauMdp()"
+      style="width:100%;padding:12px;background:#1a3a5c;border:none;border-radius:8px;color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;">
       💾 Enregistrer le mot de passe
     </button>
   </div>
@@ -1280,4 +1286,5 @@ new ResizeObserver(sendHeight).observe(document.body);
 window.addEventListener('load', sendHeight);
 sendHeight();
 </script>
-
+</body>
+</html>
