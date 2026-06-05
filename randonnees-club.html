@@ -1095,6 +1095,7 @@ async function authInit() {
     }
     if (event === 'SIGNED_IN' && session && window._attendRecovery) {
       window._attendRecovery = false;
+      window._recoverySession = session; /* ✅ stocker la session pour updateUser */
       history.replaceState(null, '', window.location.pathname);
       document.getElementById('auth-overlay').style.display = 'none';
       afficherModalReset();
@@ -1133,6 +1134,23 @@ async function enregistrerNouveauMdp() {
     err.textContent = 'Les deux mots de passe ne correspondent pas.';
     err.style.display = 'block'; return;
   }
+
+  /* Vérifier que la session est bien active avant updateUser */
+  const { data: { session: activeSession } } = await _supa.auth.getSession();
+  const session = activeSession || window._recoverySession || null;
+  if (!session) {
+    /* Session expirée — redemander le lien de reset */
+    err.textContent = '⚠️ Session expirée. Veuillez redemander un lien de réinitialisation.';
+    err.style.display = 'block';
+    setTimeout(() => {
+      document.getElementById('modal-reset-pwd').style.display = 'none';
+      document.getElementById('auth-overlay').style.display = 'flex';
+      document.getElementById('auth-checking').style.display = 'none';
+      document.getElementById('auth-form').style.display = 'block';
+    }, 3000);
+    return;
+  }
+
   const { error } = await _supa.auth.updateUser({ password: pwd });
   if (error) {
     err.textContent = 'Erreur : ' + error.message;
