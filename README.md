@@ -1,4 +1,4 @@
-Rando FDR est un système de création d'informations précises pour préparer un randonnée pédestre. cela permet à, l'utilisateur, de grouper toutes les informations
+Rando FDR est un système de création d'informations précises pour préparer une randonnée pédestre. cela permet à, l'utilisateur, de grouper toutes les informations
 de logistique sur les difficultés de la rando. 
 En même temps il informe tous les participants éventuels de toutes les caractéristiques logistiques, technique du sentier proposé.
 date
