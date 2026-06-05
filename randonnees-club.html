@@ -1,10 +1,7 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Randonnées du club — La Marmotte</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -197,6 +194,54 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
   .histo-canvas-wrap { height: 180px; }
 }
 
+/* ── BOUTON EXPORT ── */
+.btn-export {
+  padding: 8px 16px; background: var(--blue); border: none;
+  border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 13px;
+  font-weight: 600; color: white; cursor: pointer; transition: background .15s;
+}
+.btn-export:hover { background: var(--blue-mid); }
+
+/* ── MODAL EXPORT ── */
+.export-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(44,26,14,0.55); z-index: 10000;
+  align-items: center; justify-content: center; padding: 16px;
+}
+.export-overlay.open { display: flex; }
+.export-box {
+  background: white; border-radius: 16px; padding: 24px;
+  max-width: 520px; width: 100%;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+}
+.export-titre { font-size: 16px; font-weight: 700; color: var(--blue); margin-bottom: 16px; }
+.export-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.export-row label { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.export-row input[type="date"] {
+  padding: 8px 12px; border: 1.5px solid #e8d8c4; border-radius: 8px;
+  font-family: 'Outfit', sans-serif; font-size: 13px; color: var(--ink);
+  background: var(--cream); cursor: pointer;
+}
+.export-row input[type="date"]:focus { outline: none; border-color: var(--blue-light); }
+.export-preview {
+  background: var(--cream); border: 1.5px solid #e8d8c4; border-radius: 8px;
+  padding: 10px 12px; margin-bottom: 14px; font-size: 12px; color: var(--stone);
+  min-height: 36px;
+}
+.export-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-export-cancel {
+  padding: 9px 18px; background: var(--sand); border: 1.5px solid #e8d8c4;
+  border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 13px;
+  font-weight: 600; color: var(--stone); cursor: pointer;
+}
+.btn-export-dl {
+  padding: 9px 18px; background: var(--blue); border: none;
+  border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 13px;
+  font-weight: 600; color: white; cursor: pointer; transition: background .15s;
+}
+.btn-export-dl:hover { background: var(--blue-mid); }
+.btn-export-dl:disabled { background: #ccc; cursor: not-allowed; }
+
   /* ══ AUTH OVERLAY ══ */
   #auth-overlay {
     position: fixed; inset: 0; z-index: 99999;
@@ -271,8 +316,14 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body>
+
+
+
+<!-- ══ DÉTECTION PKCE RECOVERY ══ -->
+<script>
+window._attendRecovery = new URLSearchParams(window.location.search).has('code');
+console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.search);
+</script>
 
 <!-- ══ AUTH OVERLAY ══ -->
 <div id="auth-overlay">
@@ -281,16 +332,23 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
     <div class="auth-sub">Accès restreint — Admin</div>
     <div id="auth-checking" class="auth-checking">Vérification de la session…</div>
     <div id="auth-form" style="display:none">
-      <div class="auth-field">
-        <label>Email</label>
-        <input type="email" id="auth-email" placeholder="votre@email.com" autocomplete="username">
-      </div>
-      <div class="auth-field">
-        <label>Mot de passe</label>
-        <input type="password" id="auth-pwd" placeholder="••••••••" autocomplete="current-password">
-      </div>
-      <button class="auth-btn" id="auth-submit" onclick="authLogin()">Connexion</button>
+      <form onsubmit="authLogin();return false;">
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="auth-email" placeholder="votre@email.com" autocomplete="username">
+        </div>
+        <div class="auth-field">
+          <label>Mot de passe</label>
+          <input type="password" id="auth-pwd" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button type="submit" class="auth-btn" id="auth-submit">Connexion</button>
+      </form>
       <div class="auth-err" id="auth-err"></div>
+      <div style="text-align:center;margin-top:12px;">
+        <a href="#" onclick="motDePasseOublie();return false;" style="font-size:11px;color:#8a7560;text-decoration:underline dotted;">
+          Mot de passe oublié ?
+        </a>
+      </div>
     </div>
   </div>
 </div>
@@ -308,13 +366,14 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
   <div class="filters">
     <div class="filters-titre">🔍 Filtres</div>
     <div class="filters-grid">
-      <input type="date"   id="fDate"      placeholder="Date">
-      <input type="text"   id="fNom"       placeholder="Nom randonnée">
-      <input type="text"   id="fAnimateur" placeholder="Animateur">
-      <input type="number" id="fIbpMax"    placeholder="IBP max" min="0">
-      <input type="number" id="fKmMax"     placeholder="Km max"  min="0" step="0.1">
-      <input type="number" id="fDenMax"    placeholder="Dénivelé max" min="0">
+      <input type="date" id="fDate" placeholder="Date">
+      <input type="text" id="fNom" placeholder="Nom randonnée">
+      <input type="text" id="fAnimateur" placeholder="Animateur">
+      <input type="number" id="fIbpMax" placeholder="IBP max" min="0">
+      <input type="number" id="fKmMax" placeholder="Km max" min="0" step="0.1">
+      <input type="number" id="fDenMax" placeholder="Dénivelé max" min="0">
       <button class="btn-reset" onclick="resetFiltres()">✕ Réinitialiser</button>
+      <button class="btn-export" onclick="ouvrirExport()">⬇️ Export CSV</button>
     </div>
 
     <div class="bottom-filters">
@@ -328,10 +387,10 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
           <input type="date" id="periodeFin" onchange="onPeriodeChange()">
         </div>
         <div class="btns-rapides">
-          <button class="btn-periode active" id="btn-tout"    onclick="setPeriode('tout')">Tout</button>
-          <button class="btn-periode"        id="btn-an1"     onclick="setPeriode('an1')">Cette saison</button>
-          <button class="btn-periode"        id="btn-an2"     onclick="setPeriode('an2')">Saison préc.</button>
-          <button class="btn-periode"        id="btn-3ans"    onclick="setPeriode('3ans')">3 ans</button>
+          <button class="btn-periode active" id="btn-tout" onclick="setPeriode('tout')">Tout</button>
+          <button class="btn-periode" id="btn-an1" onclick="setPeriode('an1')">Cette saison</button>
+          <button class="btn-periode" id="btn-an2" onclick="setPeriode('an2')">Saison préc.</button>
+          <button class="btn-periode" id="btn-3ans" onclick="setPeriode('3ans')">3 ans</button>
         </div>
       </div>
 
@@ -890,6 +949,123 @@ function fermerDetail() { document.getElementById("modalDetail").classList.remov
 document.getElementById("modalDetail").addEventListener("click", function(e) { if (e.target === this) fermerDetail(); });
 
 function appInit() { charger(); }
+
+/* ══ EXPORT CSV ══════════════════════════════════════════════ */
+function ouvrirExport() {
+  /* Pré-remplir avec la période active */
+  const debut = document.getElementById("periodeDebut").value;
+  const fin   = document.getElementById("periodeFin").value;
+  document.getElementById("exportDebut").value = debut;
+  document.getElementById("exportFin").value   = fin;
+  majPreviewExport();
+  document.getElementById("exportOverlay").classList.add("open");
+}
+
+function fermerExport() {
+  document.getElementById("exportOverlay").classList.remove("open");
+}
+
+function setExportPeriode(mode) {
+  if (mode === "tout") {
+    document.getElementById("exportDebut").value = "";
+    document.getElementById("exportFin").value   = "";
+  } else {
+    const b = getSaisonBornes(mode === "an2" ? 1 : 0);
+    document.getElementById("exportDebut").value = b.debut;
+    document.getElementById("exportFin").value   = b.fin;
+  }
+  majPreviewExport();
+}
+
+function majPreviewExport() {
+  const debut = document.getElementById("exportDebut").value;
+  const fin   = document.getElementById("exportFin").value;
+  const preview = document.getElementById("exportPreview");
+  const btnDl   = document.getElementById("btnDlCsv");
+
+  /* Filtrer les données selon la période */
+  const donnees = toutes.filter(r => {
+    if (r.statut === "annulée") return false;
+    if (debut && r.date_rando < debut) return false;
+    if (fin   && r.date_rando > fin)   return false;
+    return true;
+  });
+
+  if (!donnees.length) {
+    preview.textContent = "Aucune randonnée sur cette période.";
+    btnDl.disabled = true;
+    return;
+  }
+
+  const periodeLabel = debut || fin
+    ? `du ${debut ? debut.split("-").reverse().join("/") : "…"} au ${fin ? fin.split("-").reverse().join("/") : "…"}`
+    : "toutes les saisons";
+
+  preview.innerHTML = `<strong>${donnees.length}</strong> randonnée${donnees.length > 1 ? "s" : ""} ${periodeLabel}<br>
+    <span style="font-size:11px;">Colonnes : Date · Randonnée · Animateur · IBP · Distance · Dénivelé · Durée · Participants · Statut</span>`;
+  btnDl.disabled = false;
+}
+
+function telechargerCSV() {
+  const debut = document.getElementById("exportDebut").value;
+  const fin   = document.getElementById("exportFin").value;
+
+  const donnees = toutes.filter(r => {
+    if (r.statut === "annulée") return false;
+    if (debut && r.date_rando < debut) return false;
+    if (fin   && r.date_rando > fin)   return false;
+    return true;
+  }).sort((a, b) => (a.date_rando || "").localeCompare(b.date_rando || ""));
+
+  if (!donnees.length) return;
+
+  const sep = ";";
+  const esc = v => {
+    if (v === null || v === undefined) return "";
+    const s = String(v).replace(/"/g, '""');
+    return s.includes(sep) || s.includes('"') || s.includes("
+") ? `"${s}"` : s;
+  };
+
+  const headers = ["Jour", "Date", "Randonnée", "Animateur", "IBP", "Distance (km)", "Dénivelé (m)", "Durée", "Participants", "Statut"];
+  const jours = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+
+  const rows = donnees.map(r => {
+    const d = r.date_rando ? new Date(r.date_rando + "T12:00:00") : null;
+    const dateAff = d ? d.toLocaleDateString("fr-FR") : "";
+    const jour    = d ? jours[d.getDay()] : "";
+    return [
+      esc(jour),
+      esc(dateAff),
+      esc(r.nom_rando),
+      esc(r.animateur),
+      esc(r.ibp),
+      esc(r.distance),
+      esc(r.denivele),
+      esc(r.duree),
+      esc(r.nb_participants),
+      esc(r.statut || "publiée"),
+    ].join(sep);
+  });
+
+  const csv = "\uFEFF" + [headers.join(sep), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  const suffix = debut ? `_${debut}_${fin || "fin"}` : "_toutes";
+  a.download = `randonnees_marmotte${suffix}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  fermerExport();
+}
+
+/* Fermer modal export au clic extérieur */
+document.getElementById("exportOverlay").addEventListener("click", function(e) {
+  if (e.target === this) fermerExport();
+});
 </script>
 
 <script>
@@ -898,17 +1074,74 @@ function appInit() { charger(); }
    Accès réservé aux comptes avec raw_app_meta_data.role = "admin"
    SDK : Supabase JS v2 via CDN
 ═══════════════════════════════════════════════════════════════ */
-const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* Auth uses same constants defined in main script */
+const _supaURL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+const _supaKEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+const _supa = window.supabase.createClient(_supaURL, _supaKEY);
 
 async function authInit() {
+  /* ══ PKCE Recovery handler — enregistré en PREMIER ══ */
+  _supa.auth.onAuthStateChange(async (event, session) => {
+    console.log("[Auth] event:", event, "recovery:", window._attendRecovery);
+    if (event === 'PASSWORD_RECOVERY') {
+      window._attendRecovery = false;
+      history.replaceState(null, '', window.location.pathname);
+      document.getElementById('auth-overlay').style.display = 'none';
+      afficherModalReset();
+      return;
+    }
+    if (event === 'SIGNED_IN' && session && window._attendRecovery) {
+      window._attendRecovery = false;
+      history.replaceState(null, '', window.location.pathname);
+      document.getElementById('auth-overlay').style.display = 'none';
+      afficherModalReset();
+      return;
+    }
+  });
+
   /* Vérifier session existante */
-  const { data: { session } } = await _supa.auth.getSession();
-  if (session) {
-    await authVerifierRole(session.user);
+  if (!window._attendRecovery) {
+    const { data: { session } } = await _supa.auth.getSession();
+    if (session) {
+      await authVerifierRole(session.user);
+    } else {
+      document.getElementById('auth-checking').style.display = 'none';
+      document.getElementById('auth-form').style.display = 'block';
+      document.getElementById('auth-email').focus();
+    }
+  }
+}
+
+function afficherModalReset() {
+  const modal = document.getElementById('modal-reset-pwd');
+  modal.style.display = 'flex';
+}
+
+async function enregistrerNouveauMdp() {
+  const pwd     = document.getElementById('new-pwd').value;
+  const confirm = document.getElementById('new-pwd-confirm').value;
+  const err     = document.getElementById('reset-pwd-err');
+  err.style.display = 'none';
+  if (pwd.length < 8) {
+    err.textContent = 'Le mot de passe doit faire au moins 8 caractères.';
+    err.style.display = 'block'; return;
+  }
+  if (pwd !== confirm) {
+    err.textContent = 'Les deux mots de passe ne correspondent pas.';
+    err.style.display = 'block'; return;
+  }
+  const { error } = await _supa.auth.updateUser({ password: pwd });
+  if (error) {
+    err.textContent = 'Erreur : ' + error.message;
+    err.style.display = 'block';
   } else {
+    await _supa.auth.signOut();
+    document.getElementById('modal-reset-pwd').style.display = 'none';
+    document.getElementById('auth-overlay').style.display = 'flex';
     document.getElementById('auth-checking').style.display = 'none';
     document.getElementById('auth-form').style.display = 'block';
-    document.getElementById('auth-email').focus();
+    document.getElementById('auth-err').textContent = '✅ Mot de passe mis à jour. Connectez-vous avec votre nouveau mot de passe.';
+    document.getElementById('auth-err').style.color = '#2d6a4f';
   }
 }
 
@@ -926,7 +1159,7 @@ async function authVerifierRole(user) {
 
 async function authLogin() {
   const email = document.getElementById('auth-email').value.trim();
-  const pwd   = document.getElementById('auth-pwd').value;
+  const pwd   = document.getElementById('auth-pwd').value; /* NE PAS trimmer le mot de passe */
   const btn   = document.getElementById('auth-submit');
   const err   = document.getElementById('auth-err');
   if (!email || !pwd) { err.textContent = 'Email et mot de passe requis'; return; }
@@ -959,9 +1192,30 @@ async function authLogout() {
   location.reload();
 }
 
+async function motDePasseOublie() {
+  const email = document.getElementById('auth-email').value.trim();
+  const err   = document.getElementById('auth-err');
+  if (!email) {
+    err.textContent = 'Saisissez votre email ci-dessus puis cliquez sur ce lien.';
+    err.style.color = '#f85149';
+    return;
+  }
+  const { error } = await _supa.auth.resetPasswordForEmail(email, {
+    redirectTo: "https://lamarmotterando.github.io/randoFDR/randonnees-club.html"
+  });
+  if (error) {
+    err.textContent = '❌ Erreur : ' + error.message;
+    err.style.color = '#f85149';
+  } else {
+    err.textContent = '✅ Email de réinitialisation envoyé à ' + email;
+    err.style.color = '#238636';
+  }
+}
+
 /* Entrée clavier sur le formulaire */
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !document.getElementById('auth-overlay').classList.contains('hidden')) {
+  if (e.key === 'Enter' && document.getElementById('auth-overlay').style.display !== 'none'
+      && !document.getElementById('auth-overlay').classList.contains('hidden')) {
     authLogin();
   }
 });
@@ -970,6 +1224,51 @@ document.addEventListener('keydown', e => {
 authInit();
 
 </script>
+
+<!-- ══ MODAL EXPORT CSV ══ -->
+<div class="export-overlay" id="exportOverlay">
+  <div class="export-box">
+    <div class="export-titre">⬇️ Export CSV — Randonnées</div>
+    <div class="export-row">
+      <label>Du</label>
+      <input type="date" id="exportDebut" onchange="majPreviewExport()">
+      <label>au</label>
+      <input type="date" id="exportFin" onchange="majPreviewExport()">
+    </div>
+    <div class="export-row" style="margin-bottom:8px;">
+      <label style="font-size:12px;color:var(--stone);">Raccourcis :</label>
+      <button class="btn-periode" onclick="setExportPeriode('an1')" style="font-size:11px;padding:4px 10px;">Cette saison</button>
+      <button class="btn-periode" onclick="setExportPeriode('an2')" style="font-size:11px;padding:4px 10px;">Saison préc.</button>
+      <button class="btn-periode" onclick="setExportPeriode('tout')" style="font-size:11px;padding:4px 10px;">Tout</button>
+    </div>
+    <div class="export-preview" id="exportPreview">Sélectionnez une période…</div>
+    <div class="export-actions">
+      <button class="btn-export-cancel" onclick="fermerExport()">Annuler</button>
+      <button class="btn-export-dl" id="btnDlCsv" onclick="telechargerCSV()" disabled="">⬇️ Télécharger</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL RESET MOT DE PASSE ══ -->
+<div id="modal-reset-pwd" style="display:none;position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:28px;width:360px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+    <div style="font-size:2rem;text-align:center;margin-bottom:10px;">🔑</div>
+    <h3 style="text-align:center;color:#1a3a5c;margin-bottom:6px;">Nouveau mot de passe</h3>
+    <p style="text-align:center;font-size:13px;color:#8a7560;margin-bottom:20px;">Saisissez votre nouveau mot de passe</p>
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;font-weight:600;color:#8a7560;margin-bottom:5px;">Nouveau mot de passe</label>
+      <input type="password" id="new-pwd" placeholder="Minimum 8 caractères" autocomplete="new-password" style="width:100%;padding:10px 14px;border:1.5px solid #e8d8c4;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;">
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="display:block;font-size:12px;font-weight:600;color:#8a7560;margin-bottom:5px;">Confirmer</label>
+      <input type="password" id="new-pwd-confirm" placeholder="Répétez le mot de passe" autocomplete="new-password" style="width:100%;padding:10px 14px;border:1.5px solid #e8d8c4;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;">
+    </div>
+    <div id="reset-pwd-err" style="color:#c1440e;font-size:13px;margin-bottom:12px;display:none;text-align:center;"></div>
+    <button onclick="enregistrerNouveauMdp()" style="width:100%;padding:12px;background:#1a3a5c;border:none;border-radius:8px;color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;">
+      💾 Enregistrer le mot de passe
+    </button>
+  </div>
+</div>
 
 <script>
 /* ── Auto-resize iframe parent (Webnode) ── */
@@ -981,5 +1280,4 @@ new ResizeObserver(sendHeight).observe(document.body);
 window.addEventListener('load', sendHeight);
 sendHeight();
 </script>
-</body>
-</html>
+
