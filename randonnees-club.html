@@ -950,7 +950,7 @@ function voirDetail(id) {
 }
 
 function fermerDetail() { document.getElementById("modalDetail").classList.remove("open"); }
-document.getElementById("modalDetail").addEventListener("click", function(e) { if (e.target === this) fermerDetail(); });
+/* modalDetail listener géré dans DOMContentLoaded ci-dessus */
 
 function appInit() { charger(); }
 
@@ -1065,9 +1065,16 @@ function telechargerCSV() {
   fermerExport();
 }
 
-/* Fermer modal export au clic extérieur */
-document.getElementById("exportOverlay").addEventListener("click", function(e) {
-  if (e.target === this) fermerExport();
+/* Fermer modal export au clic extérieur — initialisé après chargement DOM */
+document.addEventListener("DOMContentLoaded", function() {
+  const overlay = document.getElementById("exportOverlay");
+  if (overlay) overlay.addEventListener("click", function(e) {
+    if (e.target === this) fermerExport();
+  });
+  const modal = document.getElementById("modalDetail");
+  if (modal) modal.addEventListener("click", function(e) {
+    if (e.target === this) fermerDetail();
+  });
 });
 </script>
 
