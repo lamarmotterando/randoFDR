@@ -1095,6 +1095,13 @@ async function authInit() {
     console.log("[Auth] event:", event, "recovery:", window._attendRecovery);
     if (event === 'PASSWORD_RECOVERY') {
       window._attendRecovery = false;
+      window._recoverySession = session;
+      if (session) {
+        await _supa.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token
+        });
+      }
       history.replaceState(null, '', window.location.pathname);
       document.getElementById('auth-overlay').style.display = 'none';
       afficherModalReset();
@@ -1102,7 +1109,12 @@ async function authInit() {
     }
     if (event === 'SIGNED_IN' && session && window._attendRecovery) {
       window._attendRecovery = false;
-      window._recoverySession = session; /* ✅ stocker la session pour updateUser */
+      window._recoverySession = session;
+      /* Forcer la session dans le client Supabase */
+      await _supa.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token
+      });
       history.replaceState(null, '', window.location.pathname);
       document.getElementById('auth-overlay').style.display = 'none';
       afficherModalReset();
@@ -1142,11 +1154,18 @@ async function enregistrerNouveauMdp() {
     err.style.display = 'block'; return;
   }
 
-  /* Vérifier que la session est bien active avant updateUser */
+  /* Restaurer la session depuis le token mémorisé si nécessaire */
+  if (window._recoverySession) {
+    try {
+      await _supa.auth.setSession({
+        access_token: window._recoverySession.access_token,
+        refresh_token: window._recoverySession.refresh_token
+      });
+    } catch(e) { console.warn("setSession:", e); }
+  }
+
   const { data: { session: activeSession } } = await _supa.auth.getSession();
-  const session = activeSession || window._recoverySession || null;
-  if (!session) {
-    /* Session expirée — redemander le lien de reset */
+  if (!activeSession) {
     err.textContent = '⚠️ Session expirée. Veuillez redemander un lien de réinitialisation.';
     err.style.display = 'block';
     setTimeout(() => {
