@@ -245,123 +245,17 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 .btn-export-dl:hover { background: var(--blue-mid); }
 .btn-export-dl:disabled { background: #ccc; cursor: not-allowed; }
 
-  /* ══ AUTH OVERLAY ══ */
-  #auth-overlay {
-    position: fixed; inset: 0; z-index: 99999;
-    display: flex; align-items: center; justify-content: center;
-    background: #ffffff;
-    font-family: 'DM Mono', monospace;
-  }
-  #auth-overlay.hidden { display: none; }
-  .auth-box {
-    background: #f5ead8;
-    border: 1px solid #e8d8c4;
-    border-radius: 14px;
-    padding: 32px 28px;
-    width: 100%; max-width: 360px;
-    box-shadow: 0 4px 24px rgba(44,26,14,0.12);
-  }
-  .auth-logo {
-    font-family: 'Syne', sans-serif;
-    font-size: 20px; font-weight: 800;
-    color: #2c1a0e; margin-bottom: 4px;
-    letter-spacing: -.02em;
-  }
-  .auth-logo span { color: #39d353; }
-  .auth-sub {
-    font-size: 11px; color: #8a7560;
-    margin-bottom: 24px; letter-spacing: .04em;
-    text-transform: uppercase;
-  }
-  .auth-field { margin-bottom: 14px; }
-  .auth-field label {
-    display: block; font-size: 10px; font-weight: 500;
-    color: #8b949e; text-transform: uppercase;
-    letter-spacing: .08em; margin-bottom: 6px;
-  }
-  .auth-field input {
-    width: 100%; padding: 10px 14px;
-    background: #ffffff; border: 1px solid #e8d8c4;
-    border-radius: 8px; color: #2c1a0e;
-    font-family: 'DM Mono', monospace; font-size: 13px;
-    transition: border-color .2s;
-  }
-  .auth-field input:focus { outline: none; border-color: #39d353; }
-  .auth-btn {
-    width: 100%; padding: 11px;
-    background: #238636; border: 1px solid #2ea043;
-    border-radius: 8px; color: white;
-    font-family: 'DM Mono', monospace; font-size: 13px;
-    font-weight: 500; cursor: pointer;
-    transition: background .2s; margin-top: 4px;
-  }
-  .auth-btn:hover { background: #2ea043; }
-  .auth-btn:disabled { background: #21262d; border-color: #21262d; color: #484f58; cursor: not-allowed; }
-  .auth-err {
-    margin-top: 12px; font-size: 11px; color: #f85149;
-    text-align: center; min-height: 16px;
-    letter-spacing: .02em;
-  }
-  .auth-checking {
-    text-align: center; color: #8a7560;
-    font-size: 12px; padding: 8px 0;
-  }
-  /* Bouton logout dans header */
-  .logout-btn {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px; color: #484f58;
-    background: none; border: 1px solid #21262d;
-    border-radius: 6px; padding: 5px 12px;
-    cursor: pointer; transition: all .2s;
-    white-space: nowrap;
-  }
-  .logout-btn:hover { border-color: #f85149; color: #f85149; }
+  
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<!-- ══ DÉTECTION PKCE RECOVERY ══ -->
-<script>
-window._attendRecovery = new URLSearchParams(window.location.search).has('code');
-console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.search);
-</script>
-
-<!-- ══ AUTH OVERLAY ══ -->
-<div id="auth-overlay">
-  <div class="auth-box">
-    <div class="auth-logo">🥾 Rando<span>FDR</span></div>
-    <div class="auth-sub">Accès restreint — Admin</div>
-    <div id="auth-checking" class="auth-checking">Vérification de la session…</div>
-    <div id="auth-form" style="display:none">
-      <form onsubmit="authLogin();return false;">
-        <div class="auth-field">
-          <label>Email</label>
-          <input type="email" id="auth-email" placeholder="votre@email.com" autocomplete="username">
-        </div>
-        <div class="auth-field">
-          <label>Mot de passe</label>
-          <input type="password" id="auth-pwd" placeholder="••••••••" autocomplete="current-password">
-        </div>
-        <button type="submit" class="auth-btn" id="auth-submit">Connexion</button>
-      </form>
-      <div class="auth-err" id="auth-err"></div>
-      <div style="text-align:center;margin-top:12px;">
-        <a href="#" onclick="motDePasseOublie();return false;"
-          style="font-size:11px;color:#8a7560;text-decoration:underline dotted;">
-          Mot de passe oublié ?
-        </a>
-      </div>
-    </div>
-  </div>
-</div>
-
 
 <div class="topbar">
   <h1>🥾 Randonnées du club — La Marmotte</h1>
   <p id="topbarSub">Chargement…</p>
-  <div id="auth-logout-zone" style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;"></div>
 </div>
 
 <div class="container">
@@ -954,6 +848,9 @@ function fermerDetail() { document.getElementById("modalDetail").classList.remov
 
 function appInit() { charger(); }
 
+/* Démarrer directement sans auth */
+document.addEventListener('DOMContentLoaded', appInit);
+
 /* ══ EXPORT CSV ══════════════════════════════════════════════ */
 function ouvrirExport() {
   /* Pré-remplir avec la période active */
@@ -1078,199 +975,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
-<script>
 
-/* ══ SUPABASE AUTH — PROTECTION ADMIN ══════════════════════════
-   Accès réservé aux comptes avec raw_app_meta_data.role = "admin"
-   SDK : Supabase JS v2 via CDN
-═══════════════════════════════════════════════════════════════ */
-/* Auth uses same constants defined in main script */
-const _supaURL = "https://whlxbfnmyqdflmxosfse.supabase.co";
-const _supaKEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
-const _supa = window.supabase.createClient(_supaURL, _supaKEY);
-
-async function authInit() {
-  /* ══ PKCE Recovery handler — enregistré en PREMIER ══ */
-  _supa.auth.onAuthStateChange(async (event, session) => {
-    console.log("[Auth] event:", event, "recovery:", window._attendRecovery);
-    if (event === 'PASSWORD_RECOVERY') {
-      window._attendRecovery = false;
-      window._recoverySession = session;
-      if (session) {
-        await _supa.auth.setSession({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token
-        });
-      }
-      history.replaceState(null, '', window.location.pathname);
-      document.getElementById('auth-overlay').style.display = 'none';
-      afficherModalReset();
-      return;
-    }
-    if (event === 'SIGNED_IN' && session && window._attendRecovery) {
-      window._attendRecovery = false;
-      window._recoverySession = session;
-      /* Forcer la session dans le client Supabase */
-      await _supa.auth.setSession({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token
-      });
-      history.replaceState(null, '', window.location.pathname);
-      document.getElementById('auth-overlay').style.display = 'none';
-      afficherModalReset();
-      return;
-    }
-  });
-
-  /* Vérifier session existante */
-  if (!window._attendRecovery) {
-    const { data: { session } } = await _supa.auth.getSession();
-    if (session) {
-      await authVerifierRole(session.user);
-    } else {
-      document.getElementById('auth-checking').style.display = 'none';
-      document.getElementById('auth-form').style.display = 'block';
-      document.getElementById('auth-email').focus();
-    }
-  }
-}
-
-function afficherModalReset() {
-  const modal = document.getElementById('modal-reset-pwd');
-  modal.style.display = 'flex';
-}
-
-async function enregistrerNouveauMdp() {
-  const pwd     = document.getElementById('new-pwd').value;
-  const confirm = document.getElementById('new-pwd-confirm').value;
-  const err     = document.getElementById('reset-pwd-err');
-  err.style.display = 'none';
-  if (pwd.length < 8) {
-    err.textContent = 'Le mot de passe doit faire au moins 8 caractères.';
-    err.style.display = 'block'; return;
-  }
-  if (pwd !== confirm) {
-    err.textContent = 'Les deux mots de passe ne correspondent pas.';
-    err.style.display = 'block'; return;
-  }
-
-  /* Restaurer la session depuis le token mémorisé si nécessaire */
-  if (window._recoverySession) {
-    try {
-      await _supa.auth.setSession({
-        access_token: window._recoverySession.access_token,
-        refresh_token: window._recoverySession.refresh_token
-      });
-    } catch(e) { console.warn("setSession:", e); }
-  }
-
-  const { data: { session: activeSession } } = await _supa.auth.getSession();
-  if (!activeSession) {
-    err.textContent = '⚠️ Session expirée. Veuillez redemander un lien de réinitialisation.';
-    err.style.display = 'block';
-    setTimeout(() => {
-      document.getElementById('modal-reset-pwd').style.display = 'none';
-      document.getElementById('auth-overlay').style.display = 'flex';
-      document.getElementById('auth-checking').style.display = 'none';
-      document.getElementById('auth-form').style.display = 'block';
-    }, 3000);
-    return;
-  }
-
-  const { error } = await _supa.auth.updateUser({ password: pwd });
-  if (error) {
-    err.textContent = 'Erreur : ' + error.message;
-    err.style.display = 'block';
-  } else {
-    await _supa.auth.signOut();
-    document.getElementById('modal-reset-pwd').style.display = 'none';
-    document.getElementById('auth-overlay').style.display = 'flex';
-    document.getElementById('auth-checking').style.display = 'none';
-    document.getElementById('auth-form').style.display = 'block';
-    document.getElementById('auth-err').textContent = '✅ Mot de passe mis à jour. Connectez-vous avec votre nouveau mot de passe.';
-    document.getElementById('auth-err').style.color = '#2d6a4f';
-  }
-}
-
-// APRÈS
-async function authVerifierRole(user) {
-  const role = user?.app_metadata?.role || user?.user_metadata?.role || '';
-  const ROLES_AUTORISES = ['admin', 'user'];
-  if (ROLES_AUTORISES.includes(role)) {
-    authOuvrir(user);
-  } else {
-    await _supa.auth.signOut();
-    document.getElementById('auth-err').textContent = '⛔ Accès réservé aux membres du club.';
-  }
-}
-
-async function authLogin() {
-  const email = document.getElementById('auth-email').value.trim();
-  const pwd   = document.getElementById('auth-pwd').value; /* NE PAS trimmer le mot de passe */
-  const btn   = document.getElementById('auth-submit');
-  const err   = document.getElementById('auth-err');
-  if (!email || !pwd) { err.textContent = 'Email et mot de passe requis'; return; }
-  btn.disabled = true; btn.textContent = 'Connexion…'; err.textContent = '';
-  const { data, error } = await _supa.auth.signInWithPassword({ email, password: pwd });
-  if (error) {
-    err.textContent = '❌ ' + (error.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect' : error.message);
-    btn.disabled = false; btn.textContent = 'Connexion';
-    return;
-  }
-  await authVerifierRole(data.user);
-  btn.disabled = false; btn.textContent = 'Connexion';
-}
-
-function authOuvrir(user) {
-  document.getElementById('auth-overlay').classList.add('hidden');
-  /* Ajouter bouton logout + email dans le header */
-  const logoutZone = document.getElementById('auth-logout-zone');
-  if (logoutZone) {
-    logoutZone.innerHTML = `
-      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--txt3);">${user.email}</span>
-      <button class="logout-btn" onclick="authLogout()">Déconnexion</button>`;
-  }
-  /* Lancer l'application */
-  if (typeof appInit === 'function') appInit();
-}
-
-async function authLogout() {
-  await _supa.auth.signOut();
-  location.reload();
-}
-
-async function motDePasseOublie() {
-  const email = document.getElementById('auth-email').value.trim();
-  const err   = document.getElementById('auth-err');
-  if (!email) {
-    err.textContent = 'Saisissez votre email ci-dessus puis cliquez sur ce lien.';
-    err.style.color = '#f85149';
-    return;
-  }
-  const { error } = await _supa.auth.resetPasswordForEmail(email, {
-    redirectTo: "https://lamarmotterando.github.io/randoFDR/randonnees-club.html"
-  });
-  if (error) {
-    err.textContent = '❌ Erreur : ' + error.message;
-    err.style.color = '#f85149';
-  } else {
-    err.textContent = '✅ Email de réinitialisation envoyé à ' + email;
-    err.style.color = '#238636';
-  }
-}
-
-/* Entrée clavier sur le formulaire */
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('auth-overlay').style.display !== 'none'
-      && !document.getElementById('auth-overlay').classList.contains('hidden')) {
-    authLogin();
-  }
-});
-
-/* Démarrer l'auth au chargement */
-authInit();
-
-</script>
 
 <!-- ══ MODAL EXPORT CSV ══ -->
 <div class="export-overlay" id="exportOverlay">
@@ -1296,29 +1001,6 @@ authInit();
   </div>
 </div>
 
-<!-- ══ MODAL RESET MOT DE PASSE ══ -->
-<div id="modal-reset-pwd" style="display:none;position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:16px;padding:28px;width:360px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
-    <div style="font-size:2rem;text-align:center;margin-bottom:10px;">🔑</div>
-    <h3 style="text-align:center;color:#1a3a5c;margin-bottom:6px;">Nouveau mot de passe</h3>
-    <p style="text-align:center;font-size:13px;color:#8a7560;margin-bottom:20px;">Saisissez votre nouveau mot de passe</p>
-    <div style="margin-bottom:14px;">
-      <label style="display:block;font-size:12px;font-weight:600;color:#8a7560;margin-bottom:5px;">Nouveau mot de passe</label>
-      <input type="password" id="new-pwd" placeholder="Minimum 8 caractères" autocomplete="new-password"
-        style="width:100%;padding:10px 14px;border:1.5px solid #e8d8c4;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;">
-    </div>
-    <div style="margin-bottom:20px;">
-      <label style="display:block;font-size:12px;font-weight:600;color:#8a7560;margin-bottom:5px;">Confirmer</label>
-      <input type="password" id="new-pwd-confirm" placeholder="Répétez le mot de passe" autocomplete="new-password"
-        style="width:100%;padding:10px 14px;border:1.5px solid #e8d8c4;border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;">
-    </div>
-    <div id="reset-pwd-err" style="color:#c1440e;font-size:13px;margin-bottom:12px;display:none;text-align:center;"></div>
-    <button onclick="enregistrerNouveauMdp()"
-      style="width:100%;padding:12px;background:#1a3a5c;border:none;border-radius:8px;color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;">
-      💾 Enregistrer le mot de passe
-    </button>
-  </div>
-</div>
 
 <script>
 /* ── Auto-resize iframe parent (Webnode) ── */
