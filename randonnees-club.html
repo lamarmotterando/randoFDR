@@ -980,7 +980,7 @@ function fermerImport() {
 
 function normaliserNom(str) {
   return (str || '').toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[-_]/g, ' ')
     .split(/\s+/).filter(m => m.length > 2);
 }
@@ -998,7 +998,7 @@ function detecterSep(ligne) {
   return (ligne.match(/;/g)||[]).length >= (ligne.match(/,/g)||[]).length ? ';' : ',';
 }
 function trouverColonne(headers, ...candidats) {
-  const norm = h => h.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
+  const norm = h => h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
   for (const c of candidats) {
     const idx = headers.findIndex(h => norm(h).includes(norm(c)));
     if (idx !== -1) return idx;
@@ -1016,9 +1016,7 @@ function previewImport() {
   reader.onload = function(e) {
     let text = e.target.result;
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-    const lignes = text.split(/
-?
-/).filter(l => l.trim());
+    const lignes = text.split(/\r?\n/).filter(l => l.trim());
     if (lignes.length < 2) {
       preview.innerHTML = '<span style="color:#c1440e;">⚠️ Fichier vide ou invalide</span>';
       preview.style.display = 'block'; return;
