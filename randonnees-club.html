@@ -272,6 +272,7 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
       <input type="number" id="fDenMax"    placeholder="Dénivelé max" min="0">
       <button class="btn-reset" onclick="resetFiltres()">✕ Réinitialiser</button>
       <button class="btn-export" onclick="ouvrirExport()">⬇️ Export CSV</button>
+      <button class="btn-export" onclick="ouvrirImport()" style="background:#2d6a4f;">⬆️ Import CSV</button>
     </div>
 
     <div class="bottom-filters">
@@ -962,11 +963,158 @@ function telechargerCSV() {
   fermerExport();
 }
 
+/* ══ IMPORT CSV ══════════════════════════════════════════════ */
+let _importData = [];
+
+function ouvrirImport() {
+  document.getElementById('importFile').value = '';
+  document.getElementById('importPreview').style.display = 'none';
+  document.getElementById('importResult').style.display = 'none';
+  document.getElementById('btnImport').disabled = true;
+  _importData = [];
+  document.getElementById('importOverlay').classList.add('open');
+}
+function fermerImport() {
+  document.getElementById('importOverlay').classList.remove('open');
+}
+
+function normaliserNom(str) {
+  return (str || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[-_]/g, ' ')
+    .split(/\s+/).filter(m => m.length > 2);
+}
+function toISODateImport(str) {
+  if (!str) return null;
+  str = str.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+    const [d, m, y] = str.split('/');
+    return `${y}-${m}-${d}`;
+  }
+  return null;
+}
+function detecterSep(ligne) {
+  return (ligne.match(/;/g)||[]).length >= (ligne.match(/,/g)||[]).length ? ';' : ',';
+}
+function trouverColonne(headers, ...candidats) {
+  const norm = h => h.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
+  for (const c of candidats) {
+    const idx = headers.findIndex(h => norm(h).includes(norm(c)));
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+function previewImport() {
+  const file = document.getElementById('importFile').files[0];
+  const preview = document.getElementById('importPreview');
+  const btnImport = document.getElementById('btnImport');
+  _importData = []; btnImport.disabled = true; preview.style.display = 'none';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    let text = e.target.result;
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    const lignes = text.split(/
+?
+/).filter(l => l.trim());
+    if (lignes.length < 2) {
+      preview.innerHTML = '<span style="color:#c1440e;">⚠️ Fichier vide ou invalide</span>';
+      preview.style.display = 'block'; return;
+    }
+    const sep = detecterSep(lignes[0]);
+    const headers = lignes[0].split(sep).map(h => h.trim().replace(/^"|"$/g,''));
+    const iDate = trouverColonne(headers, 'date_rando','date','Date');
+    const iAnim = trouverColonne(headers, 'animateur','animatrice','Animateur');
+    const iPart = trouverColonne(headers, 'nb_participants','participants','Participants','participant');
+    const manquantes = [];
+    if (iDate===-1) manquantes.push('Date');
+    if (iAnim===-1) manquantes.push('Animateur');
+    if (iPart===-1) manquantes.push('Participants');
+    if (manquantes.length > 0) {
+      preview.innerHTML = `<span style="color:#c1440e;">❌ Colonnes manquantes : ${manquantes.join(', ')}</span><br>
+        <span style="color:#8a7560;">Colonnes trouvées : ${headers.join(', ')}</span>`;
+      preview.style.display = 'block'; return;
+    }
+    _importData = [];
+    for (let i = 1; i < lignes.length; i++) {
+      const cols = lignes[i].split(sep).map(c => c.trim().replace(/^"|"$/g,''));
+      const date = toISODateImport(cols[iDate]);
+      const anim = cols[iAnim]?.trim();
+      const nb   = parseInt(cols[iPart]);
+      if (!date || !anim || isNaN(nb)) continue;
+      _importData.push({ date, anim, nb, ligne: i+1 });
+    }
+    preview.innerHTML = `<strong>${_importData.length} ligne(s) valide(s)</strong> sur ${lignes.length-1} (séparateur : <code>${sep}</code>)<br>
+      <strong>Colonnes :</strong> Date[${iDate}] · Animateur[${iAnim}] · Participants[${iPart}]<br><br>
+      <div style="max-height:120px;overflow-y:auto;">
+        ${_importData.slice(0,5).map(r => `<div style="padding:2px 0;border-bottom:1px solid #e8d8c4;">📅 ${r.date} · 👤 ${r.anim} · 👥 ${r.nb}</div>`).join('')}
+        ${_importData.length > 5 ? `<div style="color:#8a7560;font-style:italic;">… et ${_importData.length-5} autre(s)</div>` : ''}
+      </div>`;
+    preview.style.display = 'block';
+    btnImport.disabled = _importData.length === 0;
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+async function lancerImport() {
+  const btn = document.getElementById('btnImport');
+  const result = document.getElementById('importResult');
+  btn.disabled = true; btn.textContent = '⏳ Import en cours…';
+  result.style.display = 'none';
+  let ok = 0, ignored = 0, errors = 0;
+  const details = [];
+  for (const row of _importData) {
+    const motsAnim = normaliserNom(row.anim);
+    const fiche = toutes.find(f => {
+      if (f.date_rando !== row.date) return false;
+      const motsF = normaliserNom(f.animateur);
+      return motsAnim.some(m => motsF.includes(m));
+    });
+    if (!fiche) {
+      ignored++;
+      details.push(`⚠️ Ligne ${row.ligne} — ${row.date} / ${row.anim} : aucune fiche trouvée`);
+      continue;
+    }
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${fiche.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Prefer':'return=minimal' },
+        body: JSON.stringify({ nb_participants: row.nb })
+      });
+      if (res.ok) {
+        ok++; fiche.nb_participants = row.nb;
+        details.push(`✅ ${row.date} / ${fiche.animateur} → ${row.nb} participants`);
+      } else {
+        errors++; details.push(`❌ HTTP ${res.status} — fiche id=${fiche.id}`);
+      }
+    } catch(e) { errors++; details.push(`❌ Réseau : ${e.message}`); }
+  }
+  if (ok > 0) filtrer();
+  result.style.cssText = `display:block;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;
+    background:${errors>0?'#fef2f2':ok>0?'#f0fdf4':'#fff8ee'};
+    border:1.5px solid ${errors>0?'#fca5a5':ok>0?'#86efac':'#e8d8c4'};`;
+  result.innerHTML = `<strong>Résultat :</strong> ✅ ${ok} mis à jour · ⚠️ ${ignored} ignoré(s) · ❌ ${errors} erreur(s)<br><br>
+    <div style="max-height:150px;overflow-y:auto;font-size:11px;line-height:1.8;">${details.join('<br>')}</div>`;
+  btn.textContent = '⬆️ Importer'; btn.disabled = false;
+}
+
+/* ══ FIN IMPORT CSV ══ */
+
 /* Fermer modal export au clic extérieur — initialisé après chargement DOM */
 document.addEventListener("DOMContentLoaded", function() {
   const overlay = document.getElementById("exportOverlay");
   if (overlay) overlay.addEventListener("click", function(e) {
     if (e.target === this) fermerExport();
+  });
+  const importOvl = document.getElementById("importOverlay");
+  if (importOvl) importOvl.addEventListener("click", function(e) {
+    if (e.target === this) fermerImport();
+  });
+  const importOverlay = document.getElementById("importOverlay");
+  if (importOverlay) importOverlay.addEventListener("click", function(e) {
+    if (e.target === this) fermerImport();
   });
   const modal = document.getElementById("modalDetail");
   if (modal) modal.addEventListener("click", function(e) {
@@ -976,6 +1124,42 @@ document.addEventListener("DOMContentLoaded", function() {
 </script>
 
 
+
+<!-- ══ MODAL IMPORT CSV ══ -->
+<div class="export-overlay" id="importOverlay">
+  <div class="export-box" style="max-width:600px;">
+    <div class="export-titre">⬆️ Import CSV — Participants</div>
+
+    <div style="background:#f0f9f4;border:1.5px solid #86efac;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#166534;line-height:1.8;">
+      <strong>📋 Conditions d'import :</strong><br>
+      • Séparateur <code>;</code> ou <code>,</code> (détecté automatiquement)<br>
+      • Encodage UTF-8<br>
+      • <strong>Colonnes obligatoires</strong> (noms flexibles) :<br>
+      &nbsp;&nbsp;— <strong>Date</strong> : <code>date</code>, <code>date_rando</code> — format JJ/MM/AAAA ou AAAA-MM-JJ<br>
+      &nbsp;&nbsp;— <strong>Animateur</strong> : <code>animateur</code> — nom, prénom ou les deux dans n'importe quel ordre<br>
+      &nbsp;&nbsp;— <strong>Participants</strong> : <code>nb_participants</code>, <code>participants</code><br>
+      • Matching par <strong>date + animateur</strong> — mise à jour du nb de participants si trouvé<br>
+      • Lignes sans correspondance → ignorées avec avertissement
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px;">Sélectionner un fichier CSV</label>
+      <input type="file" id="importFile" accept=".csv,.txt"
+        style="width:100%;padding:8px;border:1.5px dashed #e8d8c4;border-radius:8px;background:var(--cream);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;"
+        onchange="previewImport()">
+    </div>
+
+    <div id="importPreview" style="display:none;background:var(--cream);border:1.5px solid #e8d8c4;border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;max-height:200px;overflow-y:auto;"></div>
+
+    <div id="importResult" style="display:none;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;"></div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn-export-cancel" onclick="fermerImport()">Annuler</button>
+      <button class="btn-export-dl" id="btnImport" onclick="lancerImport()" disabled
+        style="background:#2d6a4f;">⬆️ Importer</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ MODAL EXPORT CSV ══ -->
 <div class="export-overlay" id="exportOverlay">
