@@ -51,6 +51,13 @@ const remarques = val("remarques","Non renseigné")
 const animateur = val("animateur","❌ Non renseigné")
 const selectAnim = document.getElementById("animateur")
 const tel = selectAnim?.selectedOptions[0]?.dataset?.tel || ""
+/* Extraire le prénom = premier mot du nom (format "NOM Prénom" ou "Prénom NOM") */
+const prenomAnim = (() => {
+  const mots = animateur.trim().split(/\s+/);
+  if (mots.length === 1) return mots[0];
+  /* Si premier mot tout en majuscules → c'est le nom, prendre le suivant */
+  return mots[0] === mots[0].toUpperCase() ? mots[1] : mots[0];
+})();
 const animateurAvecTel = animateur && tel ? `${animateur}  📱 ${tel}` : animateur
 
 /* ── Pastille IBP ── */
@@ -84,7 +91,6 @@ En cas de nécessité, vous pouvez modifier l'ensemble des paramètres de la FdR
 
 Sur cette nouvelle page, le bouton "Annuler" fournit l'état de la rando comme - Annulée -. Ces actions mettront automatiquement à jour le planning sur le site et Google Calendar.
 
-Nous vous souhaitons une belle rando !
 ――――――――――――――――――――――――――――――――――
 
 Feuille de route : ${formatDate(date)} — ${nom}
