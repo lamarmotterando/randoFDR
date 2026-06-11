@@ -192,7 +192,7 @@
     </div>
     <img id="modalDetailProfil" src="" alt="Profil" class="modal-profil" style="display:none">
     <pre class="modal-resume" id="modalDetailResume"></pre>
-    <button class="btn-modifier-detail" onclick="demanderMdp()">✏️ Modifier cette randonnée</button>
+    <button class="btn-modifier-detail" onclick="ouvrirModif(idEnCours)">✏️ Modifier cette randonnée</button>
     <div style="display:flex;gap:8px;margin-top:8px;">
       <button class="btn-resync" style="flex:1" onclick="resyncCalendar()">🔄 Resync Calendar</button>
       <button class="btn-create-cal" style="flex:1" onclick="creerCalendar()">➕ Créer dans Calendar</button>
@@ -200,22 +200,7 @@
   </div>
 </div>
 
-<!-- ══ Modal mot de passe ══ -->
-<div class="modal-overlay" id="modalMdp">
-  <div class="modal-box" style="max-width:360px">
-    <div class="mdp-box">
-      <div style="font-size:38px;margin-bottom:10px">🔐</div>
-      <div style="font-size:16px;font-weight:700;color:#1a3a5c;margin-bottom:6px">Accès modification</div>
-      <div style="font-size:13px;color:var(--stone);margin-bottom:20px">Entrez votre nom pour accéder à la modification</div>
-      <input id="mdpInput" type="text" placeholder="">
-      <div class="err-msg" id="mdpErr">Nom incorrect — seul l'animateur peut modifier cette fiche.</div>
-      <div style="display:flex;gap:10px;margin-top:14px">
-        <button onclick="fermerMdp()" style="flex:1;padding:11px;background:var(--sand);border:1.5px solid #e8d8c4;border-radius:8px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer">Annuler</button>
-        <button onclick="validerMdp()" style="flex:1;padding:11px;background:linear-gradient(135deg,#1a3a5c,#2d6a9f);color:white;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer">Accéder →</button>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- ══ (Modale "nom" supprimée — la validation se fait désormais par code email, directement dans la modale de modification) ══ -->
 
 <!-- ══ Modal modification ══ -->
 <div class="modal-overlay" id="modalModif">
@@ -226,6 +211,19 @@
     </div>
     <div class="form-modif">
       <input type="hidden" id="modifId">
+
+      <!-- ══ Validation par code email ══ -->
+      <div id="codeZone" style="background:#f0f7f4;border:1px solid #d4e6dd;border-radius:8px;padding:12px;margin-bottom:14px;">
+        <button type="button" id="btnEnvoiCode" onclick="envoyerMonCode()"
+          style="width:100%;padding:10px;background:linear-gradient(135deg,#1a3a5c,#2d6a9f);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">
+          📧 Recevoir mon code par email
+        </button>
+        <div id="codeInfo" style="display:none;margin-top:10px;">
+          <p style="font-size:13px;color:#2d6a4f;margin:0 0 8px;">✅ Code envoyé à <strong id="codeEmailMasque"></strong> — saisissez-le pour valider.</p>
+          <input id="modifCode" type="text" inputmode="numeric" maxlength="6" placeholder="Code à 6 chiffres"
+            style="width:100%;box-sizing:border-box;text-align:center;letter-spacing:4px;font-size:18px;padding:10px;border:1.5px solid #cdd9e5;border-radius:8px;">
+        </div>
+      </div>
       <div class="form-row">
         <div><label>Nom de la randonnée</label><input id="modifNom" type="text"></div>
         <div><label>Date</label><input id="modifDate" type="date"></div>
@@ -306,6 +304,8 @@
 <script>
 const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
 /* ✅ SUPABASE_KEY supprimée — toutes les requêtes passent par dynamic-handler */
+/* Brique "modification par code email" — fonction dédiée, indépendante de dynamic-handler */
+const CODE_FN_URL = SUPABASE_URL + "/functions/v1/code-modif";
 
 let fiches = [];
 let idEnCours = null;
@@ -593,47 +593,45 @@ document.getElementById("modalDetail").addEventListener("click", function(e) {
 });
 
 /* ══ MOT DE PASSE ══ */
-function demanderMdp() {
-  document.getElementById("mdpInput").value = "";
-  document.getElementById("mdpErr").style.display = "none";
-  document.getElementById("modalDetail").classList.remove("open");
-  document.getElementById("modalMdp").classList.add("open");
-  setTimeout(() => document.getElementById("mdpInput").focus(), 150);
-}
-
-function fermerMdp() {
-  document.getElementById("modalMdp").classList.remove("open");
-  if (idEnCours) document.getElementById("modalDetail").classList.add("open");
-}
-
-function validerMdp() {
-  const f = fiches.find(x => x.id === idEnCours);
-  if (!f) return;
-  const saisi   = document.getElementById("mdpInput").value.trim().toLowerCase();
-  const attendu = (f.animateur || "").trim().toLowerCase();
-  const ok = saisi.length > 0 && (attendu.includes(saisi) || saisi.includes(attendu));
-  if (!ok) {
-    document.getElementById("mdpErr").style.display = "block";
-    document.getElementById("mdpInput").value = "";
-    document.getElementById("mdpInput").focus();
-    return;
+/* ══ VALIDATION PAR CODE EMAIL ══ */
+async function envoyerMonCode() {
+  const id = idEnCours || Number(document.getElementById("modifId").value);
+  if (!id) return;
+  const btn = document.getElementById("btnEnvoiCode");
+  btn.disabled = true; btn.textContent = "⏳ Envoi…";
+  try {
+    const res = await fetch(CODE_FN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "envoyerCode", id })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    document.getElementById("codeEmailMasque").textContent = data.emailMasque || "votre adresse";
+    document.getElementById("codeInfo").style.display = "block";
+    btn.textContent = "📧 Renvoyer le code";
+    setTimeout(() => document.getElementById("modifCode").focus(), 100);
+  } catch(e) {
+    btn.textContent = "📧 Recevoir mon code par email";
+    const errEl = document.getElementById("modifErr");
+    errEl.textContent = "Impossible d'envoyer le code : " + e.message;
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
   }
-  fermerMdp();
-  document.getElementById("modalDetail").classList.remove("open");
-  ouvrirModif(idEnCours);
 }
-
-document.getElementById("mdpInput").addEventListener("keydown", e => {
-  if (e.key === "Enter") validerMdp();
-});
-document.getElementById("modalMdp").addEventListener("click", function(e) {
-  if (e.target === this) fermerMdp();
-});
 
 /* ══ FORMULAIRE MODIFICATION ══ */
 function ouvrirModif(id) {
   const f = fiches.find(x => x.id === id);
   if (!f) return;
+
+  /* Fermer la modale détail et réinitialiser la zone de validation par code */
+  document.getElementById("modalDetail").classList.remove("open");
+  document.getElementById("codeInfo").style.display = "none";
+  document.getElementById("modifCode").value = "";
+  const be = document.getElementById("btnEnvoiCode");
+  be.textContent = "📧 Recevoir mon code par email"; be.disabled = false;
 
   document.getElementById("modifId").value            = f.id;
   console.log("[ouvrirModif] id=", f.id, "type=", typeof f.id, "modifId.value=", document.getElementById("modifId").value);
@@ -842,16 +840,28 @@ async function sauvegarderModif() {
   console.log("[Modif] PATCH id=", id, patch);
 
   try {
-    /* ✅ Migration vers dynamic-handler — plus de clé exposée */
-    const handlerRes = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", {
+    const code = (document.getElementById("modifCode").value || "").trim();
+    if (!code) {
+      const errEl = document.getElementById("modifErr");
+      errEl.textContent = "Demandez puis saisissez votre code de validation.";
+      errEl.style.display = "block";
+      return;
+    }
+    const handlerRes = await fetch(CODE_FN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "updateFiche", id, fiche: patch })
+      body: JSON.stringify({ action: "modifierAvecCode", id, code, fiche: patch })
     });
 
+    if (handlerRes.status === 403) {
+      const errEl = document.getElementById("modifErr");
+      errEl.textContent = "Code invalide ou expiré — redemandez un code.";
+      errEl.style.display = "block";
+      return;
+    }
     if (!handlerRes.ok) {
       const errText = await handlerRes.text();
-      console.error("[Modif] erreur handler:", errText);
+      console.error("[Modif] erreur code-modif:", errText);
       throw new Error("HTTP " + handlerRes.status + " — " + errText);
     }
 
@@ -907,13 +917,23 @@ async function supprimerFiche() {
   if (btn) { btn.disabled = true; btn.textContent = "⏳ Annulation…"; }
 
   try {
-    /* ✅ Migration vers dynamic-handler — plus de clé exposée */
-    const res = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", {
+    const code = (document.getElementById("modifCode").value || "").trim();
+    if (!code) {
+      alert("Demandez puis saisissez votre code de validation pour annuler la rando.");
+      if (btn) { btn.disabled = false; btn.textContent = "❌ Annuler"; }
+      return;
+    }
+    const res = await fetch(CODE_FN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "updateFiche", id, fiche: { statut: "annulée" } })
+      body: JSON.stringify({ action: "modifierAvecCode", id, code, fiche: { statut: "annulée" } })
     });
 
+    if (res.status === 403) {
+      alert("Code invalide ou expiré — redemandez un code.");
+      if (btn) { btn.disabled = false; btn.textContent = "❌ Annuler"; }
+      return;
+    }
     if (!res.ok) throw new Error("HTTP " + res.status);
 
     const f = fiches.find(x => x.id === id);
