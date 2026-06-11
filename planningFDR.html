@@ -219,10 +219,16 @@
           📧 Recevoir mon code par email
         </button>
         <div id="codeInfo" style="display:none;margin-top:10px;">
-          <p style="font-size:13px;color:#2d6a4f;margin:0 0 8px;">✅ Code envoyé à <strong id="codeEmailMasque"></strong> — saisissez-le pour valider.</p>
-          <input id="modifCode" type="text" inputmode="numeric" maxlength="6" placeholder="Code à 6 chiffres"
-            style="width:100%;box-sizing:border-box;text-align:center;letter-spacing:4px;font-size:18px;padding:10px;border:1.5px solid #cdd9e5;border-radius:8px;">
+          <p style="font-size:13px;color:#2d6a4f;margin:0 0 8px;">✅ Code envoyé à <strong id="codeEmailMasque"></strong> — saisissez-le puis validez.</p>
+          <div style="display:flex;gap:8px;">
+            <input id="modifCode" type="text" inputmode="numeric" maxlength="6" placeholder="Code à 6 chiffres"
+              style="flex:1;box-sizing:border-box;text-align:center;letter-spacing:4px;font-size:18px;padding:10px;border:1.5px solid #cdd9e5;border-radius:8px;">
+            <button type="button" id="btnValiderCode" onclick="validerMonCode()"
+              style="padding:0 18px;background:#2d6a4f;color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Valider</button>
+          </div>
+          <div class="err-msg" id="codeErr" style="display:none;margin-top:8px;">Code invalide ou expiré — réessayez ou redemandez un code.</div>
         </div>
+        <div id="codeOk" style="display:none;margin-top:10px;font-size:13px;font-weight:600;color:#1a7a3a;">🔓 Code validé — vous pouvez modifier la fiche.</div>
       </div>
       <div class="form-row">
         <div><label>Nom de la randonnée</label><input id="modifNom" type="text"></div>
@@ -594,6 +600,22 @@ document.getElementById("modalDetail").addEventListener("click", function(e) {
 
 /* ══ MOT DE PASSE ══ */
 /* ══ VALIDATION PAR CODE EMAIL ══ */
+let codeValide = "";
+
+/* Verrouille / déverrouille tous les champs + boutons du formulaire de modif */
+function verrouillerForm(verrou) {
+  const form = document.querySelector("#modalModif .form-modif");
+  if (!form) return;
+  form.querySelectorAll("input, select, textarea").forEach(el => {
+    if (el.id === "modifCode" || el.id === "modifId") return;
+    el.disabled = verrou;
+  });
+  const save = document.querySelector("#modalModif .btn-save");
+  const del  = document.querySelector("#modalModif .btn-delete");
+  if (save) save.disabled = verrou;
+  if (del)  del.disabled = verrou;
+}
+
 async function envoyerMonCode() {
   const id = idEnCours || Number(document.getElementById("modifId").value);
   if (!id) return;
@@ -609,29 +631,74 @@ async function envoyerMonCode() {
     if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
     document.getElementById("codeEmailMasque").textContent = data.emailMasque || "votre adresse";
     document.getElementById("codeInfo").style.display = "block";
+    document.getElementById("codeErr").style.display = "none";
     btn.textContent = "📧 Renvoyer le code";
     setTimeout(() => document.getElementById("modifCode").focus(), 100);
   } catch(e) {
     btn.textContent = "📧 Recevoir mon code par email";
-    const errEl = document.getElementById("modifErr");
+    const errEl = document.getElementById("codeErr");
     errEl.textContent = "Impossible d'envoyer le code : " + e.message;
     errEl.style.display = "block";
+    document.getElementById("codeInfo").style.display = "block";
   } finally {
     btn.disabled = false;
   }
 }
+
+async function validerMonCode() {
+  const id = idEnCours || Number(document.getElementById("modifId").value);
+  const code = (document.getElementById("modifCode").value || "").trim();
+  const errEl = document.getElementById("codeErr");
+  if (!code) { errEl.textContent = "Saisissez le code reçu par email."; errEl.style.display = "block"; return; }
+  const btn = document.getElementById("btnValiderCode");
+  btn.disabled = true; btn.textContent = "…";
+  try {
+    const res = await fetch(CODE_FN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "verifierCode", id, code })
+    });
+    const data = await res.json();
+    if (res.ok && data.valide) {
+      codeValide = code;
+      document.getElementById("codeInfo").style.display = "none";
+      document.getElementById("btnEnvoiCode").style.display = "none";
+      document.getElementById("codeOk").style.display = "block";
+      errEl.style.display = "none";
+      verrouillerForm(false);          // 🔓 déverrouille le formulaire
+    } else {
+      errEl.textContent = "Code invalide ou expiré — réessayez ou redemandez un code.";
+      errEl.style.display = "block";
+    }
+  } catch(e) {
+    errEl.textContent = "Impossible de vérifier le code : " + e.message;
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Valider";
+  }
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && document.activeElement && document.activeElement.id === "modifCode") {
+    e.preventDefault(); validerMonCode();
+  }
+});
 
 /* ══ FORMULAIRE MODIFICATION ══ */
 function ouvrirModif(id) {
   const f = fiches.find(x => x.id === id);
   if (!f) return;
 
-  /* Fermer la modale détail et réinitialiser la zone de validation par code */
+  /* Fermer la modale détail et réinitialiser la validation par code */
   document.getElementById("modalDetail").classList.remove("open");
+  codeValide = "";
   document.getElementById("codeInfo").style.display = "none";
+  document.getElementById("codeOk").style.display = "none";
+  document.getElementById("codeErr").style.display = "none";
   document.getElementById("modifCode").value = "";
   const be = document.getElementById("btnEnvoiCode");
-  be.textContent = "📧 Recevoir mon code par email"; be.disabled = false;
+  be.textContent = "📧 Recevoir mon code par email"; be.disabled = false; be.style.display = "block";
+  verrouillerForm(true);          // 🔒 champs bloqués tant que le code n'est pas validé
 
   document.getElementById("modifId").value            = f.id;
   console.log("[ouvrirModif] id=", f.id, "type=", typeof f.id, "modifId.value=", document.getElementById("modifId").value);
@@ -840,10 +907,10 @@ async function sauvegarderModif() {
   console.log("[Modif] PATCH id=", id, patch);
 
   try {
-    const code = (document.getElementById("modifCode").value || "").trim();
+    const code = codeValide;
     if (!code) {
       const errEl = document.getElementById("modifErr");
-      errEl.textContent = "Demandez puis saisissez votre code de validation.";
+      errEl.textContent = "Validez d'abord votre code de modification.";
       errEl.style.display = "block";
       return;
     }
@@ -917,9 +984,9 @@ async function supprimerFiche() {
   if (btn) { btn.disabled = true; btn.textContent = "⏳ Annulation…"; }
 
   try {
-    const code = (document.getElementById("modifCode").value || "").trim();
+    const code = codeValide;
     if (!code) {
-      alert("Demandez puis saisissez votre code de validation pour annuler la rando.");
+      alert("Validez d'abord votre code de modification pour annuler la rando.");
       if (btn) { btn.disabled = false; btn.textContent = "❌ Annuler"; }
       return;
     }
