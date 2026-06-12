@@ -90,10 +90,10 @@
   .ibp-badge.visible { opacity: 1; }
 
   .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
-  .btn-primary { background: #2d6a4f; color: #fff; } .btn-primary:hover { background: #1b4332; }
-  .btn-edit    { background: #3182ce; color: #fff; font-size: .70rem; padding: 3px 6px; } .btn-edit:hover { background: #2c5282; }
-  .btn-delete  { background: #e53e3e; color: #fff; font-size: .70rem; padding: 3px 6px; } .btn-delete:hover { background: #c53030; }
-  .btn-cancel  { background: #e2e8f0; color: #4a5568; } .btn-cancel:hover { background: #cbd5e0; }
+  .btn-primary { background: #52b788; color: #1a1a1a; } .btn-primary:hover { background: #40a574; }
+  .btn-edit    { background: #3182ce; color: #1a1a1a; font-size: .70rem; padding: 3px 6px; } .btn-edit:hover { background: #2c5282; }
+  .btn-delete  { background: #e53e3e; color: #1a1a1a; } .btn-delete:hover { background: #c53030; }
+  .btn-cancel  { background: #e2e8f0; color: #1a1a1a; } .btn-cancel:hover { background: #cbd5e0; }
   .form-actions { display: flex; gap: 10px; margin-top: 10px; }
 
   .gestion-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
@@ -268,7 +268,7 @@
   .rattach-dropdown .btn-rattach-ok { flex:1; padding: 7px; background: #185fa5; color: #fff; border: none; border-radius: 7px; font-size: .82rem; font-weight: 600; cursor: pointer; }
   .rattach-dropdown .btn-rattach-ok:hover { background: #0c4472; }
   .rattach-dropdown .btn-rattach-cancel { flex:1; padding: 7px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 7px; font-size: .82rem; font-weight: 600; cursor: pointer; }
-  .btn-rattach { background: #e8f4fd; color: #185fa5; border: 1px solid #b5d4f4; font-size: .68rem; padding: 2px 5px; border-radius: 5px; cursor: pointer; white-space: nowrap; }
+  .btn-rattach { background: #e8f4fd; color: #1a1a1a; border: 1px solid #b5d4f4; cursor: pointer; white-space: nowrap; }
   .btn-rattach:hover { background: #b5d4f4; }
   .btn-rattach.rattache { background: #ddeef8; color: #0c4472; font-style: italic; }
 
@@ -447,7 +447,7 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
 
 <!-- ══ MODAL MODIFIER ══ -->
 <div class="modal-overlay" id="modal-edit">
-  <div class="modal" style="width:580px">
+  <div class="modal" style="width:680px">
     <h3>✏️ Modifier l'événement</h3>
     <input type="hidden" id="edit-rowIndex">
     <input type="hidden" id="edit-statut-original">
@@ -529,12 +529,12 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
       </div>
     </div>
 
-    <div class="modal-actions" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
-      <div style="display:flex;gap:8px;">
+    <div class="modal-actions" style="justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn btn-delete" id="btn-modal-annuler" onclick="confirmerDepuisModal()" style="display:none;">❌ Annuler la rando</button>
-        <button class="btn-rattach" id="btn-modal-rattacher" onclick="rattacherDepuisModal()" style="display:none;padding:6px 12px;font-size:.8rem;">🏕 Rattacher</button>
+        <button class="btn btn-rattach" id="btn-modal-rattacher" onclick="rattacherDepuisModal()" style="display:none;">🏕 Rattacher</button>
       </div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn btn-cancel" onclick="closeModal('modal-edit')">Fermer</button>
         <button class="btn btn-primary" id="btn-save-edit" onclick="saveEdit()">💾 Enregistrer</button>
       </div>
