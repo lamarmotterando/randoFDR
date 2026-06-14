@@ -15,7 +15,7 @@
 }
 body { font-family: 'Outfit', sans-serif; background: var(--sand); color: var(--ink); min-height: 100vh; }
 
-/* ── HEADER ── */
+/* -- HEADER -- */
 .topbar {
   background: linear-gradient(135deg, var(--ember), var(--flame), var(--amber));
   padding: 14px 20px; box-shadow: 0 3px 12px rgba(193,68,14,0.3);
@@ -25,7 +25,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--sand); color: var(--
 
 .container { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
 
-/* ── FILTRES ── */
+/* -- FILTRES -- */
 .filters {
   background: white; border-radius: 12px;
   padding: 18px 20px; margin-bottom: 18px;
@@ -51,13 +51,13 @@ body { font-family: 'Outfit', sans-serif; background: var(--sand); color: var(--
 }
 .btn-reset:hover { border-color: var(--flame); color: var(--flame); }
 
-/* ── PÉRIODE + STATS + RADAR ── */
+/* -- PERIODE + STATS + RADAR -- */
 .bottom-filters {
   display: flex; gap: 16px; align-items: flex-start;
   margin-top: 14px; flex-wrap: wrap;
 }
 
-/* Sélecteur période */
+/* Selecteur periode */
 .periode-bloc {
   background: var(--cream); border: 1.5px solid #e8d8c4;
   border-radius: 10px; padding: 12px 14px; flex-shrink: 0;
@@ -87,7 +87,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--sand); color: var(--
 .stats-text { font-size: 13px; font-weight: 600; color: var(--blue); flex: 1; min-width: 200px; }
 .radar-wrap { width: 220px; height: 160px; flex-shrink: 0; }
 
-/* ── HISTOGRAMME ── */
+/* -- HISTOGRAMME -- */
 .histo-bloc {
   background: white; border-radius: 12px;
   padding: 20px; margin-bottom: 18px;
@@ -113,7 +113,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--sand); color: var(--
 .histo-stat-val { font-size: 18px; font-weight: 700; color: var(--blue); margin-top: 2px; }
 .histo-canvas-wrap { position: relative; height: 220px; }
 
-/* ── TABLE ── */
+/* -- TABLE -- */
 .table-wrap {
   background: white; border-radius: 12px; overflow: hidden;
   box-shadow: 0 2px 10px rgba(44,26,14,0.08); border: 1.5px solid #e8d8c4;
@@ -135,7 +135,7 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 .td-anim { color: var(--stone); white-space: nowrap; }
 .td-num  { text-align: right; color: var(--ink); }
 
-/* ── IBP ── */
+/* -- IBP -- */
 .ibp-pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
 .ibp-n1 { background: #d4edda; color: #155724; }
 .ibp-n2 { background: #cce5ff; color: #004085; }
@@ -143,7 +143,7 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 .ibp-n4 { background: #f8d7da; color: #721c24; }
 .ibp-n5 { background: #343a40; color: #ffffff; }
 
-/* ── BADGE STATUT ── */
+/* -- BADGE STATUT -- */
 .badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
 .badge-pub  { background: #d4edda; color: #155724; border: 1px solid #b8dfc9; }
 .badge-ann  { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
@@ -151,7 +151,7 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 .tr-ann td  { opacity: .6; }
 .td-nom.barre { text-decoration: line-through; color: var(--stone); }
 
-/* ── MODAL ── */
+/* -- MODAL -- */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
   background: rgba(44,26,14,0.55); z-index: 9999;
@@ -197,7 +197,7 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
   .histo-canvas-wrap { height: 180px; }
 }
 
-/* ── BOUTON EXPORT ── */
+/* -- BOUTON EXPORT -- */
 .btn-export {
   padding: 8px 16px; background: var(--blue); border: none;
   border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 13px;
@@ -205,7 +205,7 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 }
 .btn-export:hover { background: var(--blue-mid); }
 
-/* ── MODAL EXPORT ── */
+/* -- MODAL EXPORT -- */
 .export-overlay {
   display: none; position: fixed; inset: 0;
   background: rgba(44,26,14,0.55); z-index: 10000;
@@ -244,9 +244,6 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 }
 .btn-export-dl:hover { background: var(--blue-mid); }
 .btn-export-dl:disabled { background: #ccc; cursor: not-allowed; }
-
-  
-
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -254,31 +251,31 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 
 
 <div class="topbar">
-  <h1>🥾 Randonnées du club — La Marmotte</h1>
-  <p id="topbarSub">Chargement…</p>
+  <h1>&#129406; Randonn&eacute;es du club &mdash; La Marmotte</h1>
+  <p id="topbarSub">Chargement&hellip;</p>
 </div>
 
 <div class="container">
 
   <!-- FILTRES -->
   <div class="filters">
-    <div class="filters-titre">🔍 Filtres</div>
+    <div class="filters-titre">&#128269; Filtres</div>
     <div class="filters-grid">
       <input type="date"   id="fDate"      placeholder="Date">
-      <input type="text"   id="fNom"       placeholder="Nom randonnée">
+      <input type="text"   id="fNom"       placeholder="Nom randonn&eacute;e">
       <input type="text"   id="fAnimateur" placeholder="Animateur">
       <input type="number" id="fIbpMax"    placeholder="IBP max" min="0">
       <input type="number" id="fKmMax"     placeholder="Km max"  min="0" step="0.1">
-      <input type="number" id="fDenMax"    placeholder="Dénivelé max" min="0">
-      <button class="btn-reset" onclick="resetFiltres()">✕ Réinitialiser</button>
-      <button class="btn-export" onclick="ouvrirExport()">⬇️ Export CSV</button>
-      <button class="btn-export" onclick="ouvrirImport()" style="background:#2d6a4f;">⬆️ Import CSV</button>
+      <input type="number" id="fDenMax"    placeholder="D&eacute;nivel&eacute; max" min="0">
+      <button class="btn-reset" onclick="resetFiltres()">&#10005; R&eacute;initialiser</button>
+      <button class="btn-export" onclick="ouvrirExport()">&#11015;&#65039; Export CSV</button>
+      <button class="btn-export" onclick="ouvrirImport()" style="background:#2d6a4f;">&#11014;&#65039; Import CSV</button>
     </div>
 
     <div class="bottom-filters">
-      <!-- Sélecteur de période -->
+      <!-- Selecteur de periode -->
       <div class="periode-bloc">
-        <div class="periode-titre">📅 Période d'analyse</div>
+        <div class="periode-titre">&#128197; P&eacute;riode d'analyse</div>
         <div class="periode-row">
           <label>Du</label>
           <input type="date" id="periodeDebut" onchange="onPeriodeChange()">
@@ -288,13 +285,13 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
         <div class="btns-rapides">
           <button class="btn-periode active" id="btn-tout"    onclick="setPeriode('tout')">Tout</button>
           <button class="btn-periode"        id="btn-an1"     onclick="setPeriode('an1')">Cette saison</button>
-          <button class="btn-periode"        id="btn-an2"     onclick="setPeriode('an2')">Saison préc.</button>
+          <button class="btn-periode"        id="btn-an2"     onclick="setPeriode('an2')">Saison pr&eacute;c.</button>
           <button class="btn-periode"        id="btn-3ans"    onclick="setPeriode('3ans')">3 ans</button>
         </div>
       </div>
 
       <div style="flex:1; min-width:200px;">
-        <div class="stats-text" id="statsText">—</div>
+        <div class="stats-text" id="statsText">&mdash;</div>
         <div class="radar-wrap"><canvas id="radarCanvas"></canvas></div>
       </div>
     </div>
@@ -303,7 +300,7 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
   <!-- HISTOGRAMME PARTICIPANTS -->
   <div class="histo-bloc" id="histoBloc">
     <div class="histo-header">
-      <div class="histo-titre">👥 Participants par randonnée</div>
+      <div class="histo-titre">&#128101; Participants par randonn&eacute;e</div>
       <div class="histo-stats-row" id="histoStats"></div>
     </div>
     <div class="histo-canvas-wrap">
@@ -317,7 +314,7 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
       <thead>
         <tr>
           <th onclick="trier('date_rando')">Date <span class="sort-icon" id="sort-date_rando"></span></th>
-          <th onclick="trier('nom_rando')">Randonnée <span class="sort-icon" id="sort-nom_rando"></span></th>
+          <th onclick="trier('nom_rando')">Randonn&eacute;e <span class="sort-icon" id="sort-nom_rando"></span></th>
           <th onclick="trier('ibp')">IBP <span class="sort-icon" id="sort-ibp"></span></th>
           <th onclick="trier('distance')" class="col-stats">Km <span class="sort-icon" id="sort-distance"></span></th>
           <th onclick="trier('denivele')" class="col-stats">D+ <span class="sort-icon" id="sort-denivele"></span></th>
@@ -327,18 +324,18 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
         </tr>
       </thead>
       <tbody id="tableBody">
-        <tr><td colspan="7" class="empty">⏳ Chargement…</td></tr>
+        <tr><td colspan="7" class="empty">&#9203; Chargement&hellip;</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- MODAL DÉTAIL -->
+<!-- MODAL DETAIL -->
 <div class="modal-overlay" id="modalDetail">
   <div class="modal-box">
     <div class="modal-head">
       <div class="modal-titre" id="modalTitre"></div>
-      <button class="modal-close" onclick="fermerDetail()">✕ Fermer</button>
+      <button class="modal-close" onclick="fermerDetail()">&#10005; Fermer</button>
     </div>
     <div id="modalContenu"></div>
   </div>
@@ -347,9 +344,11 @@ td { padding: 9px 12px; border-bottom: 1px solid #f0e8dc; vertical-align: middle
 <script>
 const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+/* Toutes les ecritures passent par l'Edge Function dynamic-handler (service_role cote serveur) */
+const URL_HANDLER = SUPABASE_URL + "/functions/v1/dynamic-handler";
 
 let toutes    = [];
-let filtrées  = [];
+let filtrees  = [];
 let colTri    = "date_rando";
 let sensTri   = -1;
 let radarChart = null;
@@ -357,32 +356,32 @@ let histoChart = null;
 let idEnCours  = null;
 let periodeMode = "tout";
 
-/* ══ CHARGEMENT ══ */
+/* == CHARGEMENT == */
 async function charger() {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque,lieu,nb_participants,noms_participants&order=date_rando.desc`,
-      { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
+      SUPABASE_URL + "/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque,lieu,nb_participants,noms_participants&order=date_rando.desc",
+      { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
     );
     toutes = await res.json();
-    document.getElementById("topbarSub").textContent = `${toutes.length} randonnées archivées`;
+    document.getElementById("topbarSub").textContent = toutes.length + " randonn\u00e9es archiv\u00e9es";
     filtrer();
   } catch(e) {
     document.getElementById("tableBody").innerHTML =
-      `<tr><td colspan="7" class="empty">⚠️ Erreur : ${e.message}</td></tr>`;
+      '<tr><td colspan="7" class="empty">\u26a0\ufe0f Erreur : ' + e.message + '</td></tr>';
   }
 }
 
-/* ══ PÉRIODE ══ */
+/* == PERIODE == */
 function getSaisonBornes(offset = 0) {
-  // Saison rando : septembre → août de l'année suivante
+  // Saison rando : septembre -> aout de l'annee suivante
   const now = new Date();
   let annee = now.getFullYear() - offset;
-  // Si on est avant septembre, la saison courante a démarré l'année précédente
+  // Si on est avant septembre, la saison courante a demarre l'annee precedente
   if (now.getMonth() < 8) annee--;
   return {
-    debut: `${annee}-09-01`,
-    fin:   `${annee + 1}-08-31`
+    debut: annee + "-09-01",
+    fin:   (annee + 1) + "-08-31"
   };
 }
 
@@ -411,7 +410,7 @@ function setPeriode(mode) {
 }
 
 function onPeriodeChange() {
-  // Désactiver les boutons rapides si dates modifiées manuellement
+  // Desactiver les boutons rapides si dates modifiees manuellement
   periodeMode = "custom";
   document.querySelectorAll(".btn-periode").forEach(b => b.classList.remove("active"));
   filtrer();
@@ -423,7 +422,7 @@ function periodeActive() {
   return { debut: d || null, fin: f || null };
 }
 
-/* ══ FILTRES ══ */
+/* == FILTRES == */
 document.querySelectorAll(".filters-grid input").forEach(i => i.addEventListener("input", filtrer));
 
 function resetFiltres() {
@@ -442,7 +441,7 @@ function filtrer() {
   const den  = parseFloat(document.getElementById("fDenMax").value) || null;
   const { debut, fin } = periodeActive();
 
-  filtrées = toutes.filter(r => {
+  filtrees = toutes.filter(r => {
     if (date   && r.date_rando !== date) return false;
     if (nom    && !(r.nom_rando  || "").toLowerCase().includes(nom))  return false;
     if (anim   && !(r.animateur  || "").toLowerCase().includes(anim)) return false;
@@ -457,7 +456,7 @@ function filtrer() {
   trierEtAfficher();
 }
 
-/* ══ TRI ══ */
+/* == TRI == */
 function trier(col) {
   if (colTri === col) sensTri *= -1;
   else { colTri = col; sensTri = 1; }
@@ -465,7 +464,7 @@ function trier(col) {
 }
 
 function trierEtAfficher() {
-  filtrées.sort((a, b) => {
+  filtrees.sort((a, b) => {
     let vA = a[colTri] ?? ""; let vB = b[colTri] ?? "";
     if (colTri === "date_rando") return (new Date(vA) - new Date(vB)) * sensTri;
     if (!isNaN(vA) && !isNaN(vB) && vA !== "" && vB !== "") return (vA - vB) * sensTri;
@@ -473,71 +472,71 @@ function trierEtAfficher() {
   });
   document.querySelectorAll(".sort-icon").forEach(el => el.textContent = "");
   const icon = document.getElementById("sort-" + colTri);
-  if (icon) icon.textContent = sensTri === 1 ? "▲" : "▼";
+  if (icon) icon.textContent = sensTri === 1 ? "\u25b2" : "\u25bc";
   afficher();
 }
 
-/* ══ IBP ══ */
+/* == IBP == */
 function ibpPill(v) {
   const n = parseFloat(v);
-  if (!v || isNaN(n)) return "—";
-  if (n <= 25)  return `<span class="ibp-pill ibp-n1">🟢 ${n}</span>`;
-  if (n <= 50)  return `<span class="ibp-pill ibp-n2">🔵 ${n}</span>`;
-  if (n <= 75)  return `<span class="ibp-pill ibp-n3">🟡 ${n}</span>`;
-  if (n <= 100) return `<span class="ibp-pill ibp-n4">🔴 ${n}</span>`;
-  return              `<span class="ibp-pill ibp-n5">⚫ ${n}</span>`;
+  if (!v || isNaN(n)) return "\u2014";
+  if (n <= 25)  return '<span class="ibp-pill ibp-n1">\ud83d\udfe2 ' + n + '</span>';
+  if (n <= 50)  return '<span class="ibp-pill ibp-n2">\ud83d\udd35 ' + n + '</span>';
+  if (n <= 75)  return '<span class="ibp-pill ibp-n3">\ud83d\udfe1 ' + n + '</span>';
+  if (n <= 100) return '<span class="ibp-pill ibp-n4">\ud83d\udd34 ' + n + '</span>';
+  return              '<span class="ibp-pill ibp-n5">\u26ab ' + n + '</span>';
 }
 function ibpLabel(v) {
   const n = parseFloat(v);
   if (!v || isNaN(n)) return "";
-  if (n <= 25)  return "🟢 N1 — Facile";
-  if (n <= 50)  return "🔵 N2 — Assez Facile";
-  if (n <= 75)  return "🟡 N3 — Peu Difficile";
-  if (n <= 100) return "🔴 N4 — Assez Difficile";
-  return              "⚫ N5 — Difficile";
+  if (n <= 25)  return "\ud83d\udfe2 N1 \u2014 Facile";
+  if (n <= 50)  return "\ud83d\udd35 N2 \u2014 Assez Facile";
+  if (n <= 75)  return "\ud83d\udfe1 N3 \u2014 Peu Difficile";
+  if (n <= 100) return "\ud83d\udd34 N4 \u2014 Assez Difficile";
+  return              "\u26ab N5 \u2014 Difficile";
 }
 
-/* ══ AFFICHAGE TABLE ══ */
+/* == AFFICHAGE TABLE == */
 function afficher() {
   const tbody = document.getElementById("tableBody");
-  if (!filtrées.length) {
-    tbody.innerHTML = `<tr><td colspan="7" class="empty">Aucune randonnée ne correspond aux filtres.</td></tr>`;
+  if (!filtrees.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">Aucune randonn\u00e9e ne correspond aux filtres.</td></tr>';
     majStats(); majHisto(); return;
   }
-  tbody.innerHTML = filtrées.map(f => {
+  tbody.innerHTML = filtrees.map(f => {
     const dateAff = f.date_rando
       ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", { day:"2-digit", month:"2-digit", year:"numeric" })
-      : "—";
-    const statut = f.statut || "publiée";
-    const badgeHtml = statut === "annulée"
-      ? `<span class="badge badge-ann">❌ Annulée</span>`
-      : statut === "modifiée"
-      ? `<span class="badge badge-mod">✏️ Modifiée</span>`
-      : `<span class="badge badge-pub">✅ Publiée</span>`;
-    const trClass  = statut === "annulée" ? "tr-ann" : "";
-    const nomClass = statut === "annulée" ? "td-nom barre" : "td-nom";
-    return `<tr class="${trClass}" onclick="voirDetail(${f.id})">
-      <td class="td-date">${dateAff}</td>
-      <td class="${nomClass}" title="${f.nom_rando || ''}">${f.nom_rando || "—"}</td>
-      <td>${ibpPill(f.ibp)}</td>
-      <td class="td-num col-stats">${f.distance ? f.distance + " km" : "—"}</td>
-      <td class="td-num col-stats">${f.denivele  ? f.denivele  + " m" : "—"}</td>
-      <td class="td-anim col-anim">👤 ${f.animateur || "—"}</td>
-      <td class="td-num col-stats">${f.nb_participants ? f.nb_participants + " pers." : "—"}</td>
-      <td>${badgeHtml}</td>
-    </tr>`;
+      : "\u2014";
+    const statut = f.statut || "publi\u00e9e";
+    const badgeHtml = statut === "annul\u00e9e"
+      ? '<span class="badge badge-ann">\u274c Annul\u00e9e</span>'
+      : statut === "modifi\u00e9e"
+      ? '<span class="badge badge-mod">\u270f\ufe0f Modifi\u00e9e</span>'
+      : '<span class="badge badge-pub">\u2705 Publi\u00e9e</span>';
+    const trClass  = statut === "annul\u00e9e" ? "tr-ann" : "";
+    const nomClass = statut === "annul\u00e9e" ? "td-nom barre" : "td-nom";
+    return '<tr class="' + trClass + '" onclick="voirDetail(' + f.id + ')">' +
+      '<td class="td-date">' + dateAff + '</td>' +
+      '<td class="' + nomClass + '" title="' + (f.nom_rando || '') + '">' + (f.nom_rando || "\u2014") + '</td>' +
+      '<td>' + ibpPill(f.ibp) + '</td>' +
+      '<td class="td-num col-stats">' + (f.distance ? f.distance + " km" : "\u2014") + '</td>' +
+      '<td class="td-num col-stats">' + (f.denivele  ? f.denivele  + " m" : "\u2014") + '</td>' +
+      '<td class="td-anim col-anim">\ud83d\udc64 ' + (f.animateur || "\u2014") + '</td>' +
+      '<td class="td-num col-stats">' + (f.nb_participants ? f.nb_participants + " pers." : "\u2014") + '</td>' +
+      '<td>' + badgeHtml + '</td>' +
+    '</tr>';
   }).join("");
   majStats();
   majHisto();
 }
 
-/* ══ HISTOGRAMME PARTICIPANTS ══ */
+/* == HISTOGRAMME PARTICIPANTS == */
 function majHisto() {
-  // Seulement les randos passées non annulées avec nb_participants
-  const donnees = filtrées
+  // Seulement les randos passees non annulees avec nb_participants
+  const donnees = filtrees
     .filter(r => {
       const d = new Date(r.date_rando + "T12:00:00");
-      return d <= new Date() && r.statut !== "annulée" && r.nb_participants > 0;
+      return d <= new Date() && r.statut !== "annul\u00e9e" && r.nb_participants > 0;
     })
     .sort((a, b) => new Date(a.date_rando) - new Date(b.date_rando));
 
@@ -557,7 +556,7 @@ function majHisto() {
   const min = Math.min(...valeurs);
   const total = valeurs.reduce((s, v) => s + v, 0);
 
-  // Couleurs : au-dessus de la moyenne → vert, en-dessous → orange
+  // Couleurs : au-dessus de la moyenne -> vert, en-dessous -> orange
   const couleurs = valeurs.map(v =>
     v >= moy ? "rgba(45,106,79,0.75)" : "rgba(193,68,14,0.65)"
   );
@@ -566,28 +565,17 @@ function majHisto() {
   );
 
   // Stats
-  document.getElementById("histoStats").innerHTML = `
-    <div class="histo-stat">
-      <div class="histo-stat-lbl">Randos</div>
-      <div class="histo-stat-val">${donnees.length}</div>
-    </div>
-    <div class="histo-stat">
-      <div class="histo-stat-lbl">Moyenne</div>
-      <div class="histo-stat-val" style="color:var(--blue-mid)">${moy.toFixed(1)}</div>
-    </div>
-    <div class="histo-stat">
-      <div class="histo-stat-lbl">Maximum</div>
-      <div class="histo-stat-val" style="color:#2d6a4f">${max}</div>
-    </div>
-    <div class="histo-stat">
-      <div class="histo-stat-lbl">Minimum</div>
-      <div class="histo-stat-val" style="color:#c1440e">${min}</div>
-    </div>
-    <div class="histo-stat">
-      <div class="histo-stat-lbl">Total pers.</div>
-      <div class="histo-stat-val">${total}</div>
-    </div>
-  `;
+  document.getElementById("histoStats").innerHTML =
+    '<div class="histo-stat"><div class="histo-stat-lbl">Randos</div>' +
+    '<div class="histo-stat-val">' + donnees.length + '</div></div>' +
+    '<div class="histo-stat"><div class="histo-stat-lbl">Moyenne</div>' +
+    '<div class="histo-stat-val" style="color:var(--blue-mid)">' + moy.toFixed(1) + '</div></div>' +
+    '<div class="histo-stat"><div class="histo-stat-lbl">Maximum</div>' +
+    '<div class="histo-stat-val" style="color:#2d6a4f">' + max + '</div></div>' +
+    '<div class="histo-stat"><div class="histo-stat-lbl">Minimum</div>' +
+    '<div class="histo-stat-val" style="color:#c1440e">' + min + '</div></div>' +
+    '<div class="histo-stat"><div class="histo-stat-lbl">Total pers.</div>' +
+    '<div class="histo-stat-val">' + total + '</div></div>';
 
   if (histoChart) { histoChart.destroy(); histoChart = null; }
 
@@ -607,7 +595,7 @@ function majHisto() {
           borderSkipped: false,
         },
         {
-          label: `Moyenne (${moy.toFixed(1)})`,
+          label: "Moyenne (" + moy.toFixed(1) + ")",
           data: Array(valeurs.length).fill(moy),
           type: "line",
           borderColor: "#1a3a5c",
@@ -633,15 +621,15 @@ function majHisto() {
             title: (items) => noms[items[0].dataIndex] || labels[items[0].dataIndex],
             label: (item) => {
               if (item.datasetIndex === 0)
-                return ` ${item.raw} participant${item.raw > 1 ? "s" : ""}`;
-              return ` Moyenne : ${parseFloat(item.raw).toFixed(1)}`;
+                return " " + item.raw + " participant" + (item.raw > 1 ? "s" : "");
+              return " Moyenne : " + parseFloat(item.raw).toFixed(1);
             },
             afterLabel: (item) => {
               if (item.datasetIndex === 0) {
                 const diff = item.raw - moy;
                 return diff >= 0
-                  ? ` ▲ +${diff.toFixed(1)} vs moy.`
-                  : ` ▼ ${diff.toFixed(1)} vs moy.`;
+                  ? " \u25b2 +" + diff.toFixed(1) + " vs moy."
+                  : " \u25bc " + diff.toFixed(1) + " vs moy.";
               }
             }
           },
@@ -668,10 +656,10 @@ function majHisto() {
   });
 }
 
-/* ══ STATS + RADAR ══ */
+/* == STATS + RADAR == */
 function majStats() {
-  const n = filtrées.length;
-  const animFiltré = document.getElementById("fAnimateur").value.toLowerCase().trim();
+  const n = filtrees.length;
+  const animFiltre = document.getElementById("fAnimateur").value.toLowerCase().trim();
   let totalKm = 0, totalDen = 0, totalIBP = 0, nbIBP = 0;
   toutes.forEach(r => {
     totalKm  += Number(r.distance) || 0;
@@ -683,9 +671,9 @@ function majStats() {
   const moyIBP = nbIBP ? totalIBP / nbIBP : 0;
 
   let aKm = 0, aDen = 0, aIBP = 0, aNbIBP = 0, aNb = 0;
-  if (animFiltré) {
-    filtrées.forEach(r => {
-      if ((r.animateur || "").toLowerCase().includes(animFiltré)) {
+  if (animFiltre) {
+    filtrees.forEach(r => {
+      if ((r.animateur || "").toLowerCase().includes(animFiltre)) {
         aKm  += Number(r.distance) || 0;
         aDen += Number(r.denivele) || 0;
         if (Number(r.ibp) > 0) { aIBP += Number(r.ibp); aNbIBP++; }
@@ -696,27 +684,27 @@ function majStats() {
   const aMoyKm  = aNb ? aKm  / aNb : 0;
   const aMoyDen = aNb ? aDen / aNb : 0;
   const aMoyIBP = aNbIBP ? aIBP / aNbIBP : 0;
-  const animNom = animFiltré
-    ? (filtrées.find(r => (r.animateur || "").toLowerCase().includes(animFiltré))?.animateur || animFiltré)
+  const animNom = animFiltre
+    ? (filtrees.find(r => (r.animateur || "").toLowerCase().includes(animFiltre))?.animateur || animFiltre)
     : "";
 
   const { debut, fin } = periodeActive();
   const periodeLabel = (debut || fin)
-    ? ` · période : ${debut ? debut.split("-").reverse().join("/") : "…"} → ${fin ? fin.split("-").reverse().join("/") : "…"}`
+    ? " \u00b7 p\u00e9riode : " + (debut ? debut.split("-").reverse().join("/") : "\u2026") + " \u2192 " + (fin ? fin.split("-").reverse().join("/") : "\u2026")
     : "";
 
   document.getElementById("statsText").innerHTML =
-    `📊 <strong>${n}</strong> randonnée(s) affichée(s) sur ${toutes.length}${periodeLabel}<br>` +
-    `<span style="color:var(--stone);font-size:12px;">Club —</span> ` +
-    `Moy. Distance : <strong>${moyKm.toFixed(1)} km</strong> · ` +
-    `Moy. D+ : <strong>${moyDen.toFixed(0)} m</strong> · ` +
-    `Moy. IBP : <strong>${moyIBP.toFixed(0)}</strong>` +
-    (animFiltré && aNb > 0
-      ? `<br><span style="color:var(--blue);font-size:12px;">👤 ${animNom} (${aNb} rando${aNb>1?"s":""}) —</span> ` +
-        `Moy. Distance : <strong style="color:var(--blue);">${aMoyKm.toFixed(1)} km</strong> · ` +
-        `Moy. D+ : <strong style="color:var(--blue);">${aMoyDen.toFixed(0)} m</strong> · ` +
-        `Moy. IBP : <strong style="color:var(--blue);">${aMoyIBP.toFixed(0)}</strong>`
-      : animFiltré ? `<br><span style="color:var(--stone);font-size:12px;">👤 Aucune randonnée trouvée.</span>` : "");
+    "\ud83d\udcca <strong>" + n + "</strong> randonn\u00e9e(s) affich\u00e9e(s) sur " + toutes.length + periodeLabel + "<br>" +
+    '<span style="color:var(--stone);font-size:12px;">Club \u2014</span> ' +
+    "Moy. Distance : <strong>" + moyKm.toFixed(1) + " km</strong> \u00b7 " +
+    "Moy. D+ : <strong>" + moyDen.toFixed(0) + " m</strong> \u00b7 " +
+    "Moy. IBP : <strong>" + moyIBP.toFixed(0) + "</strong>" +
+    (animFiltre && aNb > 0
+      ? '<br><span style="color:var(--blue);font-size:12px;">\ud83d\udc64 ' + animNom + " (" + aNb + " rando" + (aNb>1?"s":"") + ") \u2014</span> " +
+        'Moy. Distance : <strong style="color:var(--blue);">' + aMoyKm.toFixed(1) + " km</strong> \u00b7 " +
+        'Moy. D+ : <strong style="color:var(--blue);">' + aMoyDen.toFixed(0) + " m</strong> \u00b7 " +
+        'Moy. IBP : <strong style="color:var(--blue);">' + aMoyIBP.toFixed(0) + "</strong>"
+      : animFiltre ? '<br><span style="color:var(--stone);font-size:12px;">\ud83d\udc64 Aucune randonn\u00e9e trouv\u00e9e.</span>' : "");
 
   const ctx = document.getElementById("radarCanvas");
   if (radarChart) { radarChart.destroy(); radarChart = null; }
@@ -746,7 +734,7 @@ function majStats() {
   }
   radarChart = new Chart(ctx, {
     type: "radar",
-    data: { labels: ["Activité", "Distance", "Dénivelé", "Difficulté"], datasets },
+    data: { labels: ["Activit\u00e9", "Distance", "D\u00e9nivel\u00e9", "Difficult\u00e9"], datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: "top", labels: { boxWidth: 10, font: { size: 10 } } } },
@@ -755,66 +743,66 @@ function majStats() {
   });
 }
 
-/* ══ MODAL DÉTAIL ══ */
+/* == MODAL DETAIL == */
 function voirDetail(id) {
   const f = toutes.find(x => x.id === id);
   if (!f) return;
   idEnCours = id;
-  const statut = f.statut || "publiée";
-  const badgeTitre = statut === "annulée"
-    ? ' <span class="badge badge-ann" style="vertical-align:middle">❌ Annulée</span>'
-    : statut === "modifiée"
-    ? ' <span class="badge badge-mod" style="vertical-align:middle">✏️ Modifiée</span>'
+  const statut = f.statut || "publi\u00e9e";
+  const badgeTitre = statut === "annul\u00e9e"
+    ? ' <span class="badge badge-ann" style="vertical-align:middle">\u274c Annul\u00e9e</span>'
+    : statut === "modifi\u00e9e"
+    ? ' <span class="badge badge-mod" style="vertical-align:middle">\u270f\ufe0f Modifi\u00e9e</span>'
     : '';
   const dateAff = f.date_rando
     ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" })
-    : "—";
-  const mapsUrl = f.gps ? `https://www.google.com/maps?q=${f.gps}` : null;
-  document.getElementById("modalTitre").innerHTML = (f.nom_rando || "—") + badgeTitre;
+    : "\u2014";
+  const mapsUrl = f.gps ? "https://www.google.com/maps?q=" + f.gps : null;
+  document.getElementById("modalTitre").innerHTML = (f.nom_rando || "\u2014") + badgeTitre;
 
   let html = "";
-  if (f.profil_png) html += `<img src="${f.profil_png}" alt="Profil altitude" class="modal-profil">`;
+  if (f.profil_png) html += '<img src="' + f.profil_png + '" alt="Profil altitude" class="modal-profil">';
 
-  html += `<div class="detail-section"><div class="detail-section-titre">📅 Général</div>
-    <div class="detail-grid">
-      <div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">${dateAff}</div></div>
-      <div class="detail-item"><div class="detail-label">Animateur</div><div class="detail-value">👤 ${f.animateur || "—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Heure RV</div><div class="detail-value">⏰ ${f.heure_rv || "—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Statut</div><div class="detail-value">${
-        statut === "annulée" ? '<span class="badge badge-ann">❌ Annulée</span>' :
-        statut === "modifiée" ? '<span class="badge badge-mod">✏️ Modifiée</span>' :
-        '<span class="badge badge-pub">✅ Publiée</span>'}</div></div>
-    </div></div>`;
+  html += '<div class="detail-section"><div class="detail-section-titre">\ud83d\udcc5 G\u00e9n\u00e9ral</div>' +
+    '<div class="detail-grid">' +
+      '<div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">' + dateAff + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Animateur</div><div class="detail-value">\ud83d\udc64 ' + (f.animateur || "\u2014") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Heure RV</div><div class="detail-value">\u23f0 ' + (f.heure_rv || "\u2014") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Statut</div><div class="detail-value">' + (
+        statut === "annul\u00e9e" ? '<span class="badge badge-ann">\u274c Annul\u00e9e</span>' :
+        statut === "modifi\u00e9e" ? '<span class="badge badge-mod">\u270f\ufe0f Modifi\u00e9e</span>' :
+        '<span class="badge badge-pub">\u2705 Publi\u00e9e</span>') + '</div></div>' +
+    '</div></div>';
 
-  html += `<div class="detail-section"><div class="detail-section-titre">🅿️ Logistique</div>
-    <div class="detail-grid">
-      <div class="detail-item span2"><div class="detail-label">Parking covoiturage</div><div class="detail-value">${f.parking_covoit || "—"}</div></div>
-      <div class="detail-item span2"><div class="detail-label">Parking départ</div><div class="detail-value">${f.parking_depart || "—"}</div></div>
-      ${f.lieu ? `<div class="detail-item span2"><div class="detail-label">Lieu</div><div class="detail-value">📍 ${f.lieu}</div></div>` : ""}
-      ${f.gps ? `<div class="detail-item"><div class="detail-label">GPS</div><div class="detail-value">${f.gps}</div></div>
-        <div class="detail-item"><div class="detail-label">Carte</div><div class="detail-value"><a href="${mapsUrl}" target="_blank">🗺 Ouvrir Maps</a></div></div>` : ""}
-    </div></div>`;
+  html += '<div class="detail-section"><div class="detail-section-titre">\ud83c\udd7f\ufe0f Logistique</div>' +
+    '<div class="detail-grid">' +
+      '<div class="detail-item span2"><div class="detail-label">Parking covoiturage</div><div class="detail-value">' + (f.parking_covoit || "\u2014") + '</div></div>' +
+      '<div class="detail-item span2"><div class="detail-label">Parking d\u00e9part</div><div class="detail-value">' + (f.parking_depart || "\u2014") + '</div></div>' +
+      (f.lieu ? '<div class="detail-item span2"><div class="detail-label">Lieu</div><div class="detail-value">\ud83d\udccd ' + f.lieu + '</div></div>' : "") +
+      (f.gps ? '<div class="detail-item"><div class="detail-label">GPS</div><div class="detail-value">' + f.gps + '</div></div>' +
+        '<div class="detail-item"><div class="detail-label">Carte</div><div class="detail-value"><a href="' + mapsUrl + '" target="_blank">\ud83d\uddfa Ouvrir Maps</a></div></div>' : "") +
+    '</div></div>';
 
-  html += `<div class="detail-section"><div class="detail-section-titre">📏 Parcours</div>
-    <div class="detail-grid">
-      <div class="detail-item"><div class="detail-label">Distance</div><div class="detail-value">${f.distance ? f.distance + " km" : "—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Dénivelé +</div><div class="detail-value">${f.denivele ? f.denivele + " m" : "—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Durée</div><div class="detail-value">⏱ ${f.duree || "—"}</div></div>
-      <div class="detail-item"><div class="detail-label">IBP</div><div class="detail-value">${f.ibp ? ibpPill(f.ibp) + " " + ibpLabel(f.ibp) : "—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Effort</div><div class="detail-value">${f.effort ? f.effort + " / 5" : "—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Technicité</div><div class="detail-value">${f.technicite ? f.technicite + " / 5" : "—"}</div></div>
-      <div class="detail-item"><div class="detail-label">Risque</div><div class="detail-value">${f.risque ? f.risque + " / 5" : "—"}</div></div>
-    </div></div>`;
+  html += '<div class="detail-section"><div class="detail-section-titre">\ud83d\udccf Parcours</div>' +
+    '<div class="detail-grid">' +
+      '<div class="detail-item"><div class="detail-label">Distance</div><div class="detail-value">' + (f.distance ? f.distance + " km" : "\u2014") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">D\u00e9nivel\u00e9 +</div><div class="detail-value">' + (f.denivele ? f.denivele + " m" : "\u2014") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Dur\u00e9e</div><div class="detail-value">\u23f1 ' + (f.duree || "\u2014") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">IBP</div><div class="detail-value">' + (f.ibp ? ibpPill(f.ibp) + " " + ibpLabel(f.ibp) : "\u2014") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Effort</div><div class="detail-value">' + (f.effort ? f.effort + " / 5" : "\u2014") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Technicit\u00e9</div><div class="detail-value">' + (f.technicite ? f.technicite + " / 5" : "\u2014") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Risque</div><div class="detail-value">' + (f.risque ? f.risque + " / 5" : "\u2014") + '</div></div>' +
+    '</div></div>';
 
-  if (f.couts) html += `<div class="detail-section"><div class="detail-section-titre">💶 Coûts trajet</div>
-    <div class="detail-grid full"><div class="detail-item"><div class="detail-label">Détail</div><div class="detail-value">${f.couts}</div></div></div></div>`;
+  if (f.couts) html += '<div class="detail-section"><div class="detail-section-titre">\ud83d\udcb6 Co\u00fbts trajet</div>' +
+    '<div class="detail-grid full"><div class="detail-item"><div class="detail-label">D\u00e9tail</div><div class="detail-value">' + f.couts + '</div></div></div></div>';
 
-  if (f.remarques) html += `<div class="detail-section"><div class="detail-section-titre">📌 Remarques</div>
-    <div class="detail-grid full"><div class="detail-item"><div class="detail-value remarques">${f.remarques}</div></div></div></div>`;
+  if (f.remarques) html += '<div class="detail-section"><div class="detail-section-titre">\ud83d\udccc Remarques</div>' +
+    '<div class="detail-grid full"><div class="detail-item"><div class="detail-value remarques">' + f.remarques + '</div></div></div></div>';
 
   if (f.nb_participants || f.noms_participants) {
     const dateRando = new Date(f.date_rando + "T12:00:00");
-    if (dateRando < new Date() && f.statut !== "annulée") {
+    if (dateRando < new Date() && f.statut !== "annul\u00e9e") {
       let listeHtml = "";
       let nbInconnus = 0;
       if (f.noms_participants) {
@@ -822,21 +810,21 @@ function voirDetail(id) {
         nbInconnus = lignes.filter(l => l.includes("?")).length;
         listeHtml = lignes.map(l => {
           const inc = l.includes("?");
-          return `<div style="padding:3px 0;border-bottom:1px solid #f0e8dc;font-size:13px;${inc?"color:var(--stone);font-style:italic;":""}">
-            ${inc ? "⚠️ " : ""}${l.trim()}</div>`;
+          return '<div style="padding:3px 0;border-bottom:1px solid #f0e8dc;font-size:13px;' + (inc?"color:var(--stone);font-style:italic;":"") + '">' +
+            (inc ? "\u26a0\ufe0f " : "") + l.trim() + '</div>';
         }).join("");
       }
-      html += `<div class="detail-section"><div class="detail-section-titre">👥 Participants</div>
-        <div class="detail-grid">
-          <div class="detail-item"><div class="detail-label">Nombre</div>
-            <div class="detail-value" style="font-size:20px;font-weight:700;color:var(--blue);">${f.nb_participants || "—"}</div></div>
-          ${nbInconnus > 0 ? `<div class="detail-item"><div class="detail-label">Avertissement</div>
-            <div class="detail-value" style="color:#856404;font-size:12px;">⚠️ ${nbInconnus} sans nom identifié</div></div>`
-            : "<div class='detail-item'></div>"}
-          ${listeHtml ? `<div class="detail-item span2" style="padding:0;">
-            <div class="detail-label" style="padding:8px 12px 4px;">Liste</div>
-            <div style="padding:0 12px 8px;">${listeHtml}</div></div>` : ""}
-        </div></div>`;
+      html += '<div class="detail-section"><div class="detail-section-titre">\ud83d\udc65 Participants</div>' +
+        '<div class="detail-grid">' +
+          '<div class="detail-item"><div class="detail-label">Nombre</div>' +
+            '<div class="detail-value" style="font-size:20px;font-weight:700;color:var(--blue);">' + (f.nb_participants || "\u2014") + '</div></div>' +
+          (nbInconnus > 0 ? '<div class="detail-item"><div class="detail-label">Avertissement</div>' +
+            '<div class="detail-value" style="color:#856404;font-size:12px;">\u26a0\ufe0f ' + nbInconnus + ' sans nom identifi\u00e9</div></div>'
+            : "<div class='detail-item'></div>") +
+          (listeHtml ? '<div class="detail-item span2" style="padding:0;">' +
+            '<div class="detail-label" style="padding:8px 12px 4px;">Liste</div>' +
+            '<div style="padding:0 12px 8px;">' + listeHtml + '</div></div>' : "") +
+        '</div></div>';
     }
   }
 
@@ -845,16 +833,15 @@ function voirDetail(id) {
 }
 
 function fermerDetail() { document.getElementById("modalDetail").classList.remove("open"); }
-/* modalDetail listener géré dans DOMContentLoaded ci-dessus */
 
 function appInit() { charger(); }
 
-/* Démarrer directement sans auth */
+/* Demarrer directement sans auth */
 document.addEventListener('DOMContentLoaded', appInit);
 
-/* ══ EXPORT CSV ══════════════════════════════════════════════ */
+/* == EXPORT CSV ============================================== */
 function ouvrirExport() {
-  /* Pré-remplir avec la période active */
+  /* Pre-remplir avec la periode active */
   const debut = document.getElementById("periodeDebut").value;
   const fin   = document.getElementById("periodeFin").value;
   document.getElementById("exportDebut").value = debut;
@@ -885,26 +872,26 @@ function majPreviewExport() {
   const preview = document.getElementById("exportPreview");
   const btnDl   = document.getElementById("btnDlCsv");
 
-  /* Filtrer les données selon la période */
+  /* Filtrer les donnees selon la periode */
   const donnees = toutes.filter(r => {
-    if (r.statut === "annulée") return false;
+    if (r.statut === "annul\u00e9e") return false;
     if (debut && r.date_rando < debut) return false;
     if (fin   && r.date_rando > fin)   return false;
     return true;
   });
 
   if (!donnees.length) {
-    preview.textContent = "Aucune randonnée sur cette période.";
+    preview.textContent = "Aucune randonn\u00e9e sur cette p\u00e9riode.";
     btnDl.disabled = true;
     return;
   }
 
   const periodeLabel = debut || fin
-    ? `du ${debut ? debut.split("-").reverse().join("/") : "…"} au ${fin ? fin.split("-").reverse().join("/") : "…"}`
+    ? "du " + (debut ? debut.split("-").reverse().join("/") : "\u2026") + " au " + (fin ? fin.split("-").reverse().join("/") : "\u2026")
     : "toutes les saisons";
 
-  preview.innerHTML = `<strong>${donnees.length}</strong> randonnée${donnees.length > 1 ? "s" : ""} ${periodeLabel}<br>
-    <span style="font-size:11px;">Colonnes : Date · Randonnée · Animateur · IBP · Distance · Dénivelé · Durée · Participants · Statut</span>`;
+  preview.innerHTML = "<strong>" + donnees.length + "</strong> randonn\u00e9e" + (donnees.length > 1 ? "s" : "") + " " + periodeLabel + "<br>" +
+    '<span style="font-size:11px;">Colonnes : Date \u00b7 Randonn\u00e9e \u00b7 Animateur \u00b7 IBP \u00b7 Distance \u00b7 D\u00e9nivel\u00e9 \u00b7 Dur\u00e9e \u00b7 Participants \u00b7 Statut</span>';
   btnDl.disabled = false;
 }
 
@@ -913,7 +900,7 @@ function telechargerCSV() {
   const fin   = document.getElementById("exportFin").value;
 
   const donnees = toutes.filter(r => {
-    if (r.statut === "annulée") return false;
+    if (r.statut === "annul\u00e9e") return false;
     if (debut && r.date_rando < debut) return false;
     if (fin   && r.date_rando > fin)   return false;
     return true;
@@ -925,10 +912,10 @@ function telechargerCSV() {
   const esc = v => {
     if (v === null || v === undefined) return "";
     const s = String(v).replace(/"/g, '""');
-    return s.includes(sep) || s.includes('"') || s.includes("\n") ? `"${s}"` : s;
+    return s.includes(sep) || s.includes('"') || s.includes("\n") ? '"' + s + '"' : s;
   };
 
-  const headers = ["Jour", "Date", "Randonnée", "Animateur", "IBP", "Distance (km)", "Dénivelé (m)", "Durée", "Participants", "Statut"];
+  const headers = ["Jour", "Date", "Randonn\u00e9e", "Animateur", "IBP", "Distance (km)", "D\u00e9nivel\u00e9 (m)", "Dur\u00e9e", "Participants", "Statut"];
   const jours = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
   const rows = donnees.map(r => {
@@ -945,7 +932,7 @@ function telechargerCSV() {
       esc(r.denivele),
       esc(r.duree),
       esc(r.nb_participants),
-      esc(r.statut || "publiée"),
+      esc(r.statut || "publi\u00e9e"),
     ].join(sep);
   });
 
@@ -954,8 +941,8 @@ function telechargerCSV() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
   a.href     = url;
-  const suffix = debut ? `_${debut}_${fin || "fin"}` : "_toutes";
-  a.download = `randonnees_marmotte${suffix}.csv`;
+  const suffix = debut ? "_" + debut + "_" + (fin || "fin") : "_toutes";
+  a.download = "randonnees_marmotte" + suffix + ".csv";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -963,7 +950,7 @@ function telechargerCSV() {
   fermerExport();
 }
 
-/* ══ IMPORT CSV ══════════════════════════════════════════════ */
+/* == IMPORT CSV ============================================== */
 let _importData = [];
 
 function ouvrirImport() {
@@ -982,7 +969,7 @@ function normaliserNom(str) {
   return (str || '').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[-_]/g, ' ')
-    .split(/\s+/).filter(m => m.length > 2);
+    .split(/\s+/).filter(m => m.length >= 2);   // >= 2 : capte aussi les noms courts
 }
 function toISODateImport(str) {
   if (!str) return null;
@@ -990,7 +977,7 @@ function toISODateImport(str) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
     const [d, m, y] = str.split('/');
-    return `${y}-${m}-${d}`;
+    return y + "-" + m + "-" + d;
   }
   return null;
 }
@@ -1018,7 +1005,7 @@ function previewImport() {
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
     const lignes = text.split(/\r?\n/).filter(l => l.trim());
     if (lignes.length < 2) {
-      preview.innerHTML = '<span style="color:#c1440e;">⚠️ Fichier vide ou invalide</span>';
+      preview.innerHTML = '<span style="color:#c1440e;">\u26a0\ufe0f Fichier vide ou invalide</span>';
       preview.style.display = 'block'; return;
     }
     const sep = detecterSep(lignes[0]);
@@ -1031,8 +1018,8 @@ function previewImport() {
     if (iAnim===-1) manquantes.push('Animateur');
     if (iPart===-1) manquantes.push('Participants');
     if (manquantes.length > 0) {
-      preview.innerHTML = `<span style="color:#c1440e;">❌ Colonnes manquantes : ${manquantes.join(', ')}</span><br>
-        <span style="color:#8a7560;">Colonnes trouvées : ${headers.join(', ')}</span>`;
+      preview.innerHTML = '<span style="color:#c1440e;">\u274c Colonnes manquantes : ' + manquantes.join(', ') + '</span><br>' +
+        '<span style="color:#8a7560;">Colonnes trouv\u00e9es : ' + headers.join(', ') + '</span>';
       preview.style.display = 'block'; return;
     }
     _importData = [];
@@ -1044,12 +1031,12 @@ function previewImport() {
       if (!date || !anim || isNaN(nb)) continue;
       _importData.push({ date, anim, nb, ligne: i+1 });
     }
-    preview.innerHTML = `<strong>${_importData.length} ligne(s) valide(s)</strong> sur ${lignes.length-1} (séparateur : <code>${sep}</code>)<br>
-      <strong>Colonnes :</strong> Date[${iDate}] · Animateur[${iAnim}] · Participants[${iPart}]<br><br>
-      <div style="max-height:120px;overflow-y:auto;">
-        ${_importData.slice(0,5).map(r => `<div style="padding:2px 0;border-bottom:1px solid #e8d8c4;">📅 ${r.date} · 👤 ${r.anim} · 👥 ${r.nb}</div>`).join('')}
-        ${_importData.length > 5 ? `<div style="color:#8a7560;font-style:italic;">… et ${_importData.length-5} autre(s)</div>` : ''}
-      </div>`;
+    preview.innerHTML = '<strong>' + _importData.length + ' ligne(s) valide(s)</strong> sur ' + (lignes.length-1) + ' (s\u00e9parateur : <code>' + sep + '</code>)<br>' +
+      '<strong>Colonnes :</strong> Date[' + iDate + '] \u00b7 Animateur[' + iAnim + '] \u00b7 Participants[' + iPart + ']<br><br>' +
+      '<div style="max-height:120px;overflow-y:auto;">' +
+        _importData.slice(0,5).map(r => '<div style="padding:2px 0;border-bottom:1px solid #e8d8c4;">\ud83d\udcc5 ' + r.date + ' \u00b7 \ud83d\udc64 ' + r.anim + ' \u00b7 \ud83d\udc65 ' + r.nb + '</div>').join('') +
+        (_importData.length > 5 ? '<div style="color:#8a7560;font-style:italic;">\u2026 et ' + (_importData.length-5) + ' autre(s)</div>' : '') +
+      '</div>';
     preview.style.display = 'block';
     btnImport.disabled = _importData.length === 0;
   };
@@ -1059,56 +1046,71 @@ function previewImport() {
 async function lancerImport() {
   const btn = document.getElementById('btnImport');
   const result = document.getElementById('importResult');
-  btn.disabled = true; btn.textContent = '⏳ Import en cours…';
+  btn.disabled = true; btn.textContent = '\u23f3 Import en cours\u2026';
   result.style.display = 'none';
   let ok = 0, ignored = 0, errors = 0;
   const details = [];
+
   for (const row of _importData) {
     const motsAnim = normaliserNom(row.anim);
-    const fiche = toutes.find(f => {
-      if (f.date_rando !== row.date) return false;
+
+    /* 1) fiches a cette date */
+    const fichesDate = toutes.filter(f => f.date_rando === row.date);
+    if (fichesDate.length === 0) {
+      ignored++;
+      details.push('\u26a0\ufe0f Ligne ' + row.ligne + ' \u2014 ' + row.date + ' : aucune fiche \u00e0 cette date');
+      continue;
+    }
+
+    /* 2) parmi elles, celle dont l'animateur matche (inclusion bidirectionnelle) */
+    const fiche = fichesDate.find(f => {
       const motsF = normaliserNom(f.animateur);
-      return motsAnim.some(m => motsF.includes(m));
+      return motsAnim.some(m => motsF.includes(m)) || motsF.some(m => motsAnim.includes(m));
     });
     if (!fiche) {
       ignored++;
-      details.push(`⚠️ Ligne ${row.ligne} — ${row.date} / ${row.anim} : aucune fiche trouvée`);
+      const animsDispo = fichesDate.map(f => f.animateur || '?').join(', ');
+      details.push('\u26a0\ufe0f Ligne ' + row.ligne + ' \u2014 ' + row.date + ' : "' + row.anim + '" ne correspond \u00e0 aucun animateur (pr\u00e9sents ce jour : ' + animsDispo + ')');
       continue;
     }
+
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${fiche.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Prefer':'return=minimal' },
-        body: JSON.stringify({ nb_participants: row.nb })
+      const res = await fetch(URL_HANDLER, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'updateFiche',
+          id: fiche.id,
+          fiche: { nb_participants: row.nb }
+        })
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
         ok++; fiche.nb_participants = row.nb;
-        details.push(`✅ ${row.date} / ${fiche.animateur} → ${row.nb} participants`);
+        details.push('\u2705 ' + row.date + ' / ' + fiche.animateur + ' \u2192 ' + row.nb + ' participants');
       } else {
-        errors++; details.push(`❌ HTTP ${res.status} — fiche id=${fiche.id}`);
+        errors++;
+        details.push('\u274c Refus serveur \u2014 fiche id=' + fiche.id + ' (' + (data.error || res.status) + ')');
       }
-    } catch(e) { errors++; details.push(`❌ Réseau : ${e.message}`); }
+    } catch(e) { errors++; details.push('\u274c R\u00e9seau : ' + e.message); }
   }
+
   if (ok > 0) filtrer();
-  result.style.cssText = `display:block;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;
-    background:${errors>0?'#fef2f2':ok>0?'#f0fdf4':'#fff8ee'};
-    border:1.5px solid ${errors>0?'#fca5a5':ok>0?'#86efac':'#e8d8c4'};`;
-  result.innerHTML = `<strong>Résultat :</strong> ✅ ${ok} mis à jour · ⚠️ ${ignored} ignoré(s) · ❌ ${errors} erreur(s)<br><br>
-    <div style="max-height:150px;overflow-y:auto;font-size:11px;line-height:1.8;">${details.join('<br>')}</div>`;
-  btn.textContent = '⬆️ Importer'; btn.disabled = false;
+  result.style.cssText = 'display:block;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;' +
+    'background:' + (errors>0?'#fef2f2':ok>0?'#f0fdf4':'#fff8ee') + ';' +
+    'border:1.5px solid ' + (errors>0?'#fca5a5':ok>0?'#86efac':'#e8d8c4') + ';';
+  result.innerHTML = '<strong>R\u00e9sultat :</strong> \u2705 ' + ok + ' mis \u00e0 jour \u00b7 \u26a0\ufe0f ' + ignored + ' ignor\u00e9(s) \u00b7 \u274c ' + errors + ' erreur(s)<br><br>' +
+    '<div style="max-height:150px;overflow-y:auto;font-size:11px;line-height:1.8;">' + details.join('<br>') + '</div>';
+  btn.textContent = '\u2b06\ufe0f Importer'; btn.disabled = false;
 }
 
-/* ══ FIN IMPORT CSV ══ */
+/* == FIN IMPORT CSV == */
 
-/* Fermer modal export au clic extérieur — initialisé après chargement DOM */
+/* Fermer modals au clic exterieur */
 document.addEventListener("DOMContentLoaded", function() {
   const overlay = document.getElementById("exportOverlay");
   if (overlay) overlay.addEventListener("click", function(e) {
     if (e.target === this) fermerExport();
-  });
-  const importOvl = document.getElementById("importOverlay");
-  if (importOvl) importOvl.addEventListener("click", function(e) {
-    if (e.target === this) fermerImport();
   });
   const importOverlay = document.getElementById("importOverlay");
   if (importOverlay) importOverlay.addEventListener("click", function(e) {
@@ -1123,25 +1125,25 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 
-<!-- ══ MODAL IMPORT CSV ══ -->
+<!-- == MODAL IMPORT CSV == -->
 <div class="export-overlay" id="importOverlay">
   <div class="export-box" style="max-width:600px;">
-    <div class="export-titre">⬆️ Import CSV — Participants</div>
+    <div class="export-titre">&#11014;&#65039; Import CSV &mdash; Participants</div>
 
     <div style="background:#f0f9f4;border:1.5px solid #86efac;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#166534;line-height:1.8;">
-      <strong>📋 Conditions d'import :</strong><br>
-      • Séparateur <code>;</code> ou <code>,</code> (détecté automatiquement)<br>
-      • Encodage UTF-8<br>
-      • <strong>Colonnes obligatoires</strong> (noms flexibles) :<br>
-      &nbsp;&nbsp;— <strong>Date</strong> : <code>date</code>, <code>date_rando</code> — format JJ/MM/AAAA ou AAAA-MM-JJ<br>
-      &nbsp;&nbsp;— <strong>Animateur</strong> : <code>animateur</code> — nom, prénom ou les deux dans n'importe quel ordre<br>
-      &nbsp;&nbsp;— <strong>Participants</strong> : <code>nb_participants</code>, <code>participants</code><br>
-      • Matching par <strong>date + animateur</strong> — mise à jour du nb de participants si trouvé<br>
-      • Lignes sans correspondance → ignorées avec avertissement
+      <strong>&#128203; Conditions d'import :</strong><br>
+      &bull; S&eacute;parateur <code>;</code> ou <code>,</code> (d&eacute;tect&eacute; automatiquement)<br>
+      &bull; Encodage UTF-8<br>
+      &bull; <strong>Colonnes obligatoires</strong> (noms flexibles) :<br>
+      &nbsp;&nbsp;&mdash; <strong>Date</strong> : <code>date</code>, <code>date_rando</code> &mdash; format JJ/MM/AAAA ou AAAA-MM-JJ<br>
+      &nbsp;&nbsp;&mdash; <strong>Animateur</strong> : <code>animateur</code> &mdash; nom, pr&eacute;nom ou les deux dans n'importe quel ordre<br>
+      &nbsp;&nbsp;&mdash; <strong>Participants</strong> : <code>nb_participants</code>, <code>participants</code><br>
+      &bull; Matching par <strong>date + animateur</strong> &mdash; mise &agrave; jour du nb de participants si trouv&eacute;<br>
+      &bull; Lignes sans correspondance &rarr; ignor&eacute;es avec avertissement
     </div>
 
     <div style="margin-bottom:14px;">
-      <label style="display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px;">Sélectionner un fichier CSV</label>
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px;">S&eacute;lectionner un fichier CSV</label>
       <input type="file" id="importFile" accept=".csv,.txt"
         style="width:100%;padding:8px;border:1.5px dashed #e8d8c4;border-radius:8px;background:var(--cream);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;"
         onchange="previewImport()">
@@ -1154,15 +1156,15 @@ document.addEventListener("DOMContentLoaded", function() {
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button class="btn-export-cancel" onclick="fermerImport()">Annuler</button>
       <button class="btn-export-dl" id="btnImport" onclick="lancerImport()" disabled
-        style="background:#2d6a4f;">⬆️ Importer</button>
+        style="background:#2d6a4f;">&#11014;&#65039; Importer</button>
     </div>
   </div>
 </div>
 
-<!-- ══ MODAL EXPORT CSV ══ -->
+<!-- == MODAL EXPORT CSV == -->
 <div class="export-overlay" id="exportOverlay">
   <div class="export-box">
-    <div class="export-titre">⬇️ Export CSV — Randonnées</div>
+    <div class="export-titre">&#11015;&#65039; Export CSV &mdash; Randonn&eacute;es</div>
     <div class="export-row">
       <label>Du</label>
       <input type="date" id="exportDebut" onchange="majPreviewExport()">
@@ -1172,20 +1174,20 @@ document.addEventListener("DOMContentLoaded", function() {
     <div class="export-row" style="margin-bottom:8px;">
       <label style="font-size:12px;color:var(--stone);">Raccourcis :</label>
       <button class="btn-periode" onclick="setExportPeriode('an1')" style="font-size:11px;padding:4px 10px;">Cette saison</button>
-      <button class="btn-periode" onclick="setExportPeriode('an2')" style="font-size:11px;padding:4px 10px;">Saison préc.</button>
+      <button class="btn-periode" onclick="setExportPeriode('an2')" style="font-size:11px;padding:4px 10px;">Saison pr&eacute;c.</button>
       <button class="btn-periode" onclick="setExportPeriode('tout')" style="font-size:11px;padding:4px 10px;">Tout</button>
     </div>
-    <div class="export-preview" id="exportPreview">Sélectionnez une période…</div>
+    <div class="export-preview" id="exportPreview">S&eacute;lectionnez une p&eacute;riode&hellip;</div>
     <div class="export-actions">
       <button class="btn-export-cancel" onclick="fermerExport()">Annuler</button>
-      <button class="btn-export-dl" id="btnDlCsv" onclick="telechargerCSV()" disabled>⬇️ Télécharger</button>
+      <button class="btn-export-dl" id="btnDlCsv" onclick="telechargerCSV()" disabled>&#11015;&#65039; T&eacute;l&eacute;charger</button>
     </div>
   </div>
 </div>
 
 
 <script>
-/* ── Auto-resize iframe parent (Webnode) ── */
+/* -- Auto-resize iframe parent (Webnode) -- */
 function sendHeight() {
   const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
   window.parent.postMessage({ type: 'resize', height: h }, '*');
