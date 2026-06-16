@@ -126,7 +126,6 @@
   .chk-col { width: 34px; text-align: center; }
   input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #2d6a4f; }
 
-  /* ══ BOUTON CALENDRIER HEADER ══ */
   .btn-cal { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.4); color: #fff; padding: 7px 14px; border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .2s; }
   .btn-cal:hover { background: rgba(255,255,255,.35); }
   #modal-export { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; align-items:center; justify-content:center; }
@@ -136,7 +135,6 @@
   .mex-filters { display:grid; grid-template-columns:1fr 1fr auto; gap:14px; align-items:end; margin-bottom:20px; }
   .mex-scroll { max-height:340px; overflow-y:auto; }
 
-  /* ══ POPUP CALENDRIER ══ */
   #cal-popup {
     position: fixed; top: 64px; right: 24px; z-index: 200;
     background: #fff; border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,.22);
@@ -211,24 +209,20 @@
   .tr-old { display: none; }
   .tr-old.visible { display: table-row; }
 
-  /* ══ TOGGLE TYPE ÉVÉNEMENT ══ */
   .type-toggle { display: flex; gap: 0; border: 1.5px solid #e2e8f0; border-radius: 9px; overflow: hidden; width: fit-content; margin-bottom: 20px; }
   .type-btn { padding: 8px 22px; background: #fff; border: none; font-size: .88rem; font-weight: 600; cursor: pointer; color: #718096; transition: all .15s; font-family: inherit; }
   .type-btn:not(.active):hover { background: #f7fafc; }
   .type-btn.active-rando  { background: #2d6a4f; color: #fff; }
   .type-btn.active-sejour { background: #185fa5; color: #fff; }
 
-  /* ══ BLOC SÉJOUR ══ */
   .sejour-dates-bloc { background: #e8f4fd; border: 1.5px solid #b5d4f4; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
   .sejour-dates-titre { font-size: .82rem; font-weight: 700; color: #0c4472; margin-bottom: 12px; }
   .sejour-dates-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
-  /* ══ RATTACHEMENT SÉJOUR (dans formulaire rando) ══ */
   .rattach-sejour-bloc { background: #f0f7ff; border: 1.5px solid #b5d4f4; border-radius: 9px; padding: 7px 10px; margin-bottom: 8px; }
   .rattach-sejour-titre { font-size: .8rem; font-weight: 700; color: #185fa5; margin-bottom: 7px; }
   .rattach-sejour-bloc select { border-color: #85b7eb; font-size: .88rem; }
 
-  /* ══ LIGNE SÉJOUR dans le tableau ══ */
   .tr-sejour td { background: #ddeef8 !important; }
   .tr-sejour:hover td { background: #cce4f3 !important; }
   .tr-sejour-nom { color: #0c4472; font-weight: 700; }
@@ -236,14 +230,12 @@
   .tr-dans-sejour td { background: #f5faff; }
   .tr-dans-sejour:hover td { background: #e8f4fd !important; }
 
-  /* ══ SÉJOUR PLIÉ/DÉPLIÉ ══ */
   .tr-sejour { cursor: pointer; }
   .sejour-toggle-arrow { display: inline-block; transition: transform .2s; margin-right: 6px; font-size: .85rem; color: #185fa5; }
   .sejour-toggle-arrow.open { transform: rotate(90deg); }
   .tr-dans-sejour { display: none; }
   .tr-dans-sejour.visible { display: table-row; }
 
-  /* ══ DROPDOWN RATTACHEMENT INLINE ══ */
   .rattach-dropdown {
     position: fixed;
     top: 50%; left: 50%;
@@ -272,7 +264,6 @@
   .btn-rattach:hover { background: #b5d4f4; }
   .btn-rattach.rattache { background: #ddeef8; color: #0c4472; font-style: italic; }
 
-  /* ══ BANDEAU INFO MODAL ══ */
   .modal-info-banner {
     background: #e6f1fb; border: 1px solid #85b7eb; border-left: 3px solid #185fa5;
     border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 18px;
@@ -282,17 +273,28 @@
   .modal-info-banner .banner-title { font-size: .8rem; font-weight: 700; color: #0c4472; margin-bottom: 4px; }
   .modal-info-banner .banner-body { font-size: .76rem; color: #185fa5; line-height: 1.5; margin: 0; }
   .modal-info-banner .banner-body strong { color: #0c4472; }
+
+  /* Recherche texte */
+  .search-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 11px; padding-bottom: 11px; border-bottom: 1px solid #edf2f7; }
+  .search-wrap { position: relative; flex: 1; min-width: 220px; max-width: 420px; }
+  .search-wrap input { width: 100%; padding: 7px 30px 7px 12px; border: 1.5px solid #e2e8f0; border-radius: 7px; font-size: .86rem; font-family: inherit; color: #2d3748; }
+  .search-wrap input:focus { outline: none; border-color: #52b788; }
+  .search-wrap input.active { border-color: #52b788; }
+  .search-clear { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-size: .85rem; color: #a0aec0; cursor: pointer; display: none; }
+  .search-clear.visible { display: block; }
+  .search-badge { font-size: .74rem; color: #fff; background: #ed8936; border-radius: 20px; padding: 2px 10px; font-weight: 600; display: none; }
+  .search-badge.visible { display: inline-block; }
+  .search-info { background: #fffaf0; border: 1px solid #fbd38d; border-radius: 7px; padding: 7px 12px; margin-bottom: 12px; font-size: .78rem; color: #9c4221; display: none; }
+  .search-info.visible { display: block; }
 </style>
 </head>
 <body>
 
-<!-- ══ DÉTECTION PKCE RECOVERY ══ -->
 <script>
 window._attendRecovery = new URLSearchParams(window.location.search).has('code');
 console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.search);
 </script>
 
-<!-- ══ ÉCRAN DE CONNEXION ══ -->
 <div id="login-screen">
   <div class="login-box">
     <div class="logo">🏔️</div>
@@ -314,7 +316,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
   </div>
 </div>
 
-<!-- ══ APPLICATION ══ -->
 <div id="app">
 
   <header>
@@ -327,7 +328,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
 
   <div class="main-content">
 
-    <!-- ══ CRÉATION ══ -->
     <div class="card">
       <div class="card-title">🆕 Nouvel événement</div>
       <div style="margin-bottom:6px;font-size:.82rem;font-weight:600;color:#4a5568">Type d'événement</div>
@@ -336,7 +336,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
         <button class="type-btn" id="btn-type-sejour" onclick="switchType('sejour')">🏕 Séjour</button>
       </div>
 
-      <!-- ══ FORMULAIRE RANDONNÉE ══ -->
       <div id="bloc-form-rando">
         <div class="rattach-sejour-bloc">
           <div class="rattach-sejour-titre">🏕 Rattacher à un séjour (optionnel)</div>
@@ -367,7 +366,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
         <div class="form-actions"><button class="btn btn-primary" id="btn-create" onclick="creerRando()">➕ Créer l'événement</button></div>
       </div>
 
-      <!-- ══ FORMULAIRE SÉJOUR ══ -->
       <div id="bloc-form-sejour" style="display:none">
         <div class="sejour-dates-bloc">
           <div class="sejour-dates-titre">🗓 Dates du séjour</div>
@@ -392,11 +390,18 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
       </div>
     </div>
 
-    <!-- ══ SÉPARATEUR ══ -->
     <div class="section-divider"><span>📋 Événements planifiés</span></div>
 
-    <!-- ══ FILTRE DATES ══ -->
-    <div class="card" style="padding:10px 16px;">
+    <div class="card" style="padding:12px 16px;">
+      <div class="search-row">
+        <span style="font-size:.82rem;font-weight:600;color:#4a5568;">🔍 Recherche</span>
+        <div class="search-wrap">
+          <input type="text" id="recherche" placeholder="Nom de rando ou animateur…" autocomplete="off" oninput="appliquerRecherche()">
+          <span class="search-clear" id="search-clear" onclick="effacerRecherche()">✕</span>
+        </div>
+        <span style="font-size:.76rem;color:#718096;">nom ou animateur</span>
+        <span class="search-badge" id="search-badge">historique inclus</span>
+      </div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <span style="font-size:.82rem;font-weight:600;color:#4a5568;">🗓 Période :</span>
         <div style="display:flex;align-items:center;gap:6px;">
@@ -412,7 +417,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
       </div>
     </div>
 
-    <!-- ══ GESTION ══ -->
     <div class="card">
       <div class="gestion-header">
         <div><p class="chk-warning">⚠️ Les cases à cocher servent à la <strong>suppression définitive</strong> des fiches — action irréversible.</p></div>
@@ -421,6 +425,7 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
           <button class="btn-del-multi" id="btn-del-multi" disabled onclick="confirmSupprimerSelection()">🗑️ Supprimer la sélection</button>
         </div>
       </div>
+      <div class="search-info" id="search-info"></div>
       <div class="table-wrap">
         <table id="events-table">
           <thead>
@@ -445,7 +450,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
   </div>
 </div>
 
-<!-- ══ MODAL MODIFIER ══ -->
 <div class="modal-overlay" id="modal-edit">
   <div class="modal" style="width:680px">
     <h3>✏️ Modifier l'événement</h3>
@@ -457,7 +461,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
     <input type="hidden" id="edit-date-original">
     <input type="hidden" id="edit-statut-modifie" value="0">
 
-    <!-- ══ BANDEAU INFO ══ -->
     <div class="modal-info-banner">
       <span class="banner-icon">ℹ️</span>
       <div>
@@ -508,7 +511,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
         <textarea id="edit-remarques" style="min-height:65px;resize:vertical" placeholder="Notes, modifications…" oninput="onEditFieldChange()"></textarea>
       </div>
 
-      <!-- ══ PARTICIPANTS (visible si rando passée et non annulée) ══ -->
       <div id="edit-sectionParticipants" class="form-group full" style="display:none;border-top:1px solid #e0e8f0;padding-top:14px;margin-top:4px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
           <div style="width:3px;height:14px;background:#2e7d32;border-radius:2px;flex-shrink:0;"></div>
@@ -542,7 +544,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
   </div>
 </div>
 
-<!-- ══ MODAL CONFIRMATION ANNULATION ══ -->
 <div class="modal-overlay" id="modal-confirm">
   <div class="modal" style="max-width:460px;text-align:center">
     <div class="modal-confirm-icon">⚠️</div>
@@ -557,7 +558,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
   </div>
 </div>
 
-<!-- ══ MODAL CONFIRMATION SUPPRESSION MULTIPLE ══ -->
 <div class="modal-overlay" id="modal-suppr-multi">
   <div class="modal" style="max-width:460px;text-align:center">
     <div class="modal-suppr-icon">🗑️</div>
@@ -571,7 +571,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
   </div>
 </div>
 
-<!-- ══ POPUP CALENDRIER ══ -->
 <div id="cal-popup">
   <div class="cal-header">
     <h3>📅 Calendrier des randonnées</h3>
@@ -597,7 +596,6 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
 
 <div id="toast"></div>
 
-<!-- ══ MODAL RESET MOT DE PASSE ══ -->
 <div class="modal-overlay" id="modal-reset-pwd" style="z-index:10000;background:rgba(0,0,0,0.85);cursor:default;">
   <div class="modal" style="max-width:400px;text-align:center;">
     <div style="font-size:2rem;margin-bottom:10px;">🔑</div>
@@ -635,8 +633,8 @@ let sortCol      = "date";
 let sortDir      = "desc";
 let filtreDebut  = null;
 let filtreFin    = null;
+let rechercheTexte = "";
 
-/* État plié/déplié des séjours — Map<sejourId, bool> */
 const sejourOuverts = new Map();
 
 async function authHeaders(extra = {}) {
@@ -766,8 +764,31 @@ function appliquerFiltreDates() {
 }
 function reinitialiserFiltre() {
   document.getElementById("filtre-debut").value = ""; document.getElementById("filtre-fin").value = "";
-  filtreDebut = null; filtreFin = null; renderTable();
+  filtreDebut = null; filtreFin = null;
+  document.getElementById("recherche").value = ""; rechercheTexte = "";
+  majRechercheUI();
+  renderTable();
 }
+
+function appliquerRecherche() {
+  rechercheTexte = document.getElementById("recherche").value.trim().toLowerCase();
+  majRechercheUI();
+  renderTable();
+}
+function effacerRecherche() {
+  document.getElementById("recherche").value = "";
+  rechercheTexte = "";
+  majRechercheUI();
+  renderTable();
+}
+function majRechercheUI() {
+  const actif = rechercheTexte.length > 0;
+  document.getElementById("recherche").classList.toggle("active", actif);
+  document.getElementById("search-clear").classList.toggle("visible", actif);
+  document.getElementById("search-badge").classList.toggle("visible", actif);
+}
+window.appliquerRecherche = appliquerRecherche;
+window.effacerRecherche   = effacerRecherche;
 
 function initApp() {
   loadData(); loadEvents(); populateSejourSelect();
@@ -881,7 +902,6 @@ function showToast(msg, isError = false) {
   setTimeout(() => t.className = "", 3500);
 }
 
-/* ══ STATUT AUTOMATIQUE à la première modification ══ */
 function onEditFieldChange() {
   if (document.getElementById("edit-statut-modifie").value === "1") return;
   if (document.getElementById("edit-statut-original").value === "publiée") {
@@ -1047,7 +1067,6 @@ async function supprimerSelection(ids) {
 
 let _oldEventsOpen = false;
 
-/* ══ TOGGLE SÉJOUR plié/déplié ══ */
 function toggleSejourRows(sejourId) {
   const wasOuvert = sejourOuverts.get(sejourId) ?? false;
   sejourOuverts.set(sejourId, !wasOuvert);
@@ -1079,13 +1098,11 @@ function buildEventRow(ev, extraClass) {
         <span class="tr-sejour-nom">🏕 ${ev.nom_rando || "—"}</span>
         <span style="font-size:.76rem;color:#2a6496;margin-left:10px">${nbJours ? nbJours + " jours" : ""} · ${ev.animateur || "—"} · ${nbRandos} rando${nbRandos > 1 ? "s" : ""}</span>
       </td>`;
-    /* Clic simple → toggle plié/déplié */
     tr.style.cursor = "pointer";
     tr.addEventListener("click", (e) => {
       if (e.target.closest("input[type=checkbox]")) return;
       toggleSejourRows(ev.id);
     });
-    /* Double-clic → ouvrir modal édition */
     tr.addEventListener("dblclick", (e) => {
       if (e.target.closest("input[type=checkbox]")) return;
       openEdit(ev);
@@ -1101,7 +1118,6 @@ function buildEventRow(ev, extraClass) {
   if (ev.sejour_id) {
     tr.classList.add("tr-dans-sejour");
     tr.dataset.parentSejour = ev.sejour_id;
-    /* Vérifier si le séjour parent est ouvert */
     if (sejourOuverts.get(ev.sejour_id)) tr.classList.add("visible");
   }
   tr.innerHTML = `
@@ -1138,13 +1154,51 @@ function toggleOldEvents() {
   if (lbl) lbl.textContent = _oldEventsOpen ? "Masquer les anciens événements" : lbl.dataset.label;
 }
 
+function matchRecherche(ev) {
+  if (!rechercheTexte) return true;
+  const nom  = (ev.nom_rando || "").toLowerCase();
+  const anim = (ev.animateur || "").toLowerCase();
+  return nom.includes(rechercheTexte) || anim.includes(rechercheTexte);
+}
+
 function renderTable() {
   const tbody = document.getElementById("events-body");
   tbody.innerHTML = "";
-  if (!allRows.length) { tbody.innerHTML = "<tr><td colspan='7' class='empty-state'>Aucun événement trouvé.</td></tr>"; updateSortIcons(); return; }
+  const enRecherche = rechercheTexte.length > 0;
+  const infoEl = document.getElementById("search-info");
+
+  if (!allRows.length) { tbody.innerHTML = "<tr><td colspan='7' class='empty-state'>Aucun événement trouvé.</td></tr>"; updateSortIcons(); infoEl.classList.remove("visible"); return; }
 
   const today = new Date(); today.setHours(0,0,0,0);
   const todayISO = today.toISOString().split("T")[0];
+
+  if (enRecherche) {
+    const resultats = allRows
+      .filter(ev => {
+        const d = ev.date_rando || "";
+        if (filtreDebut && d < filtreDebut) return false;
+        if (filtreFin   && d > filtreFin)   return false;
+        return matchRecherche(ev);
+      })
+      .sort((a, b) => (b.date_rando||"").localeCompare(a.date_rando||""));
+
+    if (!resultats.length) {
+      tbody.innerHTML = `<tr><td colspan='7' class='empty-state'>Aucune randonnée ne correspond à « ${rechercheTexte} ».</td></tr>`;
+      infoEl.innerHTML = `🔍 Recherche « <strong>${rechercheTexte}</strong> » — aucun résultat.`;
+      infoEl.classList.add("visible");
+      const countEl = document.getElementById("filtre-count"); if (countEl) countEl.textContent = "0 résultat";
+      updateSortIcons(); return;
+    }
+
+    resultats.forEach(ev => tbody.appendChild(buildEventRow(ev, "")));
+    infoEl.innerHTML = `🔍 Recherche « <strong>${rechercheTexte}</strong> » — <strong>${resultats.length}</strong> randonnée${resultats.length > 1 ? "s" : ""} (passées et à venir), de la plus récente à la plus ancienne. Le filtre Du/Au reste actif.`;
+    infoEl.classList.add("visible");
+    const countEl = document.getElementById("filtre-count");
+    if (countEl) countEl.textContent = resultats.length + " résultat" + (resultats.length > 1 ? "s" : "");
+    updateSortIcons(); return;
+  }
+
+  infoEl.classList.remove("visible");
 
   const sorted = [...allRows].sort((a, b) => {
     let va = sortCol === "date" ? (a.date_rando||"") : (a.animateur||"").toLowerCase();
@@ -1196,7 +1250,6 @@ function updateSortIcons() {
 function sortTable(col) { sortDir = sortCol === col ? (sortDir === "asc" ? "desc" : "asc") : "asc"; sortCol = col; renderTable(); }
 
 function openEdit(ev) {
-  /* Réinitialiser le flag de modification */
   document.getElementById("edit-statut-modifie").value = "0";
 
   document.getElementById("edit-rowIndex").value  = ev.id;
@@ -1333,7 +1386,6 @@ async function syncCalendar(action, ficheData) {
   } catch(e) { console.warn("[Calendar sync] Erreur reseau:", e.message); return false; }
 }
 
-/* ══ POPUP CALENDRIER ══ */
 let calOffset = 0;
 function toggleCal() { const popup = document.getElementById("cal-popup"); const isOpen = popup.classList.toggle("open"); if (isOpen) { calOffset = 0; renderCal(); } }
 function calNav(delta) { calOffset += delta; renderCal(); }
@@ -1381,7 +1433,6 @@ function renderCal() {
   }
 }
 
-/* ══ RATTACHEMENT INLINE ══ */
 let _dropdownActif = null; let _overlayActif = null;
 function ouvrirRattach(event, btn, randoId, sejourIdActuel) {
   event.stopPropagation();
@@ -1407,7 +1458,6 @@ async function sauvegarderRattach(randoId, btnOk) {
   } catch(e) { showToast("Erreur réseau.", true); btnOk.textContent = "✔ Enregistrer"; btnOk.disabled = false; }
 }
 
-/* ══ EXPOSITION GLOBALE ══ */
 window.appliquerFiltreDates      = appliquerFiltreDates;
 window.confirmerDepuisModal      = confirmerDepuisModal;
 window.rattacherDepuisModal      = rattacherDepuisModal;
@@ -1448,7 +1498,6 @@ document.querySelectorAll(".modal-overlay").forEach(o => {
   o.addEventListener("click", function(e) { if (e.target === this) this.classList.remove("open"); });
 });
 
-/* ══ EXPORT CSV ══ */
 let exportData = [];
 function openModalExport() {
   const now = new Date(); const fmt = d => d.toISOString().slice(0, 10);
@@ -1491,7 +1540,6 @@ function exportCSV() {
 
 </script>
 
-<!-- ══ MODAL EXPORT CSV ══ -->
 <div id="modal-export">
   <div class="mex-inner">
     <h3>📤 Export randos prévisionnelles</h3>
