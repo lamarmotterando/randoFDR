@@ -3,47 +3,480 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Carte des Randonnées — La Marmotte</title>
+<title>Carte de la saison 2025/2026 — La Marmotte</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-<link rel="stylesheet" href="css/carteRandos.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest:#274a36; --moss:#4C9A5E; --bark:#5b4636;
+    --cream:#f4efe4; --paper:#fbf8f1; --line:#e2dac8; --ink:#23291f; --mut:#7c8472;
+    --shadow:0 10px 30px -12px rgba(28,45,30,.45);
+    --r:16px; --sans:'Inter Tight',system-ui,sans-serif; --serif:'Fraunces',Georgia,serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0;height:100vh;height:100dvh;font-family:var(--sans);color:var(--ink);background:var(--cream);display:flex;flex-direction:column;overflow:hidden;}
+
+  .topbar{flex:0 0 auto;display:flex;align-items:center;gap:18px;padding:12px 18px;background:var(--forest);color:#f1ede1;border-bottom:3px solid #16261c;z-index:1200;}
+  .brand-t{display:flex;align-items:baseline;gap:10px;min-width:0;}
+  .brand-t .glyph{font-size:20px;}
+  .brand-t h1{font-family:var(--serif);font-weight:600;font-size:19px;margin:0;white-space:nowrap;}
+  .brand-t span{color:#a9c3ad;font-size:12.5px;white-space:nowrap;}
+  .spacer{flex:1 1 auto;}
+  .seg{display:flex;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:3px;}
+  .seg-btn{appearance:none;border:0;background:transparent;color:#cfe0d0;cursor:pointer;font-family:var(--sans);font-weight:600;font-size:13px;padding:7px 14px;border-radius:999px;display:flex;flex-direction:column;align-items:center;line-height:1.05;transition:.15s;}
+  .seg-btn small{font-weight:500;font-size:10px;opacity:.7;letter-spacing:.3px;}
+  .seg-btn.on{background:#f1ede1;color:var(--forest);box-shadow:0 1px 4px rgba(0,0,0,.2);}
+  .seg-btn:not(.on):hover{color:#fff;}
+  .retour{color:#b9cdbb;text-decoration:none;font-size:13px;font-weight:500;white-space:nowrap;}
+  .retour:hover{color:#fff;}
+
+  .stage{flex:1 1 auto;display:flex;min-height:0;position:relative;}
+  .map-wrap{position:relative;flex:1 1 auto;min-width:0;}
+  #map{position:absolute;inset:0;background:#dfe6d8;}
+  body[data-dir="c"] #map{background:#10161a;}
+
+  .panel{flex:0 0 372px;display:none;flex-direction:column;min-height:0;background:var(--paper);border-right:1px solid var(--line);}
+  body[data-dir="b"] .panel{display:flex;}
+  .panel-head{padding:15px 16px 12px;border-bottom:1px solid var(--line);}
+  .panel-head h2{font-family:var(--serif);font-weight:600;font-size:17px;margin:0 0 2px;}
+  .panel-head .ph-period{font-size:11.5px;color:var(--mut);margin-bottom:9px;}
+  .search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:8px 11px;}
+  .search svg{flex:0 0 auto;color:var(--mut);}
+  .search input{border:0;outline:0;font-family:var(--sans);font-size:14px;width:100%;background:transparent;color:var(--ink);}
+  .ph-sub{font-size:12px;color:var(--mut);margin-top:9px;}
+  .ph-sub b{color:var(--moss);}
+  #list{overflow:auto;padding:9px 11px 24px;display:flex;flex-direction:column;gap:7px;}
+  .empty{padding:30px 10px;text-align:center;color:var(--mut);font-size:13px;}
+
+  .li{appearance:none;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px 12px 0;min-height:60px;overflow:hidden;font-family:var(--sans);transition:.13s;}
+  .li:hover{border-color:#cdbf9f;transform:translateY(-1px);box-shadow:0 6px 16px -10px rgba(40,60,40,.4);}
+  .li.is-sel{border-color:var(--lv);box-shadow:0 0 0 2px var(--lv) inset, var(--shadow);}
+  .li-stripe{flex:0 0 5px;align-self:stretch;background:var(--lv);border-radius:5px;margin:2px 0 2px 2px;}
+  .li-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;padding-left:7px;}
+  .li-top{display:flex;align-items:center;gap:8px;}
+  .li-date{font-weight:700;font-size:11px;color:var(--bark);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
+  .li-sec{font-size:11px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .li-name{font-family:var(--serif);font-weight:600;font-size:14.5px;line-height:1.15;}
+  .li-stats{font-size:11.5px;color:var(--mut);}
+  .li-ibp{flex:0 0 auto;align-self:center;display:flex;flex-direction:column;align-items:center;color:var(--lv);line-height:1;padding-right:4px;}
+  .li-ibp b{font-family:var(--serif);font-size:21px;font-weight:700;}
+  .li-ibp i{font-style:normal;font-size:8.5px;line-height:1.2;font-weight:600;text-transform:uppercase;letter-spacing:.2px;opacity:.85;white-space:nowrap;}
+
+  .float{position:absolute;z-index:1000;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px 16px;width:240px;display:none;max-height:calc(100% - 32px);overflow:auto;}
+  body[data-dir="a"] .float{display:block;left:16px;bottom:16px;}
+  body[data-dir="c"] .float{display:block;left:16px;top:16px;background:rgba(22,30,26,.82);border-color:rgba(255,255,255,.12);color:#e9efe5;backdrop-filter:blur(10px);}
+  .float h2{font-family:var(--serif);font-weight:600;font-size:15px;margin:0 0 2px;display:flex;align-items:center;gap:7px;}
+  .float .f-sub{font-size:11.5px;color:var(--mut);margin-bottom:11px;}
+  body[data-dir="c"] .float .f-sub{color:#a9b6a8;}
+  .float .f-sub b{color:var(--moss);}
+  .legend{display:flex;flex-direction:column;gap:6px;}
+  .lg{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink);white-space:nowrap;}
+  body[data-dir="c"] .lg{color:#dde6db;}
+  .lg-dot{width:11px;height:11px;border-radius:3px;flex:0 0 auto;}
+  .lg i{margin-left:auto;font-style:normal;font-weight:600;color:var(--mut);font-variant-numeric:tabular-nums;}
+  body[data-dir="c"] .lg i{color:#93a194;}
+
+  .mk{background:none;border:0;}
+  .pin{display:flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--lv);border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 4px 9px -3px rgba(0,0,0,.5);border:2px solid #fff;}
+  .pin b{transform:rotate(45deg);color:#fff;font-size:11px;font-weight:700;font-family:var(--sans);}
+  .ring{display:block;width:18px;height:18px;border-radius:50%;background:var(--lv);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);transition:transform .15s;}
+  .ring.is-sel{transform:scale(1.35);box-shadow:0 0 0 4px rgba(255,255,255,.55),0 3px 8px rgba(0,0,0,.4);}
+  .dot{display:block;width:14px;height:14px;border-radius:50%;background:var(--lv);border:2px solid rgba(255,255,255,.85);box-shadow:0 0 0 4px color-mix(in srgb,var(--lv) 35%,transparent),0 0 12px var(--lv);}
+  .dot.is-sel{transform:scale(1.4);}
+
+  .cl-wrap{background:none;}
+  .cl{display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-weight:700;font-family:var(--sans);font-size:14px;border:2px solid #fff;box-shadow:0 4px 12px -3px rgba(0,0,0,.5);}
+  .cl-a,.cl-b{background:radial-gradient(circle at 35% 30%, #5aa86b, #274a36);}
+  .cl-c{background:radial-gradient(circle at 35% 30%, #4C9A5E, #16261c);border-color:rgba(255,255,255,.4);box-shadow:0 0 0 5px rgba(76,154,94,.22),0 4px 12px rgba(0,0,0,.5);}
+
+  .leaflet-popup-content-wrapper{padding:0;border-radius:18px;overflow:hidden;box-shadow:var(--shadow);}
+  .leaflet-popup-content{margin:0;width:300px!important;}
+  .rando-pop .leaflet-popup-tip{background:#fff;}
+  .card{background:#fff;font-family:var(--sans);overflow:hidden;}
+  .card-head{position:relative;padding:15px 18px 14px;color:#fff;background:linear-gradient(150deg,var(--lv),color-mix(in srgb,var(--lv) 70%,#000));}
+  .card-when{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;opacity:.92;}
+  .card-title{font-family:var(--serif);font-weight:600;font-size:20px;line-height:1.1;margin:4px 0 0;max-width:205px;}
+  .card-ibp{position:absolute;top:14px;right:16px;display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:6px 10px;}
+  .card-ibp .ibp-num{font-family:var(--serif);font-weight:700;font-size:23px;line-height:1;}
+  .card-ibp .ibp-lab{font-size:9px;font-weight:600;line-height:1.05;text-transform:uppercase;letter-spacing:.3px;}
+  .card-body{padding:14px 18px 16px;}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+  .stat{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:8px 6px;text-align:center;}
+  .stat .sv{display:block;font-family:var(--serif);font-weight:600;font-size:16px;line-height:1;}
+  .stat .slk{display:block;font-size:10px;color:var(--mut);margin-top:3px;text-transform:uppercase;letter-spacing:.3px;}
+  .scales{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+  .scale{display:flex;align-items:center;gap:10px;}
+  .scale .sl{font-size:11.5px;color:var(--mut);width:78px;}
+  .sdots{display:flex;gap:4px;}
+  .sd{width:11px;height:11px;border-radius:50%;background:var(--line);}
+  .sd.on{background:var(--lv);}
+  .meta{margin:0 0 11px;display:flex;flex-direction:column;gap:8px;}
+  .meta div{display:flex;flex-direction:column;}
+  .meta dt{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);font-weight:600;}
+  .meta dd{margin:1px 0 0;font-size:13px;}
+  .approx{display:inline-block;font-size:9.5px;font-weight:600;color:var(--bark);background:#efe7d2;border:1px solid var(--line);border-radius:6px;padding:1px 5px;vertical-align:middle;}
+  .remark{margin:0 0 12px;font-size:12.5px;line-height:1.45;color:#4a5142;border-left:3px solid var(--moss);padding:4px 0 4px 11px;background:linear-gradient(90deg,rgba(76,154,94,.07),transparent);}
+  .links{display:flex;gap:9px;}
+  .lnk{flex:1 1 0;text-align:center;text-decoration:none;font-weight:600;font-size:12.5px;padding:10px 8px;border-radius:11px;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;gap:5px;transition:.15s;}
+  .lnk span{font-size:11px;opacity:.85;}
+  .lnk:hover{filter:brightness(1.07);}
+  .lnk.alt{background:var(--paper);color:var(--ink);border:1px solid var(--line);}
+
+  #hero{position:absolute;z-index:1100;right:16px;top:16px;bottom:16px;width:344px;display:none;overflow:auto;border-radius:20px;box-shadow:0 24px 60px -20px rgba(0,0,0,.7);}
+  #hero.show{display:block;}
+  #hero .card{border-radius:20px;}
+  #hero .card-title{font-size:23px;max-width:215px;}
+  #hero .hero-close{position:absolute;top:12px;left:12px;z-index:5;width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.4);background:rgba(0,0,0,.25);color:#fff;cursor:pointer;font-size:13px;backdrop-filter:blur(4px);}
+  #hero .hero-close:hover{background:rgba(0,0,0,.45);}
+
+  .leaflet-control-zoom a{border-radius:8px!important;color:var(--forest)!important;}
+
+  @media (max-width:820px){
+    .brand-t span{display:none;}
+    .seg-btn{padding:6px 10px;} .seg-btn small{display:none;}
+    .topbar{gap:10px;padding:10px 12px;} .retour{display:none;}
+    body[data-dir="b"] .stage{flex-direction:column;}
+    body[data-dir="b"] .panel{flex:0 0 48%;order:2;border-right:0;border-top:1px solid var(--line);}
+    body[data-dir="b"] .map-wrap{order:1;flex:1 1 52%;}
+    .float{width:auto;left:12px;right:12px;}
+    body[data-dir="a"] .float{bottom:12px;}
+    body[data-dir="a"] .legend{flex-direction:row;flex-wrap:wrap;gap:6px 14px;}
+    body[data-dir="a"] .lg i{display:none;}
+    #hero{left:12px;right:12px;width:auto;top:auto;bottom:12px;height:62%;}
+  }
+</style>
 </head>
-<body>
+<body data-dir="a">
 
-<div class="topbar">
-  <h1>🥾 Carte des Randonnées — La Marmotte</h1>
-  <a href="index.html" onclick="location.href='index.html';return false;">← Retour app</a>
-</div>
 
-<div id="map"></div>
 
-<div id="geocode-bar">
-  <span id="geocode-msg">⏳ Géocodage en cours…</span>
-  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-</div>
+  <header class="topbar">
+    <div class="brand-t">
+      <span class="glyph">🥾</span>
+      <h1>La Marmotte</h1>
+      <span>· saison 2025/2026</span>
+    </div>
+    <div class="spacer"></div>
+    <nav class="seg" role="tablist" aria-label="Direction de design">
+      <button class="seg-btn on" data-dir="a">Sentier<small>TOPO</small></button>
+      <button class="seg-btn" data-dir="b">Crête<small>LISTE</small></button>
+    </nav>
+    <a class="retour" href="index.html">← Retour app</a>
+  </header>
 
-<div class="stats-panel">
-  <strong>📍 Randonnées La Marmotte</strong>
-  <div class="stat-line"><span>Total</span><span id="stat-total">—</span></div>
-  <div class="stat-line"><span>✅ Localisées</span><span id="stat-ok">—</span></div>
-  <div class="stat-line"><span>⏳ Géocodées auto</span><span id="stat-geocoded">—</span></div>
-  <div class="stat-line"><span>❌ Non trouvées</span><span id="stat-nok">—</span></div>
-  <div class="legend">
-    <div class="legend-item"><div class="dot dot-blue"></div> Coords connues</div>
-    <div class="legend-item"><div class="dot dot-green"></div> Géocodé automatiquement</div>
-    <div class="legend-item"><div class="dot dot-red"></div> Non localisé</div>
+  <div class="stage">
+    <aside class="panel">
+      <div class="panel-head">
+        <h2>Saison 2025/2026</h2>
+        <div class="ph-period js-period">—</div>
+        <label class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="search" type="search" placeholder="Rechercher une rando, un lieu, un animateur…" autocomplete="off">
+        </label>
+        <div class="ph-sub"><b id="list-count">—</b> sur <span class="js-total">—</span> sorties · ordre chronologique</div>
+      </div>
+      <div id="list"></div>
+    </aside>
+
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="float">
+        <h2><span>📍</span> Saison 2025/2026</h2>
+        <div class="f-sub"><b class="js-total">—</b> sorties · <span class="js-period"></span> · par niveau IBP</div>
+        <div class="legend js-legend"></div>
+      </div>
+    </div>
   </div>
-</div>
 
-<!-- Données en variable globale -->
-<script src="data/randosCoords.js"></script>
-<!-- Libs Leaflet -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<!-- Logique carte (script classique, pas de module) -->
-<script src="js/carteRandos.js"></script>
+  <script>
+/* ============================================================
+   randos-saison-data.js — Saison 2025/2026 (fiches Supabase)
+   Période : 25/09/2025 → 22/06/2026 · statut "publiée"/"modifiée"
+   lat/lon : depuis le champ gps quand présent (geo:"gps"),
+   sinon géocodé depuis le "lieu" (geo:"lieu" = position approchée).
+   profil : true si une image de profil altimétrique existe (cf. profils-saison.js)
+   ============================================================ */
+window.randosSaison = [
+  { id:184, date:"2025-09-25", nom:"Massif du Barry",                               animateur:"Grandperrin / Brun", lieu:"Bollène",                  lat:44.2980, lon:4.7120, geo:"lieu", distance:12.0, denivele:250,  duree:null,   ibp:38 },
+  { id:185, date:"2025-09-28", nom:"Saint Hubert au départ du lac de Monieux",      animateur:"Brioude",            lieu:"Monieux",                  lat:44.0640, lon:5.3680, geo:"lieu", distance:16.0, denivele:600,  duree:null,   ibp:null },
+  { id:186, date:"2025-10-02", nom:"La Nible — Buis-les-Baronnies",                 animateur:"Pallier",            lieu:"Buis-les-Baronnies",       lat:44.2760, lon:5.2770, geo:"lieu", distance:16.0, denivele:1000, duree:null,   ibp:100 },
+  { id:187, date:"2025-10-05", nom:"Le Pas de la Frache",                           animateur:"Fabre",              lieu:"Sault",                    lat:44.0920, lon:5.4100, geo:"lieu", distance:15.0, denivele:480,  duree:null,   ibp:null },
+  { id:188, date:"2025-10-09", nom:"Murs",                                          animateur:"Bizard",             lieu:"Murs",                     lat:43.9450, lon:5.2410, geo:"lieu", distance:15.5, denivele:400,  duree:null,   ibp:53,  statut:"modifiée" },
+  { id:189, date:"2025-10-12", nom:"Sentier des Aiguiers par le Cluyer",            animateur:"Hervé",              lieu:"St-Saturnin-lès-Apt",      lat:43.9852, lon:5.3760, geo:"lieu", distance:14.0, denivele:450,  duree:null,   ibp:61 },
+  { id:190, date:"2025-10-16", nom:"La Côte Bleue au départ de Port Méjean",        animateur:"Valdarchi",          lieu:"Port Méjean",              lat:43.3365, lon:5.1790, geo:"lieu", distance:20.0, denivele:1000, duree:null,   ibp:76 },
+  { id:191, date:"2025-10-19", nom:"Saint Gens — Combe de Capellan",                animateur:"Martin",             lieu:"Saint Gens",               lat:43.9970, lon:5.1180, geo:"lieu", distance:15.0, denivele:558,  duree:null,   ibp:66 },
+  { id:193, date:"2025-10-26", nom:"Reilhanette",                                   animateur:"Martin",             lieu:"Reilhanette",              lat:44.1680, lon:5.4210, geo:"lieu", distance:16.0, denivele:610,  duree:null,   ibp:72 },
+  { id:194, date:"2025-10-30", nom:"Falaise de Lioux",                              animateur:"Pallier",            lieu:"Lioux",                    lat:43.9460, lon:5.3030, geo:"lieu", distance:21.0, denivele:795,  duree:null,   ibp:86 },
+  { id:195, date:"2025-11-06", nom:"Les Ramayettes au départ de Bédoin",            animateur:"Valdarchi",          lieu:"Bédoin",                   lat:44.1240, lon:5.1770, geo:"lieu", distance:18.0, denivele:800,  duree:null,   ibp:null },
+  { id:196, date:"2025-11-09", nom:"Pays d'Apt — Caseneuve, Colorado",              animateur:"Fabre",              lieu:"Caseneuve",                lat:43.8920, lon:5.4980, geo:"lieu", distance:14.5, denivele:450,  duree:null,   ibp:null },
+  { id:197, date:"2025-11-13", nom:"L'Arche du Portalas depuis Bonnieux",           animateur:"Pallier",            lieu:"Bonnieux",                 lat:43.8230, lon:5.3080, geo:"lieu", distance:19.0, denivele:920,  duree:null,   ibp:89 },
+  { id:198, date:"2025-11-14", nom:"Saint Pantaléon",                               animateur:"Fabre",              lieu:"Saint Pantaléon",          lat:43.8790, lon:5.2110, geo:"lieu", distance:8.5,  denivele:200,  duree:null,   ibp:null },
+  { id:199, date:"2025-11-20", nom:"Lauris",                                        animateur:"Dupré",              lieu:"Lauris",                   lat:43.7470, lon:5.3130, geo:"lieu", distance:16.5, denivele:700,  duree:null,   ibp:79 },
+  { id:200, date:"2025-11-27", nom:"Fond de l'Orme — Mérindol",                     animateur:"Bizard",             lieu:"Mérindol",                 lat:43.7490, lon:5.2050, geo:"lieu", distance:17.5, denivele:650,  duree:null,   ibp:70 },
+  { id:201, date:"2025-11-28", nom:"Saint-Étienne-du-Grès — Notre-Dame du Château", animateur:"Jouve",              lieu:"Saint-Étienne-du-Grès",    lat:43.7810, lon:4.7310, geo:"lieu", distance:12.0, denivele:300,  duree:null,   ibp:35 },
+  { id:202, date:"2025-11-30", nom:"Le Mourre Nègre par Cucuron",                   animateur:"Brioude",            lieu:"Cucuron",                  lat:43.7720, lon:5.4390, geo:"lieu", distance:16.0, denivele:700,  duree:null,   ibp:null },
+  { id:203, date:"2025-12-10", nom:"Eygalières — Aureille",                         animateur:"Nouguier",           lieu:"Aureille",                 lat:43.7030, lon:4.9490, geo:"lieu", distance:16.0, denivele:311,  duree:null,   ibp:null },
+  { id:204, date:"2025-12-14", nom:"Tour des Opies, retour par Civadières",         animateur:"Brioude",            lieu:"Aureille",                 lat:43.7030, lon:4.9490, geo:"lieu", distance:14.0, denivele:null, duree:null,   ibp:null },
+  { id:205, date:"2025-12-18", nom:"Clansayes",                                     animateur:"Dupré",              lieu:"Clansayes (Drôme)",        lat:44.3710, lon:4.8070, geo:"lieu", distance:18.0, denivele:400,  duree:null,   ibp:50 },
+  { id:206, date:"2026-01-07", nom:"Crestet — Pas du Loup",                         animateur:"Martin",             lieu:"Crestet",                  lat:44.2550, lon:5.0900, geo:"lieu", distance:15.9, denivele:493,  duree:null,   ibp:63 },
+  { id:207, date:"2026-01-10", nom:"Marseilleveyre",                                animateur:"Valdarchi",          lieu:"Marseille",                lat:43.2100, lon:5.3700, geo:"lieu", distance:14.0, denivele:1000, duree:null,   ibp:99 },
+  { id:208, date:"2026-01-22", nom:"Tour des Dentelles",                            animateur:"Brioude",            lieu:"Gigondas",                 lat:44.1900, lon:5.0000, geo:"lieu", distance:14.0, denivele:600,  duree:null,   ibp:null },
+  { id:209, date:"2026-01-25", nom:"Canal du Verdon",                               animateur:"Hervé",              lieu:"Peyrolles",                lat:43.6450, lon:5.5670, geo:"lieu", distance:13.0, denivele:300,  duree:null,   ibp:null },
+  { id:210, date:"2026-01-29", nom:"Comps",                                         animateur:"Dupré",              lieu:"Comps (Gard)",             lat:43.8950, lon:4.6050, geo:"lieu", distance:14.0, denivele:400,  duree:null,   ibp:51 },
+  { id:211, date:"2026-02-01", nom:"Le Chemin des Indochinois",                     animateur:"Fabre",              lieu:"Col de la Ligne",          lat:44.0400, lon:5.2100, geo:"lieu", distance:14.5, denivele:450,  duree:null,   ibp:null },
+  { id:212, date:"2026-02-05", nom:"La Montagne de Bluye, départ de St-Léger",      animateur:"Valdarchi",          lieu:"Saint-Léger-du-Ventoux",   lat:44.2220, lon:5.2980, geo:"lieu", distance:18.0, denivele:1000, duree:null,   ibp:94 },
+  { id:213, date:"2026-02-08", nom:"Vallon de Combres",                             animateur:"Brioude",            lieu:"Oppède",                   lat:43.8380, lon:5.1580, geo:"lieu", distance:13.0, denivele:700,  duree:null,   ibp:null },
+  { id:214, date:"2026-02-12", nom:"Autour de Vernègues",                           animateur:"Martin",             lieu:"Vernègues",                lat:43.7040, lon:5.1080, geo:"lieu", distance:18.0, denivele:336,  duree:null,   ibp:58 },
+  { id:215, date:"2026-02-15", nom:"La Cabane du Garde",                            animateur:"Raoulx / Jouve",     lieu:"Saint-Rémy-de-Provence",   lat:43.7700, lon:4.8310, geo:"lieu", distance:8.5,  denivele:270,  duree:null,   ibp:38 },
+  { id:217, date:"2026-02-22", nom:"Sivergues",                                     animateur:"Élissalde",          lieu:"Sivergues",                lat:43.8280, lon:5.4030, geo:"lieu", distance:14.0, denivele:600,  duree:null,   ibp:56 },
+  { id:218, date:"2026-02-25", nom:"Le Tour des Dentelles, départ Gigondas",        animateur:"Brioude",            lieu:"Gigondas",                 lat:44.1900, lon:5.0000, geo:"lieu", distance:12.0, denivele:450,  duree:null,   ibp:null },
+  { id:219, date:"2026-03-01", nom:"Le Tholonet — Sainte-Victoire",                 animateur:"Fabre",              lieu:"Le Tholonet",              lat:43.5240, lon:5.5000, geo:"lieu", distance:14.0, denivele:560,  duree:null,   ibp:null },
+  { id:220, date:"2026-03-12", nom:"Viens",                                         animateur:"Dupré",              lieu:"Viens",                    lat:43.8950, lon:5.5670, geo:"lieu", distance:17.0, denivele:550,  duree:null,   ibp:59 },
+  { id:221, date:"2026-03-18", nom:"Grottes de Calès — Lamanon",                    animateur:"Grandperrin / Brun", lieu:"Lamanon",                  lat:43.6940, lon:5.0900, geo:"lieu", distance:14.0, denivele:330,  duree:null,   ibp:47 },
+  { id:222, date:"2026-03-22", nom:"Hameaux ruinés : les Tarlans et Poitevin",      animateur:"Brioude",            lieu:"Les Barbéris (Monieux)",   lat:44.0250, lon:5.3220, geo:"lieu", distance:17.0, denivele:600,  duree:null,   ibp:null },
+  { id:6,   date:"2026-03-26", nom:"Saint-André-d'Olérargues",                      animateur:"Dupré",              lieu:"La Roque-sur-Cèze",        lat:44.1616, lon:4.4867, geo:"gps",  distance:18.1, denivele:501,  duree:"6h30", ibp:66, effort:3, technicite:3, risque:3, couts:"Trajet total : 36,00 €", remarques:"La Roque-sur-Cèze et les cascades du Sautadet." },
+  { id:224, date:"2026-03-29", nom:"Canal du Verdon à Peyrolles",                   animateur:"Hervé",              lieu:"Peyrolles",                lat:43.6450, lon:5.5670, geo:"lieu", distance:13.0, denivele:300,  duree:null,   ibp:44 },
+  { id:7,   date:"2026-04-01", nom:"Autour de Vénasque",                            animateur:"Martin",             lieu:"Venasque",                 lat:43.9990, lon:5.1460, geo:"lieu", distance:13.5, denivele:393,  duree:null,   ibp:51, effort:3, technicite:2, risque:2, couts:"21,60 €", profil:true },
+  { id:283, date:"2026-04-12", nom:"Le Pic des Mouches par le Col des Portes",      animateur:"Reynier Jean-Louis", lieu:"Vauvenargues",             lat:43.5504, lon:5.6719, geo:"gps",  distance:11.1, denivele:505,  duree:"4h10", ibp:58, effort:3, technicite:3, risque:2, couts:"71,60 €", remarques:"Montée longue et régulière jusqu'au Pic des Mouches ; descente caillouteuse et raide par moments. Vue 360° sur le Luberon, le Ventoux, la Sainte-Baume, les Alpes.", profil:true },
+  { id:297, date:"2026-04-15", nom:"Les Caisses et les crêtes au-dessus de Mouriès",animateur:"Raoulx Yves",        lieu:"Mouriès",                  lat:43.6984, lon:4.8833, geo:"gps",  distance:11.6, denivele:192,  duree:"3h43", ibp:36, effort:2, technicite:1, risque:1, couts:"17,70 €", profil:true }
+];
 
+  </script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script>
+/* Logique carte — saison 2025/2026.
+   Couleur par IBP, géoloc des lieux, clustering, recherche, tri chronologique, 3 directions. */
+
+(function () {
+  const RAW = (window.randosSaison || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+  let map, tileLayer, cluster;
+  let currentDir = 'a';
+  let selectedId = null;
+  let query = '';
+
+  /* ---------- Niveaux IBP (palette nature, chaude) ---------- */
+  const BANDS = [
+    { max: 40,  label: 'Facile',         color: '#4C9A5E' },
+    { max: 65,  label: 'Modéré',         color: '#C7A23B' },
+    { max: 90,  label: 'Soutenu',        color: '#D9883D' },
+    { max: 115, label: 'Difficile',      color: '#C25A38' },
+    { max: 999, label: 'Très difficile', color: '#9E3B2E' }
+  ];
+  const NA = { label: 'IBP non renseigné', color: '#8A8576' };
+  function levelOf(ibp) {
+    if (ibp == null) return NA;
+    return BANDS.find(b => ibp <= b.max) || BANDS[BANDS.length - 1];
+  }
+
+  const RANDOS = RAW.map(h => ({ ...h, level: levelOf(h.ibp) }));
+  const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  const WD = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+  function fmtDate(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    return `${WD[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  function fmtShort(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]}`;
+  }
+
+  /* échelle 1-5 (effort / technicité / risque) */
+  function scale(label, n) {
+    if (n == null) return '';
+    let dots = '';
+    for (let i = 1; i <= 5; i++) dots += `<span class="sd ${i <= n ? 'on' : ''}"></span>`;
+    return `<div class="scale"><span class="sl">${label}</span><span class="sdots">${dots}</span></div>`;
+  }
+
+  /* ---------- Carte enrichie (popup A / hero C) ---------- */
+  function richCard(h, variant) {
+    const lv = h.level;
+    const g = `https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lon}`;
+    const ign = `https://www.geoportail.gouv.fr/carte?c=${h.lon},${h.lat}&z=15&l0=GEOGRAPHICALGRIDSYSTEMS.MAPS::GEOPORTAIL:OGC:WMTS(1)`;
+    const approx = h.geo === 'lieu'
+      ? `<span class="approx" title="Position approchée déduite du lieu">≈ lieu</span>` : '';
+    const ibpTxt = h.ibp == null ? '—' : h.ibp;
+    const scales = (h.effort != null || h.technicite != null || h.risque != null)
+      ? `<div class="scales">${scale('Effort', h.effort)}${scale('Technicité', h.technicite)}${scale('Risque', h.risque)}</div>` : '';
+    const stats = `<div class="stats">
+        <div class="stat"><span class="sv">${(h.distance != null ? h.distance.toString().replace('.', ',') : '—')}</span><span class="slk">km</span></div>
+        <div class="stat"><span class="sv">${h.denivele != null ? h.denivele : '—'}</span><span class="slk">m D+</span></div>
+        <div class="stat"><span class="sv">${h.duree || '—'}</span><span class="slk">durée</span></div>
+      </div>`;
+    const meta = `<dl class="meta">
+        <div><dt>Animateur·trice</dt><dd>${h.animateur || '—'}</dd></div>
+        <div><dt>Lieu de départ</dt><dd>${h.lieu || '—'} ${approx}</dd></div>
+        ${h.couts ? `<div><dt>Covoiturage</dt><dd>${h.couts}</dd></div>` : ''}
+      </dl>`;
+    const rem = h.remarques ? `<p class="remark">${h.remarques}</p>` : '';
+    return `<article class="card ${variant}">
+      <header class="card-head" style="--lv:${lv.color}">
+        <div class="card-when">${fmtDate(h.date)}</div>
+        <h3 class="card-title">${h.nom}</h3>
+        <div class="card-ibp"><span class="ibp-num">${ibpTxt}</span><span class="ibp-lab">IBP<br>${lv.label}</span></div>
+      </header>
+      <div class="card-body">
+        ${stats}${scales}${meta}${rem}
+        <div class="links">
+          <a class="lnk" href="${ign}" target="_blank" rel="noopener">Carte IGN <span>↗</span></a>
+          <a class="lnk alt" href="${g}" target="_blank" rel="noopener">Google Maps <span>↗</span></a>
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function listItem(h) {
+    const lv = h.level;
+    const ibpTxt = h.ibp == null ? '—' : h.ibp;
+    return `<button class="li ${selectedId === h.id ? 'is-sel' : ''}" data-id="${h.id}" style="--lv:${lv.color}">
+      <span class="li-stripe"></span>
+      <span class="li-main">
+        <span class="li-top"><span class="li-date">${fmtShort(h.date)}</span><span class="li-sec">${h.lieu || ''}</span></span>
+        <span class="li-name">${h.nom}</span>
+        <span class="li-stats">${h.distance != null ? h.distance.toString().replace('.', ',') + ' km' : ''}${h.denivele != null ? ' · ' + h.denivele + ' m D+' : ''}${h.animateur ? ' · ' + h.animateur : ''}</span>
+      </span>
+      <span class="li-ibp"><b>${ibpTxt}</b><i>${lv.label.replace('IBP non renseigné', 'n.r.')}</i></span>
+    </button>`;
+  }
+
+  /* ---------- Marqueurs ---------- */
+  function makeIcon(h) {
+    const c = h.level.color;
+    if (currentDir === 'a') {
+      return L.divIcon({ className: 'mk mk-pin', iconSize: [30, 40], iconAnchor: [15, 38], popupAnchor: [0, -36],
+        html: `<span class="pin" style="--lv:${c}"><b>${h.ibp == null ? '·' : h.ibp}</b></span>` });
+    }
+    if (currentDir === 'b') {
+      return L.divIcon({ className: 'mk mk-ring', iconSize: [20, 20], iconAnchor: [10, 10], popupAnchor: [0, -10],
+        html: `<span class="ring ${selectedId === h.id ? 'is-sel' : ''}" style="--lv:${c}"></span>` });
+    }
+    return L.divIcon({ className: 'mk mk-dot', iconSize: [18, 18], iconAnchor: [9, 9],
+      html: `<span class="dot ${selectedId === h.id ? 'is-sel' : ''}" style="--lv:${c}"></span>` });
+  }
+
+  function clusterIcon(cl) {
+    const n = cl.getChildCount();
+    const s = n < 10 ? 34 : n < 30 ? 42 : 52;
+    return L.divIcon({ className: 'cl-wrap', iconSize: [s, s],
+      html: `<span class="cl cl-${currentDir}" style="width:${s}px;height:${s}px">${n}</span>` });
+  }
+
+  function buildMarkers() {
+    if (cluster) cluster.remove();
+    cluster = L.markerClusterGroup({ maxClusterRadius: 50, showCoverageOnHover: false,
+      spiderfyOnMaxZoom: true, iconCreateFunction: clusterIcon });
+    RANDOS.forEach(h => {
+      const mk = L.marker([h.lat, h.lon], { icon: makeIcon(h) });
+      mk._h = h;
+      if (currentDir === 'a') mk.bindPopup(richCard(h, 'pop'),
+        { maxWidth: 320, minWidth: 280, className: 'rando-pop', autoPanPadding: [24, 24] });
+      mk.on('click', () => select(h.id, false));
+      cluster.addLayer(mk);
+    });
+    map.addLayer(cluster);
+  }
+  function markerById(id) { let f = null; cluster.eachLayer(m => { if (m._h.id === id) f = m; }); return f; }
+
+  /* ---------- Sélection ---------- */
+  function select(id, fly) {
+    selectedId = id;
+    const h = RANDOS.find(r => r.id === id);
+    if (!h) return;
+    if (fly !== false) {
+      const mk = markerById(id);
+      if (mk) cluster.zoomToShowLayer(mk, () => {});
+      map.flyTo([h.lat, h.lon], Math.max(map.getZoom(), 12), { duration: 0.6 });
+    }
+    if (currentDir === 'a') { const mk = markerById(id); if (mk) mk.openPopup(); }
+    if (currentDir === 'b') { renderList(); highlightList(id); }
+    if (currentDir === 'c') { buildMarkers(); showHero(h); }
+  }
+  function highlightList(id) {
+    document.querySelectorAll('.li').forEach(el => el.classList.toggle('is-sel', +el.dataset.id === id));
+    const el = document.querySelector(`.li[data-id="${id}"]`);
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  }
+
+  function filtered() {
+    if (!query) return RANDOS;
+    const q = norm(query);
+    return RANDOS.filter(h => norm(h.nom).includes(q) || norm(h.lieu).includes(q) || norm(h.animateur).includes(q));
+  }
+  function renderList() {
+    const list = document.getElementById('list');
+    if (!list) return;
+    const items = filtered();
+    document.getElementById('list-count').textContent = items.length;
+    list.innerHTML = items.length ? items.map(listItem).join('') : '<div class="empty">Aucune rando ne correspond.</div>';
+    list.querySelectorAll('.li').forEach(btn => btn.addEventListener('click', () => select(+btn.dataset.id, true)));
+  }
+  function showHero(h) {
+    const hero = document.getElementById('hero');
+    hero.innerHTML = richCard(h, 'hero') + '<button class="hero-close" aria-label="Fermer">✕</button>';
+    hero.classList.add('show');
+    hero.querySelector('.hero-close').addEventListener('click', () => {
+      hero.classList.remove('show'); selectedId = null; buildMarkers();
+    });
+  }
+
+  /* ---------- Fonds ---------- */
+  const TILES = {
+    a: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', opt: { maxZoom: 18, attribution: 'Tuiles © Esri — Esri, USGS, NOAA' } },
+    b: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', opt: { maxZoom: 19, subdomains: 'abcd', attribution: '© CARTO · © OpenStreetMap' } },
+    c: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', opt: { maxZoom: 19, subdomains: 'abcd', attribution: '© CARTO · © OpenStreetMap' } }
+  };
+  function setTiles(dir) { if (tileLayer) tileLayer.remove(); const t = TILES[dir]; tileLayer = L.tileLayer(t.url, t.opt).addTo(map); }
+
+  function setDirection(dir) {
+    currentDir = dir;
+    selectedId = null;
+    document.body.dataset.dir = dir;
+    document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('on', b.dataset.dir === dir));
+    const heroEl = document.getElementById('hero');
+    if (heroEl) heroEl.classList.remove('show');
+    setTiles(dir);
+    buildMarkers();
+    if (dir === 'b') renderList();
+    setTimeout(() => map.invalidateSize(), 60);
+  }
+
+  /* ---------- Légende ---------- */
+  function fillStats() {
+    document.querySelectorAll('.js-total').forEach(el => { el.textContent = RANDOS.length; });
+    const order = [...BANDS, NA];
+    const counts = new Map();
+    RANDOS.forEach(h => counts.set(h.level.label, (counts.get(h.level.label) || 0) + 1));
+    const html = order.filter(b => counts.get(b.label)).map(b =>
+      `<div class="lg"><span class="lg-dot" style="background:${b.color}"></span>${b.label}<i>${counts.get(b.label)}</i></div>`).join('');
+    document.querySelectorAll('.js-legend').forEach(el => { el.innerHTML = html; });
+    const first = RANDOS[0], last = RANDOS[RANDOS.length - 1];
+    document.querySelectorAll('.js-period').forEach(el => {
+      el.textContent = first && last ? `${fmtShort(first.date)} ${first.date.slice(0, 4)} → ${fmtShort(last.date)} ${last.date.slice(0, 4)}` : '';
+    });
+  }
+
+  function init() {
+    map = L.map('map', { zoomControl: false }).setView([43.95, 5.1], 9);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    document.querySelectorAll('.seg-btn').forEach(b => b.addEventListener('click', () => setDirection(b.dataset.dir)));
+    const search = document.getElementById('search');
+    if (search) search.addEventListener('input', e => { query = e.target.value; renderList(); });
+    fillStats();
+    setDirection('a');
+    map.fitBounds(L.latLngBounds(RANDOS.map(h => [h.lat, h.lon])), { padding: [50, 50] });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+
+  </script>
 </body>
 </html>
 
