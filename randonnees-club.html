@@ -611,6 +611,19 @@ function majHisto() {
           pointRadius: 0,
           fill: false,
           tension: 0,
+        },
+        {
+          label: "Dénivelé (m)",
+          data: donnees.map(r => r.denivele || 0),
+          type: "line",
+          borderColor: "#4b3fc4",
+          backgroundColor: "rgba(75,63,196,0.08)",
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: "#4b3fc4",
+          fill: false,
+          tension: 0.3,
+          yAxisID: "y1",
         }
       ]
     },
@@ -627,12 +640,14 @@ function majHisto() {
           callbacks: {
             title: (items) => noms[items[0].dataIndex] || labels[items[0].dataIndex],
             label: (item) => {
-              if (item.datasetIndex === 0)
+              if (item.dataset.label === "Participants")
                 return " " + item.raw + " participant" + (item.raw > 1 ? "s" : "");
-              return " Moyenne : " + parseFloat(item.raw).toFixed(1);
+              if (item.dataset.label.startsWith("Moyenne"))
+                return " Moyenne : " + parseFloat(item.raw).toFixed(1);
+              return " D+ : " + item.raw + " m";
             },
             afterLabel: (item) => {
-              if (item.datasetIndex === 0) {
+              if (item.dataset.label === "Participants") {
                 const diff = item.raw - moy;
                 return diff >= 0
                   ? " ▲ +" + diff.toFixed(1) + " vs moy."
@@ -657,6 +672,13 @@ function majHisto() {
           grid: { color: "#f1ede4" },
           ticks: { font: { size: 13, family: "Inter" }, color: "#6b6358", stepSize: 1 },
           title: { display: true, text: "Nb participants", font: { size: 13, family: "Inter" }, color: "#6b6358" }
+        },
+        y1: {
+          position: "right",
+          beginAtZero: true,
+          grid: { drawOnChartArea: false },
+          ticks: { font: { size: 13, family: "Inter" }, color: "#4b3fc4" },
+          title: { display: true, text: "Dénivelé (m)", font: { size: 13, family: "Inter" }, color: "#4b3fc4" }
         }
       }
     }
