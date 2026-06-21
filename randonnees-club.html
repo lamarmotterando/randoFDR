@@ -141,11 +141,11 @@ td { padding: 18px 20px; border-bottom: 1px solid #f1ede4; vertical-align: middl
 
 /* -- IBP -- */
 .ibp-pill { display: inline-flex; font-size: .78rem; font-weight: 700; padding: 6px 14px; border-radius: 30px; white-space: nowrap; }
-.ibp-n1 { background: #e8f3ea; color: #1e6b3f; }
-.ibp-n2 { background: #e3eef8; color: #1f5a91; }
-.ibp-n3 { background: #fff3cd; color: #856404; }
-.ibp-n4 { background: var(--terracotta-fond); color: var(--terracotta); }
-.ibp-n5 { background: #2d2a4a; color: #ffffff; }
+.ibp-n1 { background: #88c035; color: #ffffff; }
+.ibp-n2 { background: #0094d1; color: #ffffff; }
+.ibp-n3 { background: #fbb401; color: #ffffff; }
+.ibp-n4 { background: #ec2416; color: #ffffff; }
+.ibp-n5 { background: #2d2a56; color: #ffffff; }
 
 /* -- BADGE STATUT -- */
 .badge { font-size: .72rem; font-weight: 700; padding: 5px 12px; border-radius: 30px; white-space: nowrap; }
@@ -571,6 +571,18 @@ function majHisto() {
     v >= moy ? "#b97e0c" : "#a8285a"
   );
 
+  // Couleur de chaque point IBP selon son niveau (couleurs officielles IBP)
+  const ibpCouleur = v => {
+    const n = parseFloat(v);
+    if (!v || isNaN(n)) return "#6b6358";
+    if (n <= 25)  return "#88c035"; // 0-25   vert
+    if (n <= 50)  return "#0094d1"; // 26-50  bleu
+    if (n <= 75)  return "#fbb401"; // 51-75  ambre
+    if (n <= 100) return "#ec2416"; // 76-100 rouge
+    return "#2d2a56";               // > 100  marine
+  };
+  const couleursIbp = donnees.map(r => ibpCouleur(r.ibp));
+
   // Stats
   document.getElementById("histoStats").innerHTML =
     '<div class="histo-stat"><div class="histo-stat-lbl">Randos</div>' +
@@ -624,6 +636,20 @@ function majHisto() {
           fill: false,
           tension: 0.3,
           yAxisID: "y1",
+        },
+        {
+          label: "IBP",
+          data: donnees.map(r => parseFloat(r.ibp) || 0),
+          type: "line",
+          borderColor: "#2d2a56",
+          backgroundColor: "rgba(45,42,86,0.06)",
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: couleursIbp,
+          pointBorderColor: couleursIbp,
+          fill: false,
+          tension: 0.3,
+          yAxisID: "y2",
         }
       ]
     },
@@ -644,6 +670,8 @@ function majHisto() {
                 return " " + item.raw + " participant" + (item.raw > 1 ? "s" : "");
               if (item.dataset.label.startsWith("Moyenne"))
                 return " Moyenne : " + parseFloat(item.raw).toFixed(1);
+              if (item.dataset.label === "IBP")
+                return " IBP : " + item.raw;
               return " D+ : " + item.raw + " m";
             },
             afterLabel: (item) => {
@@ -679,6 +707,13 @@ function majHisto() {
           grid: { drawOnChartArea: false },
           ticks: { font: { size: 13, family: "Inter" }, color: "#4b3fc4" },
           title: { display: true, text: "Dénivelé (m)", font: { size: 13, family: "Inter" }, color: "#4b3fc4" }
+        },
+        y2: {
+          position: "right",
+          beginAtZero: true,
+          grid: { drawOnChartArea: false },
+          ticks: { font: { size: 13, family: "Inter" }, color: "#2d2a56" },
+          title: { display: true, text: "IBP", font: { size: 13, family: "Inter" }, color: "#2d2a56" }
         }
       }
     }
