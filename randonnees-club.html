@@ -106,6 +106,15 @@ body { font-family: 'Inter', sans-serif; background: var(--creme); color: var(--
   margin-bottom: 22px; flex-wrap: wrap; gap: 14px;
 }
 .histo-titre { font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 600; color: var(--sapin); }
+.histo-toggle {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 8px;
+  font-size: .8rem; font-weight: 600; color: var(--muted); cursor: pointer; user-select: none;
+}
+.histo-toggle input { width: 15px; height: 15px; accent-color: var(--mousse); cursor: pointer; }
+.histo-legende {
+  font-size: .78rem; color: var(--muted); margin-bottom: 14px; line-height: 1.6;
+}
+.histo-legende strong { color: var(--sapin); font-weight: 700; }
 .histo-stats-row {
   display: flex; gap: 14px; flex-wrap: wrap;
 }
@@ -307,9 +316,16 @@ td { padding: 18px 20px; border-bottom: 1px solid #f1ede4; vertical-align: middl
   <!-- HISTOGRAMME PARTICIPANTS -->
   <div class="histo-bloc" id="histoBloc">
     <div class="histo-header">
-      <div class="histo-titre">👥 Participants par randonnée</div>
+      <div>
+        <div class="histo-titre">👥 Participants par randonnée</div>
+        <label class="histo-toggle">
+          <input type="checkbox" id="histoForce" onchange="majHisto()">
+          Inclure les randos sans participants
+        </label>
+      </div>
       <div class="histo-stats-row" id="histoStats"></div>
     </div>
+    <div class="histo-legende" id="histoLegende"></div>
     <div class="histo-canvas-wrap">
       <canvas id="histoCanvas"></canvas>
     </div>
@@ -331,7 +347,7 @@ td { padding: 18px 20px; border-bottom: 1px solid #f1ede4; vertical-align: middl
         </tr>
       </thead>
       <tbody id="tableBody">
-        <tr><td colspan="7" class="empty">⏳ Chargement…</td></tr>
+        <tr><td colspan="8" class="empty">⏳ Chargement…</td></tr>
       </tbody>
     </table>
   </div>
@@ -360,6 +376,8 @@ let colTri    = "date_rando";
 let sensTri   = -1;
 let radarChart = null;
 let histoChart = null;
+/* Etat courant de l'histogramme, lu par les callbacks de tooltip (evite les closures perimees avec update()) */
+let _histoMoy = 0, _histoNoms = [], _histoLabels = [];
 let idEnCours  = null;
 let periodeMode = "tout";
 
@@ -375,7 +393,7 @@ async function charger() {
     filtrer();
   } catch(e) {
     document.getElementById("tableBody").innerHTML =
-      '<tr><td colspan="7" class="empty">⚠️ Erreur : ' + e.message + '</td></tr>';
+      '<tr><td colspan="8" class="empty">⚠️ Erreur : ' + e.message + '</td></tr>';
   }
 }
 
@@ -443,18 +461,21 @@ function filtrer() {
   const date = document.getElementById("fDate").value;
   const nom  = document.getElementById("fNom").value.toLowerCase().trim();
   const anim = document.getElementById("fAnimateur").value.toLowerCase().trim();
-  const ibp  = parseFloat(document.getElementById("fIbpMax").value) || null;
-  const km   = parseFloat(document.getElementById("fKmMax").value)  || null;
-  const den  = parseFloat(document.getElementById("fDenMax").value) || null;
+  const ibpV = document.getElementById("fIbpMax").value.trim();
+  const kmV  = document.getElementById("fKmMax").value.trim();
+  const denV = document.getElementById("fDenMax").value.trim();
+  const ibp  = ibpV === "" ? null : parseFloat(ibpV);
+  const km   = kmV  === "" ? null : parseFloat(kmV);
+  const den  = denV === "" ? null : parseFloat(denV);
   const { debut, fin } = periodeActive();
 
   filtrees = toutes.filter(r => {
     if (date   && r.date_rando !== date) return false;
     if (nom    && !(r.nom_rando  || "").toLowerCase().includes(nom))  return false;
     if (anim   && !(r.animateur  || "").toLowerCase().includes(anim)) return false;
-    if (ibp    && !(r.ibp  !== null && r.ibp  <= ibp))  return false;
-    if (km     && !(r.distance !== null && r.distance <= km)) return false;
-    if (den    && !(r.denivele !== null && r.denivele <= den)) return false;
+    if (ibp !== null && !(r.ibp      !== null && r.ibp      <= ibp)) return false;
+    if (km  !== null && !(r.distance !== null && r.distance <= km))  return false;
+    if (den !== null && !(r.denivele !== null && r.denivele <= den)) return false;
     if (debut  && r.date_rando < debut) return false;
     if (fin    && r.date_rando > fin)   return false;
     return true;
@@ -483,6 +504,31 @@ function trierEtAfficher() {
   afficher();
 }
 
+/* == ECHAPPEMENT HTML (anti-XSS) == */
+function escapeHtml(v) {
+  if (v === null || v === undefined) return "";
+  return String(v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/* == HELPERS DONNEES == */
+// Parse une date "AAAA-MM-JJ" a midi (evite les decalages de fuseau). null si vide.
+function parseDate(v) {
+  if (!v) return null;
+  return new Date(v + "T12:00:00");
+}
+// Statut "annulée" robuste : insensible a la casse, aux espaces et aux accents.
+function estAnnulee(f) {
+  const s = (f && f.statut != null ? String(f.statut) : "")
+    .trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return s === "annulee";
+}
+
 /* == IBP == */
 function ibpPill(v) {
   const n = parseFloat(v);
@@ -507,29 +553,29 @@ function ibpLabel(v) {
 function afficher() {
   const tbody = document.getElementById("tableBody");
   if (!filtrees.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">Aucune randonnée ne correspond aux filtres.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">Aucune randonnée ne correspond aux filtres.</td></tr>';
     majStats(); majHisto(); return;
   }
   tbody.innerHTML = filtrees.map(f => {
     const dateAff = f.date_rando
-      ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", { day:"2-digit", month:"2-digit", year:"numeric" })
+      ? parseDate(f.date_rando).toLocaleDateString("fr-FR", { day:"2-digit", month:"2-digit", year:"numeric" })
       : "—";
     const statut = f.statut || "publiée";
-    const badgeHtml = statut === "annulée"
+    const badgeHtml = estAnnulee(f)
       ? '<span class="badge badge-ann">❌ Annulée</span>'
       : statut === "modifiée"
       ? '<span class="badge badge-mod">✏️ Modifiée</span>'
       : '<span class="badge badge-pub">✅ Publiée</span>';
-    const trClass  = statut === "annulée" ? "tr-ann" : "";
-    const nomClass = statut === "annulée" ? "td-nom barre" : "td-nom";
+    const trClass  = estAnnulee(f) ? "tr-ann" : "";
+    const nomClass = estAnnulee(f) ? "td-nom barre" : "td-nom";
     return '<tr class="' + trClass + '" onclick="voirDetail(' + f.id + ')">' +
       '<td class="td-date">' + dateAff + '</td>' +
-      '<td class="' + nomClass + '" title="' + (f.nom_rando || '') + '">' + (f.nom_rando || "—") + '</td>' +
+      '<td class="' + nomClass + '" title="' + escapeHtml(f.nom_rando || '') + '">' + escapeHtml(f.nom_rando || "—") + '</td>' +
       '<td>' + ibpPill(f.ibp) + '</td>' +
-      '<td class="td-num col-stats">' + (f.distance ? f.distance + " km" : "—") + '</td>' +
-      '<td class="td-num col-stats">' + (f.denivele  ? f.denivele  + " m" : "—") + '</td>' +
-      '<td class="td-anim col-anim">👤 ' + (f.animateur || "—") + '</td>' +
-      '<td class="td-num col-stats">' + (f.nb_participants ? f.nb_participants + " pers." : "—") + '</td>' +
+      '<td class="td-num col-stats">' + (f.distance ? escapeHtml(f.distance) + " km" : "—") + '</td>' +
+      '<td class="td-num col-stats">' + (f.denivele  ? escapeHtml(f.denivele)  + " m" : "—") + '</td>' +
+      '<td class="td-anim col-anim">👤 ' + escapeHtml(f.animateur || "—") + '</td>' +
+      '<td class="td-num col-stats">' + (f.nb_participants ? escapeHtml(f.nb_participants) + " pers." : "—") + '</td>' +
       '<td>' + badgeHtml + '</td>' +
     '</tr>';
   }).join("");
@@ -539,36 +585,69 @@ function afficher() {
 
 /* == HISTOGRAMME PARTICIPANTS == */
 function majHisto() {
-  // Seulement les randos passees non annulees avec nb_participants
-  const donnees = filtrees
+  const maintenant = new Date();
+  const force = document.getElementById("histoForce")?.checked;
+
+  // Base commune : randos passees et non annulees
+  const passees = filtrees
     .filter(r => {
-      const d = new Date(r.date_rando + "T12:00:00");
-      return d <= new Date() && r.statut !== "annulée" && r.nb_participants > 0;
+      const d = parseDate(r.date_rando);
+      return d <= maintenant && !estAnnulee(r);
     })
     .sort((a, b) => new Date(a.date_rando) - new Date(b.date_rando));
 
+  // Celles qui ont reellement un comptage de participants
+  const avecData = passees.filter(r => r.nb_participants > 0);
+
+  // Affichage : tout (si force) ou seulement celles avec comptage
+  const donnees = force ? passees : avecData;
+
+  // Decompte des exclusions (pour la legende)
+  const nbAnnulees = filtrees.filter(r => estAnnulee(r)).length;
+  const nbAvenir   = filtrees.filter(r => {
+    const d = parseDate(r.date_rando);
+    return d > maintenant && !estAnnulee(r);
+  }).length;
+  const nbSansPart = passees.length - avecData.length;
+
   const bloc = document.getElementById("histoBloc");
+  const legende = document.getElementById("histoLegende");
   if (donnees.length < 2) { bloc.classList.remove("visible"); return; }
   bloc.classList.add("visible");
 
+  // Legende
+  const exclusParts = [];
+  if (nbAnnulees) exclusParts.push(nbAnnulees + " annulée" + (nbAnnulees>1?"s":""));
+  if (nbAvenir)   exclusParts.push(nbAvenir + " à venir");
+  if (!force && nbSansPart) exclusParts.push(nbSansPart + " sans participants");
+  const totalExclus = nbAnnulees + nbAvenir + (force ? 0 : nbSansPart);
+  legende.innerHTML =
+    "<strong>" + donnees.length + "</strong> rando" + (donnees.length>1?"s":"") + " affichée" + (donnees.length>1?"s":"") +
+    (totalExclus ? " · " + totalExclus + " exclue" + (totalExclus>1?"s":"") + " (" + exclusParts.join(", ") + ")" : "") +
+    (force && nbSansPart ? " — dont <strong>" + nbSansPart + "</strong> sans comptage (barre vide, courbes D+/IBP conservées)" : "");
+
   const labels = donnees.map(r => {
-    const d = new Date(r.date_rando + "T12:00:00");
+    const d = parseDate(r.date_rando);
     return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" });
   });
-  const valeurs = donnees.map(r => r.nb_participants);
+  // null = pas de comptage -> barre absente, mais la rando reste sur l'axe
+  const valeurs = donnees.map(r => r.nb_participants > 0 ? r.nb_participants : null);
   const noms    = donnees.map(r => r.nom_rando || "");
 
-  const moy = valeurs.reduce((s, v) => s + v, 0) / valeurs.length;
-  const max = Math.max(...valeurs);
-  const min = Math.min(...valeurs);
-  const total = valeurs.reduce((s, v) => s + v, 0);
+  // Stats calculees uniquement sur les randos qui ont un comptage reel
+  const reels = valeurs.filter(v => v !== null);
+  const moy = reels.length ? reels.reduce((s, v) => s + v, 0) / reels.length : 0;
+  const max = reels.length ? Math.max(...reels) : 0;
+  const min = reels.length ? Math.min(...reels) : 0;
+  const total = reels.reduce((s, v) => s + v, 0);
 
-  // Couleurs vives et distinctes du radar : ambre au-dessus de la moyenne, corail en-dessous
+  // Participants en gris neutre (laisse ressortir les barres IBP colorees) ;
+  // legere nuance au-dessus / en-dessous de la moyenne ; transparent si pas de comptage
   const couleurs = valeurs.map(v =>
-    v >= moy ? "rgba(230,160,20,0.92)" : "rgba(224,62,98,0.85)"
+    v === null ? "rgba(0,0,0,0)" : (v >= moy ? "rgba(120,122,135,0.55)" : "rgba(120,122,135,0.28)")
   );
   const bordures = valeurs.map(v =>
-    v >= moy ? "#b97e0c" : "#a8285a"
+    v === null ? "rgba(0,0,0,0)" : (v >= moy ? "#8a8c99" : "#b6b8c2")
   );
 
   // Couleur de chaque point IBP selon son niveau (couleurs officielles IBP)
@@ -586,7 +665,7 @@ function majHisto() {
   // Stats
   document.getElementById("histoStats").innerHTML =
     '<div class="histo-stat"><div class="histo-stat-lbl">Randos</div>' +
-    '<div class="histo-stat-val">' + donnees.length + '</div></div>' +
+    '<div class="histo-stat-val">' + reels.length + '</div></div>' +
     '<div class="histo-stat"><div class="histo-stat-lbl">Moyenne</div>' +
     '<div class="histo-stat-val" style="color:var(--blue-mid)">' + moy.toFixed(1) + '</div></div>' +
     '<div class="histo-stat"><div class="histo-stat-lbl">Maximum</div>' +
@@ -596,7 +675,25 @@ function majHisto() {
     '<div class="histo-stat"><div class="histo-stat-lbl">Total pers.</div>' +
     '<div class="histo-stat-val">' + total + '</div></div>';
 
-  if (histoChart) { histoChart.destroy(); histoChart = null; }
+  // Etat lu par les callbacks de tooltip
+  _histoMoy = moy; _histoNoms = noms; _histoLabels = labels;
+
+  const denivData = donnees.map(r => r.denivele || 0);
+  const ibpData   = donnees.map(r => parseFloat(r.ibp) || 0);
+  const moyData   = Array(valeurs.length).fill(moy);
+  const moyLabel  = "Moyenne (" + moy.toFixed(1) + ")";
+
+  // Mise a jour en place si le graphique existe deja (plus fluide qu'un destroy/recreate)
+  if (histoChart) {
+    const ds = histoChart.data.datasets;
+    histoChart.data.labels = labels;
+    ds[0].data = valeurs; ds[0].backgroundColor = couleurs; ds[0].borderColor = bordures;
+    ds[1].label = moyLabel; ds[1].data = moyData;
+    ds[2].data = denivData;
+    ds[3].data = ibpData; ds[3].backgroundColor = couleursIbp; ds[3].borderColor = couleursIbp;
+    histoChart.update();
+    return;
+  }
 
   const ctx = document.getElementById("histoCanvas").getContext("2d");
   histoChart = new Chart(ctx, {
@@ -612,10 +709,12 @@ function majHisto() {
           borderWidth: 1.5,
           borderRadius: 8,
           borderSkipped: false,
+          barPercentage: 1.0,
+          categoryPercentage: 0.85,
         },
         {
           label: "Moyenne (" + moy.toFixed(1) + ")",
-          data: Array(valeurs.length).fill(moy),
+          data: moyData,
           type: "line",
           borderColor: "#2b2392",
           borderWidth: 2.5,
@@ -626,12 +725,13 @@ function majHisto() {
         },
         {
           label: "Dénivelé (m)",
-          data: donnees.map(r => r.denivele || 0),
+          data: denivData,
           type: "line",
           borderColor: "#4b3fc4",
           backgroundColor: "rgba(75,63,196,0.08)",
           borderWidth: 2.5,
-          pointRadius: 3,
+          pointRadius: 0,
+          pointHoverRadius: 4,
           pointBackgroundColor: "#4b3fc4",
           fill: false,
           tension: 0.3,
@@ -639,16 +739,15 @@ function majHisto() {
         },
         {
           label: "IBP",
-          data: donnees.map(r => parseFloat(r.ibp) || 0),
-          type: "line",
-          borderColor: "#2d2a56",
-          backgroundColor: "rgba(45,42,86,0.06)",
-          borderWidth: 2.5,
-          pointRadius: 4,
-          pointBackgroundColor: couleursIbp,
-          pointBorderColor: couleursIbp,
-          fill: false,
-          tension: 0.3,
+          data: ibpData,
+          type: "bar",
+          backgroundColor: couleursIbp,
+          borderColor: couleursIbp,
+          borderWidth: 1,
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 1.0,
+          categoryPercentage: 0.85,
           yAxisID: "y2",
         }
       ]
@@ -664,10 +763,12 @@ function majHisto() {
         },
         tooltip: {
           callbacks: {
-            title: (items) => noms[items[0].dataIndex] || labels[items[0].dataIndex],
+            title: (items) => _histoNoms[items[0].dataIndex] || _histoLabels[items[0].dataIndex],
             label: (item) => {
-              if (item.dataset.label === "Participants")
+              if (item.dataset.label === "Participants") {
+                if (item.raw === null || item.raw === undefined) return " Participants : non renseigné";
                 return " " + item.raw + " participant" + (item.raw > 1 ? "s" : "");
+              }
               if (item.dataset.label.startsWith("Moyenne"))
                 return " Moyenne : " + parseFloat(item.raw).toFixed(1);
               if (item.dataset.label === "IBP")
@@ -675,8 +776,8 @@ function majHisto() {
               return " D+ : " + item.raw + " m";
             },
             afterLabel: (item) => {
-              if (item.dataset.label === "Participants") {
-                const diff = item.raw - moy;
+              if (item.dataset.label === "Participants" && item.raw !== null && item.raw !== undefined) {
+                const diff = item.raw - _histoMoy;
                 return diff >= 0
                   ? " ▲ +" + diff.toFixed(1) + " vs moy."
                   : " ▼ " + diff.toFixed(1) + " vs moy.";
@@ -764,14 +865,13 @@ function majStats() {
     "Moy. D+ : <strong>" + moyDen.toFixed(0) + " m</strong> · " +
     "Moy. IBP : <strong>" + moyIBP.toFixed(0) + "</strong>" +
     (animFiltre && aNb > 0
-      ? '<br><span style="color:var(--terracotta);font-size:.84rem;">👤 ' + animNom + " (" + aNb + " rando" + (aNb>1?"s":"") + ") —</span> " +
+      ? '<br><span style="color:var(--terracotta);font-size:.84rem;">👤 ' + escapeHtml(animNom) + " (" + aNb + " rando" + (aNb>1?"s":"") + ") —</span> " +
         'Moy. Distance : <strong style="color:var(--terracotta);">' + aMoyKm.toFixed(1) + " km</strong> · " +
         'Moy. D+ : <strong style="color:var(--terracotta);">' + aMoyDen.toFixed(0) + " m</strong> · " +
         'Moy. IBP : <strong style="color:var(--terracotta);">' + aMoyIBP.toFixed(0) + "</strong>"
       : animFiltre ? '<br><span style="color:var(--muted);font-size:.84rem;">👤 Aucune randonnée trouvée.</span>' : "");
 
   const ctx = document.getElementById("radarCanvas");
-  if (radarChart) { radarChart.destroy(); radarChart = null; }
   const datasets = [{
     label: "Club",
     data: [
@@ -796,6 +896,13 @@ function majStats() {
       borderWidth: 2.5, pointBackgroundColor: "#dc2626", pointRadius: 4,
     });
   }
+
+  // Mise a jour en place (remplace les datasets, gere l'ajout/retrait de la serie Animateur)
+  if (radarChart) {
+    radarChart.data.datasets = datasets;
+    radarChart.update();
+    return;
+  }
   radarChart = new Chart(ctx, {
     type: "radar",
     data: { labels: ["Activité", "Distance", "Dénivelé", "Difficulté"], datasets },
@@ -813,60 +920,60 @@ function voirDetail(id) {
   if (!f) return;
   idEnCours = id;
   const statut = f.statut || "publiée";
-  const badgeTitre = statut === "annulée"
+  const badgeTitre = estAnnulee(f)
     ? ' <span class="badge badge-ann" style="vertical-align:middle">❌ Annulée</span>'
     : statut === "modifiée"
     ? ' <span class="badge badge-mod" style="vertical-align:middle">✏️ Modifiée</span>'
     : '';
   const dateAff = f.date_rando
-    ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" })
+    ? parseDate(f.date_rando).toLocaleDateString("fr-FR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" })
     : "—";
-  const mapsUrl = f.gps ? "https://www.google.com/maps?q=" + f.gps : null;
-  document.getElementById("modalTitre").innerHTML = (f.nom_rando || "—") + badgeTitre;
+  const mapsUrl = f.gps ? "https://www.google.com/maps?q=" + encodeURIComponent(f.gps) : null;
+  document.getElementById("modalTitre").innerHTML = escapeHtml(f.nom_rando || "—") + badgeTitre;
 
   let html = "";
-  if (f.profil_png) html += '<img src="' + f.profil_png + '" alt="Profil altitude" class="modal-profil">';
+  if (f.profil_png) html += '<img src="' + escapeHtml(f.profil_png) + '" alt="Profil altitude" class="modal-profil">';
 
   html += '<div class="detail-section"><div class="detail-section-titre">📅 Général</div>' +
     '<div class="detail-grid">' +
       '<div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">' + dateAff + '</div></div>' +
-      '<div class="detail-item"><div class="detail-label">Animateur</div><div class="detail-value">👤 ' + (f.animateur || "—") + '</div></div>' +
-      '<div class="detail-item"><div class="detail-label">Heure RV</div><div class="detail-value">⏰ ' + (f.heure_rv || "—") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Animateur</div><div class="detail-value">👤 ' + escapeHtml(f.animateur || "—") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Heure RV</div><div class="detail-value">⏰ ' + escapeHtml(f.heure_rv || "—") + '</div></div>' +
       '<div class="detail-item"><div class="detail-label">Statut</div><div class="detail-value">' + (
-        statut === "annulée" ? '<span class="badge badge-ann">❌ Annulée</span>' :
+        estAnnulee(f) ? '<span class="badge badge-ann">❌ Annulée</span>' :
         statut === "modifiée" ? '<span class="badge badge-mod">✏️ Modifiée</span>' :
         '<span class="badge badge-pub">✅ Publiée</span>') + '</div></div>' +
     '</div></div>';
 
   html += '<div class="detail-section"><div class="detail-section-titre">🅿️ Logistique</div>' +
     '<div class="detail-grid">' +
-      '<div class="detail-item span2"><div class="detail-label">Parking covoiturage</div><div class="detail-value">' + (f.parking_covoit || "—") + '</div></div>' +
-      '<div class="detail-item span2"><div class="detail-label">Parking départ</div><div class="detail-value">' + (f.parking_depart || "—") + '</div></div>' +
-      (f.lieu ? '<div class="detail-item span2"><div class="detail-label">Lieu</div><div class="detail-value">📍 ' + f.lieu + '</div></div>' : "") +
-      (f.gps ? '<div class="detail-item"><div class="detail-label">GPS</div><div class="detail-value">' + f.gps + '</div></div>' +
-        '<div class="detail-item"><div class="detail-label">Carte</div><div class="detail-value"><a href="' + mapsUrl + '" target="_blank">🗺 Ouvrir Maps</a></div></div>' : "") +
+      '<div class="detail-item span2"><div class="detail-label">Parking covoiturage</div><div class="detail-value">' + escapeHtml(f.parking_covoit || "—") + '</div></div>' +
+      '<div class="detail-item span2"><div class="detail-label">Parking départ</div><div class="detail-value">' + escapeHtml(f.parking_depart || "—") + '</div></div>' +
+      (f.lieu ? '<div class="detail-item span2"><div class="detail-label">Lieu</div><div class="detail-value">📍 ' + escapeHtml(f.lieu) + '</div></div>' : "") +
+      (f.gps ? '<div class="detail-item"><div class="detail-label">GPS</div><div class="detail-value">' + escapeHtml(f.gps) + '</div></div>' +
+        '<div class="detail-item"><div class="detail-label">Carte</div><div class="detail-value"><a href="' + escapeHtml(mapsUrl) + '" target="_blank" rel="noopener noreferrer">🗺 Ouvrir Maps</a></div></div>' : "") +
     '</div></div>';
 
   html += '<div class="detail-section"><div class="detail-section-titre">📏 Parcours</div>' +
     '<div class="detail-grid">' +
-      '<div class="detail-item"><div class="detail-label">Distance</div><div class="detail-value">' + (f.distance ? f.distance + " km" : "—") + '</div></div>' +
-      '<div class="detail-item"><div class="detail-label">Dénivelé +</div><div class="detail-value">' + (f.denivele ? f.denivele + " m" : "—") + '</div></div>' +
-      '<div class="detail-item"><div class="detail-label">Durée</div><div class="detail-value">⏱ ' + (f.duree || "—") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Distance</div><div class="detail-value">' + (f.distance ? escapeHtml(f.distance) + " km" : "—") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Dénivelé +</div><div class="detail-value">' + (f.denivele ? escapeHtml(f.denivele) + " m" : "—") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Durée</div><div class="detail-value">⏱ ' + escapeHtml(f.duree || "—") + '</div></div>' +
       '<div class="detail-item"><div class="detail-label">IBP</div><div class="detail-value">' + (f.ibp ? ibpPill(f.ibp) + " " + ibpLabel(f.ibp) : "—") + '</div></div>' +
-      '<div class="detail-item"><div class="detail-label">Effort</div><div class="detail-value">' + (f.effort ? f.effort + " / 5" : "—") + '</div></div>' +
-      '<div class="detail-item"><div class="detail-label">Technicité</div><div class="detail-value">' + (f.technicite ? f.technicite + " / 5" : "—") + '</div></div>' +
-      '<div class="detail-item"><div class="detail-label">Risque</div><div class="detail-value">' + (f.risque ? f.risque + " / 5" : "—") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Effort</div><div class="detail-value">' + (f.effort ? escapeHtml(f.effort) + " / 5" : "—") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Technicité</div><div class="detail-value">' + (f.technicite ? escapeHtml(f.technicite) + " / 5" : "—") + '</div></div>' +
+      '<div class="detail-item"><div class="detail-label">Risque</div><div class="detail-value">' + (f.risque ? escapeHtml(f.risque) + " / 5" : "—") + '</div></div>' +
     '</div></div>';
 
   if (f.couts) html += '<div class="detail-section"><div class="detail-section-titre">💶 Coûts trajet</div>' +
-    '<div class="detail-grid full"><div class="detail-item"><div class="detail-label">Détail</div><div class="detail-value">' + f.couts + '</div></div></div></div>';
+    '<div class="detail-grid full"><div class="detail-item"><div class="detail-label">Détail</div><div class="detail-value">' + escapeHtml(f.couts) + '</div></div></div></div>';
 
   if (f.remarques) html += '<div class="detail-section"><div class="detail-section-titre">📌 Remarques</div>' +
-    '<div class="detail-grid full"><div class="detail-item"><div class="detail-value remarques">' + f.remarques + '</div></div></div></div>';
+    '<div class="detail-grid full"><div class="detail-item"><div class="detail-value remarques">' + escapeHtml(f.remarques) + '</div></div></div></div>';
 
   if (f.nb_participants || f.noms_participants) {
-    const dateRando = new Date(f.date_rando + "T12:00:00");
-    if (dateRando < new Date() && f.statut !== "annulée") {
+    const dateRando = parseDate(f.date_rando);
+    if (dateRando < new Date() && !estAnnulee(f)) {
       let listeHtml = "";
       let nbInconnus = 0;
       if (f.noms_participants) {
@@ -875,13 +982,13 @@ function voirDetail(id) {
         listeHtml = lignes.map(l => {
           const inc = l.includes("?");
           return '<div style="padding:3px 0;border-bottom:1px solid #f1ede4;font-size:13px;' + (inc?"color:var(--muted);font-style:italic;":"") + '">' +
-            (inc ? "⚠️ " : "") + l.trim() + '</div>';
+            (inc ? "⚠️ " : "") + escapeHtml(l.trim()) + '</div>';
         }).join("");
       }
       html += '<div class="detail-section"><div class="detail-section-titre">👥 Participants</div>' +
         '<div class="detail-grid">' +
           '<div class="detail-item"><div class="detail-label">Nombre</div>' +
-            '<div class="detail-value" style="font-size:20px;font-weight:700;color:var(--sapin);">' + (f.nb_participants || "—") + '</div></div>' +
+            '<div class="detail-value" style="font-size:20px;font-weight:700;color:var(--sapin);">' + escapeHtml(f.nb_participants || "—") + '</div></div>' +
           (nbInconnus > 0 ? '<div class="detail-item"><div class="detail-label">Avertissement</div>' +
             '<div class="detail-value" style="color:#856404;font-size:12px;">⚠️ ' + nbInconnus + ' sans nom identifié</div></div>'
             : "<div class='detail-item'></div>") +
@@ -938,7 +1045,7 @@ function majPreviewExport() {
 
   /* Filtrer les donnees selon la periode */
   const donnees = toutes.filter(r => {
-    if (r.statut === "annulée") return false;
+    if (estAnnulee(r)) return false;
     if (debut && r.date_rando < debut) return false;
     if (fin   && r.date_rando > fin)   return false;
     return true;
@@ -964,7 +1071,7 @@ function telechargerCSV() {
   const fin   = document.getElementById("exportFin").value;
 
   const donnees = toutes.filter(r => {
-    if (r.statut === "annulée") return false;
+    if (estAnnulee(r)) return false;
     if (debut && r.date_rando < debut) return false;
     if (fin   && r.date_rando > fin)   return false;
     return true;
@@ -983,7 +1090,7 @@ function telechargerCSV() {
   const jours = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
   const rows = donnees.map(r => {
-    const d = r.date_rando ? new Date(r.date_rando + "T12:00:00") : null;
+    const d = r.date_rando ? parseDate(r.date_rando) : null;
     const dateAff = d ? d.toLocaleDateString("fr-FR") : "";
     const jour    = d ? jours[d.getDay()] : "";
     return [
