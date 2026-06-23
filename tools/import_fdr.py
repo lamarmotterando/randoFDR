@@ -12,7 +12,8 @@ import os, re, sys, json, zipfile, requests
 from pathlib import Path
 
 SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE"
+# ✅ Clé anon supprimée — insertions via dynamic-handler (service_role côté serveur)
+URL_HANDLER = SUPABASE_URL + "/functions/v1/dynamic-handler"
 MODE_PROD = "--prod" in sys.argv
 
 # ══ EXTRACTEURS ══════════════════════════════════════════════
@@ -351,17 +352,17 @@ def parser(texte, nom_fichier):
 
 def inserer(fiche):
     r = requests.post(
-        f"{SUPABASE_URL}/rest/v1/fiches",
-        headers={
-            "Content-Type": "application/json",
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Prefer": "return=minimal"
-        },
-        json=fiche,
+        URL_HANDLER,
+        headers={"Content-Type": "application/json"},
+        json={"action": "insertFiche", "fiche": fiche},
         timeout=10
     )
-    return r.status_code in (200, 201), r.text
+    try:
+        data = r.json()
+        ok = r.status_code in (200, 201) and data.get("success") is not False
+    except Exception:
+        ok = r.status_code in (200, 201)
+    return ok, r.text
 
 # ══ MAIN ══════════════════════════════════════════════════════
 
