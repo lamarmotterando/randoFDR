@@ -1,7 +1,7 @@
-/* menuAnimateurs.js — charge depuis Supabase (données non exposées dans le code) */
+/* menuAnimateurs.js — charge depuis Supabase via dynamic-handler (pas de clé exposée) */
 
 const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+/* ✅ Clé anon supprimée — lecture animateurs via dynamic-handler (action getAnimateurs) */
 
 export async function remplirMenuAnimateurs() {
   const select = document.getElementById("animateur");
@@ -12,12 +12,11 @@ export async function remplirMenuAnimateurs() {
 
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/animateurs?select=nom,email,telephone&order=nom`,
+      `${SUPABASE_URL}/functions/v1/dynamic-handler`,
       {
-        headers: {
-          "apikey": SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`
-        }
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "getAnimateurs" })
       }
     );
 
@@ -43,10 +42,10 @@ export async function remplirMenuAnimateurs() {
       if (emailField) emailField.value = opt?.dataset.email || "";
     });
 
-    console.log(`[Animateurs] ${animateurs.length} animateurs chargés depuis Supabase`);
+    console.log(`[Animateurs] ${animateurs.length} animateurs chargés via dynamic-handler`);
 
   } catch(e) {
-    console.warn("[Animateurs] Erreur chargement Supabase:", e);
+    console.warn("[Animateurs] Erreur chargement:", e);
     /* Fallback : option d'erreur */
     select.innerHTML = '<option value="">⚠️ Erreur chargement — réessayez</option>';
   }
