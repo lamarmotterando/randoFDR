@@ -265,7 +265,7 @@ const checks = [
   { id: 'supabase-rest', group: 'backend', icon: '🗄', name: 'Supabase REST API', detail: 'Table fiches — lecture',
     run: async () => { const t0 = Date.now(); try { const res = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({action:"pingDB"}) }); const ms = Date.now()-t0; const d = await res.json(); return { ok: d.ok, ms, detail: d.ok ? `HTTP ${res.status} · ${ms}ms` : `Erreur ${res.status}` }; } catch(e) { return {ok:false, ms:Date.now()-t0, detail:e.message}; } } },
   { id: 'supabase-animateurs', group: 'backend', icon: '👥', name: 'Supabase — Animateurs', detail: 'Table animateurs — lecture',
-    run: async () => { const t0 = Date.now(); try { const res = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({action:"getAnimateurs"}) }); const ms = Date.now()-t0; const d = await res.json(); const ok = Array.isArray(d) && d.length > 0; return { ok, ms, detail: ok ? `${d.length} animateurs · ${ms}ms` : `Erreur ${res.status}` }; } catch(e) { return {ok:false, ms:Date.now()-t0, detail:e.message}; } } },
+    run: async () => { const t0 = Date.now(); try { const res = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/get-animateurs", { method:"GET", headers:{"Content-Type":"application/json"} }); const ms = Date.now()-t0; const d = await res.json(); const ok = Array.isArray(d) && d.length > 0; return { ok, ms, detail: ok ? `${d.length} animateurs · ${ms}ms` : `Erreur ${res.status}` }; } catch(e) { return {ok:false, ms:Date.now()-t0, detail:e.message}; } } },
   { id: 'supabase-storage', group: 'backend', icon: '📦', name: 'Supabase Storage', detail: 'Bucket Courbe — profils PNG',
     run: async () => { const r = await ping(`${SUPABASE_URL}/storage/v1/bucket`); return { ok: r.ok || r.status === 400 || r.status === 401, ms: r.ms, detail: `HTTP ${r.status} · ${r.ms}ms` }; } },
   { id: 'dynamic-handler', group: 'backend', icon: '⚡', name: 'Edge Function dynamic-handler', detail: 'Supabase Deno — email + Calendar',
@@ -313,8 +313,8 @@ async function chargerMetriques() {
     const [fiches, animateurs] = await Promise.all([
       fetch(HANDLER, { method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ action:"getFiches", select:"id,date_rando,nom_rando,animateur,statut,type", order:"date_rando.asc" }) }).then(r=>r.json()),
-      fetch(HANDLER, { method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ action:"getAnimateurs" }) }).then(r=>r.json()),
+      fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/get-animateurs",
+        { method:"GET", headers:{"Content-Type":"application/json"} }).then(r=>r.json()),
     ]);
 
     /* Total fiches */
