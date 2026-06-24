@@ -23,3 +23,5 @@ Le handler génère un token Google via le Service Account (JWT RS256), puis cr�
 L'événement Calendar reçoit : titre 🥾 Nom, date, animateur, parking covoiturage, distance, dénivelé, IBP + couleur automatique selon niveau IBP
 
 Les champs optionnels comme heureRV, gps, parkingDepart, duree, tel, covoit4/5 restent vides à la création depuis ce formulaire — ils seront remplis plus tard via le bouton Modifier qui fait appel à calendarUpdate.
+*******************
+Migration nouvelle clé Supabase 24 juin 2026
