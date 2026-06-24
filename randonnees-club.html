@@ -386,7 +386,7 @@ let periodeMode = "tout";
 async function charger() {
   try {
     const res = await fetch(
-      SUPABASE_URL + "/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque,lieu,nb_participants,noms_participants&order=date_rando.desc",
+      SUPABASE_URL + "/rest/v1/fiches?select=id,date_rando,nom_rando,animateur,distance,denivele,duree,ibp,statut,profil_png,parking_covoit,parking_depart,gps,couts,remarques,effort,technicite,risque,lieu,nb_participants&order=date_rando.desc",
       { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
     );
     toutes = await res.json();
@@ -972,30 +972,15 @@ function voirDetail(id) {
   if (f.remarques) html += '<div class="detail-section"><div class="detail-section-titre">📌 Remarques</div>' +
     '<div class="detail-grid full"><div class="detail-item"><div class="detail-value remarques">' + escapeHtml(f.remarques) + '</div></div></div></div>';
 
-  if (f.nb_participants || f.noms_participants) {
+  if (f.nb_participants) {
     const dateRando = parseDate(f.date_rando);
     if (dateRando < new Date() && !estAnnulee(f)) {
-      let listeHtml = "";
-      let nbInconnus = 0;
-      if (f.noms_participants) {
-        const lignes = f.noms_participants.split("\n").filter(l => l.trim());
-        nbInconnus = lignes.filter(l => l.includes("?")).length;
-        listeHtml = lignes.map(l => {
-          const inc = l.includes("?");
-          return '<div style="padding:3px 0;border-bottom:1px solid #f1ede4;font-size:13px;' + (inc?"color:var(--muted);font-style:italic;":"") + '">' +
-            (inc ? "⚠️ " : "") + escapeHtml(l.trim()) + '</div>';
-        }).join("");
-      }
+      /* ✅ Seul le compteur est affiché — noms non chargés (données nominatives non exposées) */
       html += '<div class="detail-section"><div class="detail-section-titre">👥 Participants</div>' +
         '<div class="detail-grid">' +
           '<div class="detail-item"><div class="detail-label">Nombre</div>' +
             '<div class="detail-value" style="font-size:20px;font-weight:700;color:var(--sapin);">' + escapeHtml(f.nb_participants || "—") + '</div></div>' +
-          (nbInconnus > 0 ? '<div class="detail-item"><div class="detail-label">Avertissement</div>' +
-            '<div class="detail-value" style="color:#856404;font-size:12px;">⚠️ ' + nbInconnus + ' sans nom identifié</div></div>'
-            : "<div class='detail-item'></div>") +
-          (listeHtml ? '<div class="detail-item span2" style="padding:0;">' +
-            '<div class="detail-label" style="padding:8px 14px 4px;">Liste</div>' +
-            '<div style="padding:0 14px 8px;">' + listeHtml + '</div></div>' : "") +
+          "<div class='detail-item'></div>" +
         '</div></div>';
     }
   }
