@@ -1256,6 +1256,11 @@ async function lancerImport() {
   result.innerHTML = '<strong>Résultat :</strong> ✅ ' + ok + ' mis à jour · ⚠️ ' + ignored + ' ignoré(s) · ❌ ' + errors + ' erreur(s)<br><br>' +
     '<div style="max-height:150px;overflow-y:auto;font-size:11px;line-height:1.8;">' + details.join('<br>') + '</div>';
   btn.textContent = '⬆️ Importer'; btn.disabled = false;
+
+  /* Fermer automatiquement le modal 2.5s après un import sans erreur */
+  if (errors === 0 && ok > 0) {
+    setTimeout(() => fermerImport(), 2500);
+  }
 }
 
 /* == FIN IMPORT CSV == */
