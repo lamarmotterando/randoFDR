@@ -835,7 +835,10 @@ async function loadData() {
   }
   try {
     const [a, r, p] = await Promise.all([
-      callHandler({ action: "getAnimateurs" }),
+      /* ✅ getAnimateurs → Edge Function dédiée (noms uniquement, sans email ni téléphone) */
+      fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/get-animateurs",
+        { method: "GET", headers: { "Content-Type": "application/json" } }
+      ).then(r => { if (!r.ok) throw new Error("get-animateurs " + r.status); return r.json(); }),
       callHandler({ action: "getFiches", select: "nom_rando", order: "nom_rando.asc" }),
       fetch(BASE_URL + "parkings.js").then(res => res.text()).then(txt => {
         const m = txt.match(/\[([^\]]+)\]/s);
@@ -847,7 +850,7 @@ async function loadData() {
     randos = Array.isArray(r) ? [...new Set(r.map(x => x.nom_rando).filter(Boolean))].sort() : [];
     parkings = p;
     initAutocomplete();
-    console.log("[Animateurs] " + animateurs.length + " animateurs chargés via dynamic-handler");
+    console.log("[Animateurs] " + animateurs.length + " animateurs chargés via get-animateurs");
   } catch(e) { console.error("Erreur chargement:", e); }
 }
 
