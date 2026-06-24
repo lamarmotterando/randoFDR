@@ -1057,12 +1057,22 @@ function confirmSupprimerSelection() {
 
 async function supprimerSelection(ids) {
   document.getElementById("btn-del-multi").disabled = true; let erreurs = 0;
+  /* ✅ Suppression via Edge Function dédiée delete-fiche (token admin obligatoire) */
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) { showToast("Session expirée — reconnectez-vous.", true); loadEvents(); return; }
+
   for (const id of ids) {
     try {
       const fiche = allRows.find(r => String(r.id) === String(id));
       if (fiche && fiche.date_rando) await syncCalendar("calendarDelete", { dateRando: fiche.date_rando, animateur: fiche.animateur || "" });
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, { method: "DELETE", headers: await authHeaders({ "Prefer": "return=minimal" }) });
-      if (!res.ok && res.status !== 204) erreurs++;
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-fiche`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) erreurs++;
     } catch(e) { erreurs++; }
   }
   showToast(erreurs === 0 ? `🗑️ ${ids.length} fiche${ids.length > 1 ? "s supprimées" : " supprimée"}.` : `${erreurs} erreur(s) lors de la suppression.`, erreurs > 0);
