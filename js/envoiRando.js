@@ -133,8 +133,10 @@ async function chercherFicheExistante(date_rando, animateur) {
 }
 
 const HANDLER    = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
-const SEND_EMAIL = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/send-email";
+const SEND_EMAIL   = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/send-email";
+const UPDATE_FICHE = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/update-fiche";
 /* ✅ send-email : Edge Function dédiée — l'email animateur est résolu côté serveur */
+/* ✅ update-fiche : Edge Function dédiée — champs animateur uniquement, sans auth */
 
 async function callHandler(body) {
   const res = await fetch(HANDLER, {
@@ -162,7 +164,13 @@ async function sauvegarderFiche(fiche) {
       patch.statut = fiche.statut || "publiée";
       if (fiche.profil_png) patch.profil_png = fiche.profil_png;
 
-      await callHandler({ action: "updateFiche", id: idExistant, fiche: patch });
+      /* ✅ update-fiche — Edge Function dédiée avec liste blanche des champs */
+      const resUpd = await fetch(UPDATE_FICHE, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ id: idExistant, fiche: patch })
+      });
+      if (!resUpd.ok) throw new Error("update-fiche HTTP " + resUpd.status);
       console.log("[Supabase] Fiche prévisionnelle mise à jour ✅ id:", idExistant);
       return true;
     } else {
