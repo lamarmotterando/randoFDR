@@ -1,5 +1,6 @@
 /* menuAnimateurs.js — charge les animateurs via la Edge Function dédiée get-animateurs
-   ✅ Aucune clé exposée — noms uniquement (email et téléphone jamais transmis ici) */
+   ✅ Aucune clé exposée — nom + email uniquement (téléphone jamais transmis ici)
+   ✅ goanim.html est protégé par mot de passe Webnode */
 
 const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
 
@@ -7,7 +8,6 @@ export async function remplirMenuAnimateurs() {
   const select = document.getElementById("animateur");
   if (!select) return;
 
-  /* Option par défaut pendant le chargement */
   select.innerHTML = '<option value="">⏳ Chargement…</option>';
 
   try {
@@ -23,15 +23,17 @@ export async function remplirMenuAnimateurs() {
 
     animateurs.forEach(a => {
       const opt = document.createElement("option");
-      opt.value       = a.nom;
-      opt.textContent = a.nom;
+      opt.value         = a.nom;
+      opt.dataset.email = a.email || "";
+      opt.textContent   = a.nom;
       select.appendChild(opt);
     });
 
-    /* Email auto-rempli à la sélection — récupéré depuis le champ caché emailUser si présent */
+    /* Pré-remplir emailUser à la sélection */
     select.addEventListener("change", () => {
+      const opt = select.selectedOptions[0];
       const emailField = document.getElementById("emailUser");
-      if (emailField) emailField.value = "";
+      if (emailField) emailField.value = opt?.dataset.email || "";
     });
 
     console.log(`[Animateurs] ${animateurs.length} animateurs chargés via get-animateurs`);
