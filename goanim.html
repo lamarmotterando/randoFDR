@@ -563,7 +563,7 @@ async function charger() {
       const nomNorm = randoNom.trim().normalize("NFC");
       const d = await callHandler({ action: "getFiches",
         select: "id,date_rando,nom_rando,animateur,heure_rv,statut,profil_png,parking_covoit,parking_depart,gps,distance,denivele,duree,ibp,effort,technicite,risque,couts,remarques",
-        filters: "nom_rando=ilike." + encodeURIComponent(nomNorm),
+        filters: "nom_rando=ilike." + nomNorm,  /* pas d'encodeURIComponent — le nom est passé en JSON body, pas en URL */
         order: "date_rando.desc", limit: 1 });
       if (d?.length) fiche = d[0];
     } else {
