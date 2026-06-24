@@ -1232,14 +1232,11 @@ async function lancerImport() {
     }
 
     try {
-      const res = await fetch(URL_HANDLER, {
+      /* ✅ update-participants — Edge Function dédiée (nb_participants uniquement) */
+      const res = await fetch(SUPABASE_URL + '/functions/v1/update-participants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'updateFiche',
-          id: fiche.id,
-          fiche: { nb_participants: row.nb }
-        })
+        body: JSON.stringify({ id: fiche.id, nb: row.nb })
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success !== false) {
