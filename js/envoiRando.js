@@ -132,7 +132,9 @@ async function chercherFicheExistante(date_rando, animateur) {
   }
 }
 
-const HANDLER = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
+const HANDLER    = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
+const SEND_EMAIL = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/send-email";
+/* ✅ send-email : Edge Function dédiée — l'email animateur est résolu côté serveur */
 
 async function callHandler(body) {
   const res = await fetch(HANDLER, {
@@ -179,7 +181,15 @@ async function sauvegarderFiche(fiche) {
 ══════════════════════════════════════ */
 async function envoyerEmail(resume, emailUser, profilPNG) {
   try {
-    const data = await callHandler({ action: "sendEmail", resume, emailUser, profilPNG });
+    /* ✅ send-email — l'email est résolu côté serveur depuis le nom animateur
+       emailUser n'est plus transmis au serveur (fin de la faille sendEmail) */
+    const nomAnimateur = document.getElementById("animateur")?.value?.trim() || "";
+    const res  = await fetch(SEND_EMAIL, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ resume, nomAnimateur, profilPNG })
+    });
+    const data = await res.json();
     console.log("[Email] réponse:", data);
     return data?.success === true;
   } catch(e) {
