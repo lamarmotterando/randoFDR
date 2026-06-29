@@ -1119,7 +1119,7 @@ async function supprimerSelection(ids) {
   for (const id of ids) {
     try {
       const fiche = allRows.find(r => String(r.id) === String(id));
-      if (fiche && fiche.date_rando) await syncCalendar("calendarDelete", { dateRando: fiche.date_rando, animateur: fiche.animateur || "" });
+      if (fiche && fiche.date_rando && fiche.type !== "autre") await syncCalendar("calendarDelete", { dateRando: fiche.date_rando, animateur: fiche.animateur || "" });
       const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-fiche`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
