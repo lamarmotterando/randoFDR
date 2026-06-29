@@ -214,6 +214,12 @@
   .type-btn:not(.active):hover { background: #f7fafc; }
   .type-btn.active-rando  { background: #2d6a4f; color: #fff; }
   .type-btn.active-sejour { background: #185fa5; color: #fff; }
+  .type-btn.active-autre  { background: #9c6b1f; color: #fff; }
+
+  .badge-autre { display: inline-block; font-size: .68rem; background: #f6e7cf; color: #7a4f12; border-radius: 20px; padding: 1px 7px; font-weight: 700; margin-right: 6px; }
+  .autre-horaire { font-size: .72rem; color: #7a4f12; margin-left: 6px; }
+  .tr-autre td { background: #fdf6ec; }
+  .tr-autre:hover td { background: #f9ecd6 !important; }
 
   .sejour-dates-bloc { background: #e8f4fd; border: 1.5px solid #b5d4f4; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
   .sejour-dates-titre { font-size: .82rem; font-weight: 700; color: #0c4472; margin-bottom: 12px; }
@@ -334,6 +340,7 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
       <div class="type-toggle">
         <button class="type-btn active-rando" id="btn-type-rando" onclick="switchType('rando')">🥾 Randonnée</button>
         <button class="type-btn" id="btn-type-sejour" onclick="switchType('sejour')">🏕 Séjour</button>
+        <button class="type-btn" id="btn-type-autre" onclick="switchType('autre')">📌 Autres</button>
       </div>
 
       <div id="bloc-form-rando">
@@ -387,6 +394,18 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
           <div class="form-group"></div>
         </div>
         <div class="form-actions"><button class="btn" id="btn-create-sejour" onclick="creerSejour()" style="background:#185fa5;color:#fff">🏕 Créer le séjour</button></div>
+      </div>
+
+      <div id="bloc-form-autre" style="display:none">
+        <div class="form-grid">
+          <div class="form-group"><label for="autre-date">Date</label><input type="date" id="autre-date"></div>
+          <div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="form-group"><label for="autre-heure-debut">Heure de début</label><input type="time" id="autre-heure-debut"></div>
+            <div class="form-group"><label for="autre-heure-fin">Heure de fin</label><input type="time" id="autre-heure-fin"></div>
+          </div>
+          <div class="form-group full"><label for="autre-remarques">Remarques</label><textarea id="autre-remarques" style="min-height:70px;resize:vertical" placeholder="Description, lieu, infos…"></textarea></div>
+        </div>
+        <div class="form-actions"><button class="btn" id="btn-create-autre" onclick="creerAutre()" style="background:#9c6b1f;color:#fff">📌 Créer l'événement</button></div>
       </div>
     </div>
 
@@ -459,6 +478,7 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
     <input type="hidden" id="edit-nom-original">
     <input type="hidden" id="edit-anim-original">
     <input type="hidden" id="edit-date-original">
+    <input type="hidden" id="edit-type">
     <input type="hidden" id="edit-statut-modifie" value="0">
 
     <div class="modal-info-banner">
@@ -916,11 +936,13 @@ function onEditFieldChange() {
 window.onEditFieldChange = onEditFieldChange;
 
 function switchType(type) {
-  const isRando = type === "rando";
-  document.getElementById("btn-type-rando").className  = "type-btn" + (isRando  ? " active-rando"  : "");
-  document.getElementById("btn-type-sejour").className = "type-btn" + (!isRando ? " active-sejour" : "");
-  document.getElementById("bloc-form-rando").style.display  = isRando  ? "" : "none";
-  document.getElementById("bloc-form-sejour").style.display = !isRando ? "" : "none";
+  const blocs = { rando: "bloc-form-rando", sejour: "bloc-form-sejour", autre: "bloc-form-autre" };
+  const btns  = { rando: "btn-type-rando",  sejour: "btn-type-sejour",  autre: "btn-type-autre" };
+  const actif = { rando: "active-rando",    sejour: "active-sejour",    autre: "active-autre" };
+  Object.keys(blocs).forEach(k => {
+    const bloc = document.getElementById(blocs[k]); if (bloc) bloc.style.display = (k === type) ? "" : "none";
+    const btn  = document.getElementById(btns[k]);  if (btn)  btn.className = "type-btn" + (k === type ? " " + actif[k] : "");
+  });
 }
 function calcNbJours() {
   const d1 = document.getElementById("sejour-date-debut").value;
@@ -967,6 +989,38 @@ async function creerSejour() {
     } else showToast("Erreur : " + (await res.text()), true);
   } catch(e) { showToast("Erreur réseau : " + e.message, true); }
   setBusy("btn-create-sejour", false);
+}
+
+async function creerAutre() {
+  const date = document.getElementById("autre-date").value;
+  const hDeb = document.getElementById("autre-heure-debut").value;
+  const hFin = document.getElementById("autre-heure-fin").value;
+  const rem  = document.getElementById("autre-remarques").value.trim();
+  /* Aucun champ obligatoire pour le type « Autres » */
+  setBusy("btn-create-autre", true);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches`, {
+      method: "POST", headers: await authHeadersJson(),
+      body: JSON.stringify({
+        type: "autre", statut: "publiée",
+        date_rando: date || null,
+        heure_rv: hDeb || null,                 /* heure de début */
+        duree: hFin || null,                    /* heure de fin (réutilisation de la colonne duree) */
+        remarques: rem || null,
+        nom_rando: rem || "Autre événement",    /* sert de libellé dans le tableau */
+        distance: 0
+      })
+    });
+    if (res.ok) {
+      showToast("📌 Événement « Autres » créé !");
+      document.getElementById("autre-date").value = "";
+      document.getElementById("autre-heure-debut").value = "";
+      document.getElementById("autre-heure-fin").value = "";
+      document.getElementById("autre-remarques").value = "";
+      loadEvents();
+    } else showToast("Erreur : " + (await res.text()), true);
+  } catch(e) { showToast("Erreur réseau : " + e.message, true); }
+  setBusy("btn-create-autre", false);
 }
 
 function setBusy(btnId, busy) {
@@ -1124,6 +1178,32 @@ function buildEventRow(ev, extraClass) {
     return tr;
   }
 
+  if (ev.type === "autre") {
+    tr.className = "tr-autre" + (extraClass ? " " + extraClass : "");
+    const dateAff = toDisplay(ev.date_rando); const jour = jourSemaine(ev.date_rando);
+    const dateHtml = jour
+      ? `<span class="date-cell"><span class="jour">${jour}</span><span class="date">${dateAff}</span></span>`
+      : `<span class="date-cell"><span class="date">${dateAff || "—"}</span></span>`;
+    const hDeb = ev.heure_rv || ""; const hFin = ev.duree || "";
+    const horaire = (hDeb || hFin) ? `<span class="autre-horaire">🕒 ${hDeb || "?"}${hFin ? " – " + hFin : ""}</span>` : "";
+    const libelle = ev.remarques || ev.nom_rando || "Autre événement";
+    tr.innerHTML = `
+      <td class="chk-col"><input type="checkbox" class="row-chk" data-id="${ev.id}" onchange="updateSelectionToolbar()"></td>
+      <td>${dateHtml}</td>
+      <td><span class="badge-autre">📌 Autre</span><strong>${libelle}</strong>${horaire}</td>
+      <td>—</td>
+      <td style="text-align:center">—</td>
+      <td>—</td>
+      <td>—</td>
+      <td><span style="color:#ccc;font-size:.8rem">—</span></td>`;
+    tr.style.cursor = "pointer";
+    tr.addEventListener("click", (e) => {
+      if (e.target.closest("input[type=checkbox]")) return;
+      openEdit(ev);
+    });
+    return tr;
+  }
+
   if (extraClass) tr.className = extraClass;
   const dateAff = toDisplay(ev.date_rando); const jour = jourSemaine(ev.date_rando);
   const statut = ev.statut || "publiée"; const annulee = statut === "annulée";
@@ -1266,6 +1346,8 @@ function sortTable(col) { sortDir = sortCol === col ? (sortDir === "asc" ? "desc
 function openEdit(ev) {
   document.getElementById("edit-statut-modifie").value = "0";
 
+  document.getElementById("edit-type").value = ev.type || "rando";
+
   document.getElementById("edit-rowIndex").value  = ev.id;
   document.getElementById("edit-date").value      = ev.date_rando      || "";
   document.getElementById("edit-nom").value       = ev.nom_rando       || "";
@@ -1283,7 +1365,7 @@ function openEdit(ev) {
   const estPassee  = ev.date_rando < aujourdHui;
   const estAnnulee = (ev.statut === "annulée");
   const secPart = document.getElementById("edit-sectionParticipants");
-  secPart.style.display = (estPassee && !estAnnulee) ? "block" : "none";
+  secPart.style.display = (estPassee && !estAnnulee && (ev.type || "rando") === "rando") ? "block" : "none";
   document.getElementById("edit-noms-participants").value = ev.noms_participants || "";
   document.getElementById("edit-nb-participants").value   = ev.nb_participants   || "";
 
@@ -1325,7 +1407,8 @@ async function saveEdit() {
   const nbPart    = document.getElementById("edit-nb-participants").value;
   const nomsPart  = document.getElementById("edit-noms-participants").value.trim();
   if (!date || !nom || !anim) { showToast("Champs obligatoires manquants.", true); return; }
-  if (!dist) { showToast("La distance est obligatoire.", true); return; }
+  const type = document.getElementById("edit-type").value || "rando";
+  if (type === "rando" && !dist) { showToast("La distance est obligatoire.", true); return; }
   setBusy("btn-save-edit", true);
   const secPart = document.getElementById("edit-sectionParticipants");
   const participantsVisibles = secPart.style.display !== "none";
@@ -1341,15 +1424,17 @@ async function saveEdit() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, { method: "PATCH", headers: await authHeadersJson(), body: JSON.stringify(patch) });
     if (res.ok) {
       const ficheActuelle = allRows.find(x => x.id == id) || {};
-      syncCalendar("calendarUpdate", {
-        dateRando: date, dateRandoOld: ficheActuelle.date_rando || date,
-        nomRando: statut === "annulée" ? `❌ ANNULÉE — ${nom}` : nom,
-        animateur: anim, heureRV: heureRV || "", parking: parking || "",
-        parkingDepart: ficheActuelle.parking_depart || "", gps: ficheActuelle.gps || "",
-        distance: dist || "", denivele: den || "", duree: duree || "", ibp: ibp || "",
-        effort: ficheActuelle.effort || "", technicite: ficheActuelle.technicite || "",
-        risque: ficheActuelle.risque || "", couts: ficheActuelle.couts || "",
-      });
+      if (type === "rando") {
+        syncCalendar("calendarUpdate", {
+          dateRando: date, dateRandoOld: ficheActuelle.date_rando || date,
+          nomRando: statut === "annulée" ? `❌ ANNULÉE — ${nom}` : nom,
+          animateur: anim, heureRV: heureRV || "", parking: parking || "",
+          parkingDepart: ficheActuelle.parking_depart || "", gps: ficheActuelle.gps || "",
+          distance: dist || "", denivele: den || "", duree: duree || "", ibp: ibp || "",
+          effort: ficheActuelle.effort || "", technicite: ficheActuelle.technicite || "",
+          risque: ficheActuelle.risque || "", couts: ficheActuelle.couts || "",
+        });
+      }
       showToast("✅ Événement modifié !"); closeModal("modal-edit"); loadEvents();
     } else showToast("Erreur : " + (await res.text()), true);
   } catch(e) { showToast("Erreur réseau.", true); }
@@ -1414,6 +1499,7 @@ function renderCal() {
   const randoDates = new Map(); const annuleeDates = new Set(); const sejourPeriodes = []; const sejourDates = new Map();
   allRows.forEach(ev => {
     if (!ev.date_rando) return; const iso = ev.date_rando.substring(0, 10);
+    if (ev.type === "autre") return;
     if (ev.type === "sejour") { const d = new Date(ev.date_rando); const f = ev.date_fin_sejour ? new Date(ev.date_fin_sejour) : d; sejourPeriodes.push({ debut: d, fin: f, nom: ev.nom_rando || "Séjour" }); }
     else if ((ev.statut || "") === "annulée") { annuleeDates.add(iso); }
     else { if (!randoDates.has(iso)) randoDates.set(iso, []); randoDates.get(iso).push(ev); }
@@ -1478,6 +1564,7 @@ window.rattacherDepuisModal      = rattacherDepuisModal;
 window.reinitialiserFiltre       = reinitialiserFiltre;
 window.creerRando                = creerRando;
 window.creerSejour               = creerSejour;
+window.creerAutre                = creerAutre;
 window.switchType                = switchType;
 window.calcNbJours               = calcNbJours;
 window.sortTable                 = sortTable;
