@@ -81,6 +81,30 @@ tr.modifiee {
 }
 tr.modifiee:hover { background: #fff3cc !important; }
 
+/* ── LIGNE TITRE SÉJOUR (repliable) ── */
+tr.sejour-titre { cursor: pointer; }
+.sejour-titre-cell {
+  background: #ddeef8;
+  color: #0c4472;
+  font-weight: 700;
+}
+tr.sejour-titre:hover .sejour-titre-cell { background: #cce4f3; }
+.sejour-arrow {
+  display: inline-block;
+  transition: transform .2s;
+  margin-right: 6px;
+  color: #185fa5;
+  font-size: 13px;
+}
+.sejour-arrow.open { transform: rotate(90deg); }
+.sejour-nom  { font-weight: 700; }
+.sejour-meta { font-weight: 400; font-size: 11px; color: #2a6496; margin-left: 8px; }
+
+/* ── RANDO RATTACHÉE À UN SÉJOUR ── */
+tr.rando-enfant td:first-child { border-left: 3px solid #85b7eb; }
+tr.rando-enfant td { background: #f5faff; }
+tr.rando-enfant:hover td { background: #e8f4fd; }
+
 /* ── LIEN ANIMATEUR ── */
 .anim-link {
   color: #0077cc;
@@ -146,6 +170,8 @@ tr.modifiee:hover { background: #fff3cc !important; }
   }
   tr.annulee { border-left-color: #c53030 !important; background: #fff0f0 !important; }
   tr.modifiee { border-left-color: #e67e00 !important; background: #fffbe6 !important; }
+  tr.sejour-titre { border-left-color: #185fa5 !important; }
+  tr.rando-enfant { border-left-color: #85b7eb !important; }
   tr td:nth-child(1) {
     font-size: 17px; font-weight: bold; color: #1a1a1a; border: none;
     padding: 0 0 6px 0; border-bottom: 1px solid #eee; margin-bottom: 8px;
@@ -168,6 +194,11 @@ tr.modifiee:hover { background: #fff3cc !important; }
   tr td.share-cell {
     display: inline-block; border: none; padding: 4px 0 0 0;
   }
+  /* La ligne-titre séjour n'a qu'une cellule pleine largeur */
+  tr.sejour-titre td.sejour-titre-cell {
+    font-size: 16px; border: none; padding: 4px 0;
+  }
+  tr.sejour-titre td.sejour-titre-cell::before { content: none; }
 }
 </style>
 
@@ -203,6 +234,10 @@ let minDisplay    = null;
 let maxDisplay    = null;
 let allRows       = [];
 let toastTimer    = null;
+let todayMs       = null;
+
+/* État de pliage des séjours : id_sejour -> booléen (déplié ?) */
+const sejourOuvert = {};
 
 /* ══ DATES ══════════════════════════════════════════════════════════════ */
 function parseDate(dateStr) {
@@ -287,7 +322,7 @@ async function charger() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "getFiches",
-      select: "id,date_rando,nom_rando,animateur,ibp,distance,denivele,statut,heure_rv,parking_covoit,parking_depart,gps,duree,effort,technicite,risque,couts,remarques,profil_png",
+      select: "id,date_rando,nom_rando,animateur,ibp,distance,denivele,statut,heure_rv,parking_covoit,parking_depart,gps,duree,effort,technicite,risque,couts,remarques,profil_png,type,sejour_id,date_fin_sejour",
       filters: "date_rando=gte." + todayStr + "&date_rando=lte." + maxDate,
       order: "date_rando.asc"
     })
@@ -305,7 +340,171 @@ async function charger() {
     return;
   }
 
+  /* Séjours en cours : leur date de début est peut-être déjà passée, mais ils ne
+     sont pas terminés (date_fin_sejour >= aujourd'hui) → on les récupère en plus.
+     Leurs randos à venir sont déjà présentes dans le chargement principal. */
+  try {
+    const resSej = await fetch(
+      SUPABASE_URL + "/functions/v1/dynamic-handler",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "getFiches",
+          select: "id,date_rando,nom_rando,animateur,ibp,distance,denivele,statut,type,sejour_id,date_fin_sejour",
+          filters: "type=eq.sejour&date_fin_sejour=gte." + todayStr + "&date_rando=lte." + maxDate,
+          order: "date_rando.asc"
+        })
+      }
+    );
+    if (resSej.ok) {
+      const sejEnCours = await resSej.json();
+      const ids = new Set(fiches.map(f => f.id));
+      sejEnCours.forEach(s => { if (!ids.has(s.id)) fiches.push(s); });
+    }
+  } catch(e) { console.warn("Séjours en cours :", e); }
+
   construireTableau(fiches, today);
+}
+
+/* ══ LIGNE RANDO (autonome ou rattachée à un séjour) ════════════════════ */
+function creerLigneRando(f, today, isEnfant) {
+  const tr       = document.createElement("tr");
+  const annulee  = f.statut === "annulée";
+  const modifiee = f.statut === "modifiée";
+  const d        = parseDate(f.date_rando);
+  const diff     = d ? Math.floor((d - today) / 86400000) : null;
+
+  tr.style.cursor = "pointer";
+  const dest = urlContacts(f);
+  tr.addEventListener("click", () => { window.top.location.href = dest; });
+
+  if (d !== null) { tr.dataset.dateValue = d.getTime(); tr.dataset.diff = diff; }
+  if (annulee)    { tr.classList.add("annulee");  tr.dataset.annulee  = "1"; }
+  if (modifiee)   { tr.classList.add("modifiee"); tr.dataset.modifiee = "1"; }
+  if (isEnfant)   { tr.classList.add("rando-enfant"); }
+
+  /* Date */
+  const tdDate = document.createElement("td");
+  const jour   = jourSemaine(f.date_rando);
+  tdDate.innerHTML = jour
+    ? `<span class="jour-semaine">${jour}</span> ${afficherDate(f.date_rando)}`
+    : afficherDate(f.date_rando);
+  tr.appendChild(tdDate);
+
+  /* Nom */
+  const tdNom = document.createElement("td");
+  tdNom.classList.add("description-col");
+  if (annulee) {
+    tdNom.innerHTML = `<span style="text-decoration:line-through;color:#aaa">${f.nom_rando || "—"}</span>&nbsp;<span style="color:#c53030;font-weight:700;font-size:11px">❌ ANNULÉE</span>`;
+  } else if (modifiee) {
+    tdNom.innerHTML = `${f.nom_rando || "—"}&nbsp;<span style="color:#e67e00;font-weight:700;font-size:11px">✏️ MODIFIÉE</span>`;
+  } else {
+    tdNom.textContent = f.nom_rando || "—";
+  }
+  tr.appendChild(tdNom);
+
+  /* Animateur */
+  const tdAnim = document.createElement("td");
+  tdAnim.textContent = f.animateur || "—";
+  tr.appendChild(tdAnim);
+
+  /* IBP */
+  const tdIBP = document.createElement("td");
+  tdIBP.textContent = annulee ? "" : (f.ibp || "");
+  tdIBP.style.textAlign  = "center";
+  tdIBP.style.fontWeight = "700";
+  if (!annulee) {
+    const ibpStyle = couleurIBP(f.ibp);
+    if (ibpStyle) {
+      tdIBP.style.backgroundColor = ibpStyle.bg;
+      tdIBP.style.color           = ibpStyle.color;
+      tdIBP.style.borderRadius    = "4px";
+    }
+  }
+  tr.appendChild(tdIBP);
+
+  /* Distance */
+  const tdDist = document.createElement("td");
+  tdDist.textContent = f.distance ? f.distance + " km" : "";
+  tr.appendChild(tdDist);
+
+  /* Dénivelé */
+  const tdDen = document.createElement("td");
+  tdDen.textContent = f.denivele ? f.denivele + " m" : "";
+  tr.appendChild(tdDen);
+
+  /* Partage 🔗 */
+  const tdShare = document.createElement("td");
+  tdShare.classList.add("share-cell");
+  tdShare.style.textAlign = "center";
+  if (!annulee) {
+    const lien = urlContacts(f);
+    const btn  = document.createElement("button");
+    btn.className   = "share-btn";
+    btn.textContent = "🔗";
+    btn.title       = "Copier le lien de cette fiche";
+    btn.onclick     = (e) => copierLien(e, lien);
+    tdShare.appendChild(btn);
+  }
+  tr.appendChild(tdShare);
+
+  return tr;
+}
+
+/* ══ LIGNE TITRE SÉJOUR (repliable) ═════════════════════════════════════ */
+function creerLigneSejour(sej, today, nbRandos) {
+  const tr = document.createElement("tr");
+  tr.classList.add("sejour-titre");
+  tr.dataset.sejourId = sej.id;
+  tr.dataset.sejour   = "1";
+
+  const d    = parseDate(sej.date_rando);
+  const diff = d ? Math.floor((d - today) / 86400000) : null;
+  if (d !== null) { tr.dataset.dateValue = d.getTime(); tr.dataset.diff = diff; }
+
+  const debutAff = afficherDate(sej.date_rando);
+  const finAff   = afficherDate(sej.date_fin_sejour);
+  const dFin     = parseDate(sej.date_fin_sejour);
+  const nbJours  = (dFin && d) ? Math.round((dFin - d) / 86400000) + 1 : null;
+
+  /* Date de fin (ou début si pas de fin) → sert à garder le séjour affiché
+     tant qu'il n'est pas terminé */
+  const dFiltre = dFin || d;
+  if (dFiltre) tr.dataset.endValue = dFiltre.getTime();
+
+  const td = document.createElement("td");
+  td.colSpan   = 7;
+  td.className = "sejour-titre-cell";
+  td.innerHTML =
+    `<span class="sejour-arrow" id="arrow-sej-${sej.id}">▶</span>` +
+    `<span class="sejour-nom">🏕 ${sej.nom_rando || "Séjour"}</span>` +
+    `<span class="sejour-meta">${debutAff}${finAff ? " → " + finAff : ""}` +
+    `${nbJours ? " · " + nbJours + " j" : ""}` +
+    ` · ${sej.animateur || "—"}` +
+    ` · ${nbRandos} rando${nbRandos > 1 ? "s" : ""}</span>`;
+  tr.appendChild(td);
+
+  tr.addEventListener("click", () => toggleSejour(sej.id));
+  return tr;
+}
+
+function toggleSejour(id) {
+  sejourOuvert[id] = !sejourOuvert[id];
+  const arrow = document.getElementById("arrow-sej-" + id);
+  if (arrow) arrow.classList.toggle("open", sejourOuvert[id]);
+  appliquerVisibiliteEnfants();
+}
+
+/* Affiche/masque les randos d'un séjour selon le pliage ET la visibilité du titre */
+function appliquerVisibiliteEnfants() {
+  allRows.forEach(tr => {
+    if (tr.dataset.enfant !== "1") return;
+    const pid    = tr.dataset.parentSejour;
+    const parent = document.querySelector(`.sejour-titre[data-sejour-id="${pid}"]`);
+    const parentVisible = parent && parent.style.display !== "none";
+    tr.style.display = (sejourOuvert[pid] && parentVisible) ? "" : "none";
+  });
 }
 
 /* ══ TABLEAU ════════════════════════════════════════════════════════════ */
@@ -313,97 +512,70 @@ function construireTableau(fiches, today) {
   const tbody = document.getElementById("tbody");
   tbody.innerHTML = "";
   allRows = [];
+  todayMs = today.getTime();
+
+  /* Séparation : séjours / randos rattachées / randos autonomes */
+  const sejoursById     = {};
+  const enfantsBySejour = {};
+  const autonomes       = [];
+  const sejours         = [];
 
   fiches.forEach(f => {
-    const tr       = document.createElement("tr");
-    const annulee  = f.statut === "annulée";
-    const modifiee = f.statut === "modifiée";
-    const d        = parseDate(f.date_rando);
-    const diff     = d ? Math.floor((d - today) / 86400000) : null;
-
-    tr.style.cursor = "pointer";
-    const dest = urlContacts(f);
-    tr.addEventListener("click", () => { window.top.location.href = dest; });
-
-    if (d !== null) { tr.dataset.dateValue = d.getTime(); tr.dataset.diff = diff; }
-    if (annulee)    { tr.classList.add("annulee");  tr.dataset.annulee  = "1"; }
-    if (modifiee)   { tr.classList.add("modifiee"); tr.dataset.modifiee = "1"; }
-
-    /* Date */
-    const tdDate = document.createElement("td");
-    const jour   = jourSemaine(f.date_rando);
-    tdDate.innerHTML = jour
-      ? `<span class="jour-semaine">${jour}</span> ${afficherDate(f.date_rando)}`
-      : afficherDate(f.date_rando);
-    tr.appendChild(tdDate);
-
-    /* Nom */
-    const tdNom = document.createElement("td");
-    tdNom.classList.add("description-col");
-    if (annulee) {
-      tdNom.innerHTML = `<span style="text-decoration:line-through;color:#aaa">${f.nom_rando || "—"}</span>&nbsp;<span style="color:#c53030;font-weight:700;font-size:11px">❌ ANNULÉE</span>`;
-    } else if (modifiee) {
-      tdNom.innerHTML = `${f.nom_rando || "—"}&nbsp;<span style="color:#e67e00;font-weight:700;font-size:11px">✏️ MODIFIÉE</span>`;
+    if (f.type === "sejour") { sejoursById[f.id] = f; sejours.push(f); }
+  });
+  fiches.forEach(f => {
+    if (f.type === "sejour") return;
+    if (f.sejour_id != null && sejoursById[f.sejour_id]) {
+      (enfantsBySejour[f.sejour_id] = enfantsBySejour[f.sejour_id] || []).push(f);
     } else {
-      tdNom.textContent = f.nom_rando || "—";
+      autonomes.push(f); /* rando autonome (ou séjour parent absent du jeu de données) */
     }
-    tr.appendChild(tdNom);
-
-    /* Animateur */
-    const tdAnim = document.createElement("td");
-    tdAnim.textContent = f.animateur || "—";
-    tr.appendChild(tdAnim);
-
-    /* IBP */
-    const tdIBP = document.createElement("td");
-    tdIBP.textContent = annulee ? "" : (f.ibp || "");
-    tdIBP.style.textAlign  = "center";
-    tdIBP.style.fontWeight = "700";
-    if (!annulee) {
-      const ibpStyle = couleurIBP(f.ibp);
-      if (ibpStyle) {
-        tdIBP.style.backgroundColor = ibpStyle.bg;
-        tdIBP.style.color           = ibpStyle.color;
-        tdIBP.style.borderRadius    = "4px";
-      }
-    }
-    tr.appendChild(tdIBP);
-
-    /* Distance */
-    const tdDist = document.createElement("td");
-    tdDist.textContent = f.distance ? f.distance + " km" : "";
-    tr.appendChild(tdDist);
-
-    /* Dénivelé */
-    const tdDen = document.createElement("td");
-    tdDen.textContent = f.denivele ? f.denivele + " m" : "";
-    tr.appendChild(tdDen);
-
-    /* Partage 🔗 */
-    const tdShare = document.createElement("td");
-    tdShare.classList.add("share-cell");
-    tdShare.style.textAlign = "center";
-    if (!annulee) {
-      const lien = urlContacts(f);
-      const btn  = document.createElement("button");
-      btn.className   = "share-btn";
-      btn.textContent = "🔗";
-      btn.title       = "Copier le lien de cette fiche";
-      btn.onclick     = (e) => copierLien(e, lien);
-      tdShare.appendChild(btn);
-    }
-    tr.appendChild(tdShare);
-
-    tbody.appendChild(tr);
-    allRows.push(tr);
   });
 
-  /* Prochaine rando → clignoter */
+  /* Items de 1er niveau (randos autonomes + séjours), triés par date */
+  const topLevel = [
+    ...autonomes.map(f => ({ kind: "rando",  f })),
+    ...sejours.map(f   => ({ kind: "sejour", f }))
+  ];
+  topLevel.sort((a, b) => {
+    const da = parseDate(a.f.date_rando), db = parseDate(b.f.date_rando);
+    return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+  });
+
+  topLevel.forEach(item => {
+    if (item.kind === "rando") {
+      const tr = creerLigneRando(item.f, today, false);
+      tbody.appendChild(tr);
+      allRows.push(tr);
+    } else {
+      const sej     = item.f;
+      const enfants = (enfantsBySejour[sej.id] || []).slice().sort((a, b) => {
+        const da = parseDate(a.date_rando), db = parseDate(b.date_rando);
+        return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+      });
+
+      const trSej = creerLigneSejour(sej, today, enfants.length);
+      tbody.appendChild(trSej);
+      allRows.push(trSej);
+
+      enfants.forEach(ef => {
+        const trEf = creerLigneRando(ef, today, true);
+        trEf.dataset.parentSejour = sej.id;
+        trEf.dataset.enfant       = "1";
+        trEf.style.display        = "none"; /* replié par défaut */
+        tbody.appendChild(trEf);
+        allRows.push(trEf);
+      });
+    }
+  });
+
+  /* Prochaine rando → clignoter (séjours et randos rattachées exclus) */
   setTimeout(() => {
     let prochaineRow = null, minDiff = Infinity;
     allRows.forEach(tr => {
       const diff = parseInt(tr.dataset.diff, 10);
-      if (!isNaN(diff) && diff >= 0 && diff < minDiff && !tr.dataset.annulee) {
+      if (!isNaN(diff) && diff >= 0 && diff < minDiff
+          && !tr.dataset.annulee && !tr.dataset.sejour && tr.dataset.enfant !== "1") {
         minDiff = diff; prochaineRow = tr;
       }
     });
@@ -425,10 +597,12 @@ function construireTableau(fiches, today) {
       /* minDisplay = date de la prochaine rando non-annulée (la première qui clignote) */
       minDisplay = parseInt(prochaineRow.dataset.dateValue, 10);
 
-      /* maxDisplay = date de la 3ème rando non-annulée à venir (fenêtre de 3 randos) */
+      /* maxDisplay = date de la 3ème rando autonome à venir (fenêtre de 3 randos,
+         hors séjours et hors randos rattachées) */
       const aVenir = allRows.filter(tr => {
         const diff = parseInt(tr.dataset.diff, 10);
-        return !isNaN(diff) && diff >= 0 && !tr.dataset.annulee;
+        return !isNaN(diff) && diff >= 0
+            && !tr.dataset.annulee && !tr.dataset.sejour && tr.dataset.enfant !== "1";
       });
       if (aVenir.length >= 3)      maxDisplay = parseInt(aVenir[2].dataset.dateValue, 10);
       else if (aVenir.length > 0)  maxDisplay = parseInt(aVenir[aVenir.length-1].dataset.dateValue, 10);
@@ -438,6 +612,7 @@ function construireTableau(fiches, today) {
          même si elle arrive avant la première rando non-annulée dans le planning. */
       allRows.forEach(tr => {
         if (!tr.dataset.annulee) return;
+        if (tr.dataset.enfant === "1") return;
         const t    = parseInt(tr.dataset.dateValue, 10);
         const diff = parseInt(tr.dataset.diff, 10);
         if (!isNaN(diff) && diff >= 0 && t < minDisplay) {
@@ -452,6 +627,16 @@ function construireTableau(fiches, today) {
 
 function applyFilter() {
   allRows.forEach(tr => {
+    if (tr.dataset.enfant === "1") return; /* géré par le pliage du séjour */
+
+    /* Titre de séjour : reste affiché tant que sa date de fin n'est pas passée */
+    if (tr.dataset.sejour === "1") {
+      if (!filterEnabled) { tr.style.display = ""; return; }
+      const end = parseInt(tr.dataset.endValue, 10);
+      tr.style.display = (isNaN(end) || end >= todayMs) ? "" : "none";
+      return;
+    }
+
     const t = parseInt(tr.dataset.dateValue, 10);
     if (filterEnabled && minDisplay !== null && maxDisplay !== null) {
       /* Les annulées sont affichées si leur date tombe dans la fenêtre des 3 prochaines randos */
@@ -460,6 +645,7 @@ function applyFilter() {
       tr.style.display = "";
     }
   });
+  appliquerVisibiliteEnfants();
 }
 
 document.getElementById("toggleBtn").onclick = () => {
