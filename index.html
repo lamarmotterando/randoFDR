@@ -401,7 +401,7 @@ validerIntervalle('technicite', 'erreur-technicite');
 validerIntervalle('risque',     'erreur-risque');
 
 /* Enregistrement Service Worker PWA — uniquement sur GitHub Pages */
-if ('serviceWorker' in navigator && location.hostname === 'dbizcyber.github.io') {
+if ('serviceWorker' in navigator && location.hostname === 'lamarmotterando.github.io') {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/randoFDR/sw.js')
       .then(reg => console.log('[PWA] Service Worker enregistré:', reg.scope))
