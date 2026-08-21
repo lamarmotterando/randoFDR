@@ -2,9 +2,7 @@
    sw.js — Service Worker randoFDR
    Cache les ressources essentielles pour usage hors ligne
    ============================================================ */
-
-const CACHE_NAME = 'randofdr-v6';
-
+const CACHE_NAME = 'randofdr-v7';
 /* Fichiers à mettre en cache au démarrage */
 const CACHE_STATIC = [
   '/randoFDR/',
@@ -32,7 +30,6 @@ const CACHE_STATIC = [
   '/randoFDR/data/randosCoords.js',
   '/randoFDR/manifest.json',
 ];
-
 /* ── INSTALLATION : mise en cache des ressources statiques ── */
 self.addEventListener('install', event => {
   console.log('[SW] Installation...');
@@ -45,7 +42,6 @@ self.addEventListener('install', event => {
       .then(() => self.skipWaiting())
   );
 });
-
 /* ── ACTIVATION : nettoyage des anciens caches ── */
 self.addEventListener('activate', event => {
   console.log('[SW] Activation...');
@@ -62,11 +58,9 @@ self.addEventListener('activate', event => {
     ).then(() => self.clients.claim())
   );
 });
-
 /* ── FETCH : stratégie Cache First, réseau en fallback ── */
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-
   /* APIs externes (météo, carte, nominatim) → réseau uniquement */
   const apiDomains = [
     'api.open-meteo.com',
@@ -81,12 +75,10 @@ self.addEventListener('fetch', event => {
     'fonts.googleapis.com',
     'fonts.gstatic.com',
   ];
-
   if (apiDomains.some(d => url.hostname.includes(d))) {
     event.respondWith(fetch(event.request));
     return;
   }
-
   /* Ressources locales → Cache First */
   event.respondWith(
     caches.match(event.request)
