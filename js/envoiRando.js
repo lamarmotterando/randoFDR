@@ -87,22 +87,43 @@ function collecterFiche(profilPNG) {
 }
 
 /* ══════════════════════════════════════
-   SAUVEGARDE SUPABASE (indépendante)
+   ENDPOINTS SUPABASE
 ══════════════════════════════════════ */
+const HANDLER       = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
+const SEND_EMAIL     = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/send-email";
+const UPDATE_FICHE   = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/update-fiche";
+/* ✅ send-email : Edge Function dédiée — l'email animateur est résolu côté serveur */
+/* ✅ update-fiche : Edge Function dédiée — champs animateur uniquement, sans auth */
+
+async function callHandler(body) {
+  const res = await fetch(HANDLER, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Handler error: ${res.status}`);
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
 /* ══════════════════════════════════════
    CHERCHER FICHE PRÉVISIONNELLE SUPABASE
    Cherche par date + animateur pour éviter doublon
+   🔧 CORRIGÉ : l'appel réseau manquait (variable `rows` jamais
+   définie → exception silencieuse → retournait toujours null →
+   créait systématiquement une nouvelle fiche en doublon).
 ══════════════════════════════════════ */
 async function chercherFicheExistante(date_rando, animateur) {
   if (!date_rando || !animateur) return null;
   try {
-    const params = new URLSearchParams({
-      select:     "id,nom_rando,animateur,ibp",
-      date_rando: "eq." + date_rando,
-      order:      "id.asc"
+    const rows = await callHandler({
+      action:  "getFiches",
+      select:  "id,nom_rando,animateur,ibp",
+      filters: "date_rando=eq." + date_rando,
+      order:   "id.asc"
     });
 
-    if (!rows.length) return null;
+    if (!rows || !rows.length) return null;
 
     const normaliser = str => (str || "")
       .toLowerCase()
@@ -132,23 +153,9 @@ async function chercherFicheExistante(date_rando, animateur) {
   }
 }
 
-const HANDLER    = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
-const SEND_EMAIL   = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/send-email";
-const UPDATE_FICHE = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/update-fiche";
-/* ✅ send-email : Edge Function dédiée — l'email animateur est résolu côté serveur */
-/* ✅ update-fiche : Edge Function dédiée — champs animateur uniquement, sans auth */
-
-async function callHandler(body) {
-  const res = await fetch(HANDLER, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`Handler error: ${res.status}`);
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
-}
-
+/* ══════════════════════════════════════
+   SAUVEGARDE SUPABASE (indépendante)
+══════════════════════════════════════ */
 async function sauvegarderFiche(fiche) {
   try {
     const idExistant = await chercherFicheExistante(fiche.date_rando, fiche.animateur);
