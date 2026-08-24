@@ -20,33 +20,6 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 
-<script>
-/* ══ SON À L'ENVOI DU MAIL ══ */
-(function () {
-  let ac;
-  function dingEnvoi() {
-    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-    if (ac.state === "suspended") ac.resume();
-    [880, 1320].forEach((freq, i) => {          // deux notes qui montent = "c'est parti !"
-      const o = ac.createOscillator(), g = ac.createGain();
-      const t = ac.currentTime + i * 0.10;
-      o.type = "sine";
-      o.frequency.value = freq;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.4, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
-      o.connect(g); g.connect(ac.destination);
-      o.start(t); o.stop(t + 0.45);
-    });
-  }
-  // on attend que le bouton existe avant de brancher le clic
-  window.addEventListener("DOMContentLoaded", () => {
-    const btn = document.getElementById("btnEnvoyer");
-    if (btn) btn.addEventListener("click", dingEnvoi);
-    else console.warn("Bouton #btnEnvoyer introuvable");
-  });
-})();
-</script>
 <body>
 
 <div class="topbar" id="topbar">
@@ -695,6 +668,54 @@ const obs = new IntersectionObserver(entries => {
 }, { threshold:0.3 });
 sections.forEach(s => obs.observe(s));
 </script>
+<script>
+/* ══ MÉLODIE DES MONTAGNES À L'ENVOI DU MAIL 🏔️ ══ */
+(function () {
+  let ac;
 
+  // une note : onde chaude (triangle) + sous-octave douce pour le corps
+  function note(freq, start, dur, gain) {
+    const t = ac.currentTime + start;
+    [{ f: freq, type: "triangle", g: gain },
+     { f: freq / 2, type: "sine", g: gain * 0.35 }   // sous-octave = rondeur "cor des Alpes"
+    ].forEach(v => {
+      const o = ac.createOscillator(), env = ac.createGain();
+      o.type = v.type;
+      o.frequency.value = v.f;
+      env.gain.setValueAtTime(0.0001, t);
+      env.gain.exponentialRampToValueAtTime(v.g, t + 0.03);   // attaque douce
+      env.gain.exponentialRampToValueAtTime(0.0001, t + dur); // extinction
+      o.connect(env); env.connect(ac.destination);
+      o.start(t); o.stop(t + dur + 0.05);
+    });
+  }
+
+  function melodieMontagnes() {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === "suspended") ac.resume();
+
+    // Sol – Do – Mi – Sol aigu – Mi – Sol aigu (tenu) : appel de cor qui monte
+    const notes = [
+      { f: 392.00, d: 0.18 },  // Sol
+      { f: 523.25, d: 0.18 },  // Do
+      { f: 659.25, d: 0.18 },  // Mi
+      { f: 783.99, d: 0.28 },  // Sol aigu
+      { f: 659.25, d: 0.16 },  // Mi
+      { f: 783.99, d: 0.70 },  // Sol aigu final, tenu
+    ];
+    let t = 0;
+    notes.forEach((n, i) => {
+      note(n.f, t, n.d, i === notes.length - 1 ? 0.5 : 0.4);
+      t += n.d * 0.85;   // léger chevauchement = phrasé plus lié
+    });
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("btnEnvoyer");
+    if (btn) btn.addEventListener("click", melodieMontagnes);
+    else console.warn("Bouton #btnEnvoyer introuvable");
+  });
+})();
+</script>
 </body>
 </html>
