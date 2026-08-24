@@ -19,7 +19,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <link rel="stylesheet" href="css/style.css">
 </head>
-  <script>
+
+<script>
 /* ══ SON À L'ENVOI DU MAIL ══ */
 (function () {
   let ac;
@@ -38,7 +39,12 @@
       o.start(t); o.stop(t + 0.45);
     });
   }
-  document.getElementById("btnEnvoyer")?.addEventListener("click", dingEnvoi);
+  // on attend que le bouton existe avant de brancher le clic
+  window.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("btnEnvoyer");
+    if (btn) btn.addEventListener("click", dingEnvoi);
+    else console.warn("Bouton #btnEnvoyer introuvable");
+  });
 })();
 </script>
 <body>
