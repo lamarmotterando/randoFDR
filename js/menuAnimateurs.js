@@ -21,19 +21,11 @@ export async function remplirMenuAnimateurs() {
 
     select.innerHTML = '<option value="">— Choisir un animateur —</option>';
 
-    animateurs.forEach(a => {
+     animateurs.forEach(a => {
       const opt = document.createElement("option");
-      opt.value         = a.nom;
-      opt.dataset.email = a.email || "";
-      opt.textContent   = a.nom;
+      opt.value       = a.nom;
+      opt.textContent = a.nom;
       select.appendChild(opt);
-    });
-
-    /* Pré-remplir emailUser à la sélection */
-    select.addEventListener("change", () => {
-      const opt = select.selectedOptions[0];
-      const emailField = document.getElementById("emailUser");
-      if (emailField) emailField.value = opt?.dataset.email || "";
     });
 
     console.log(`[Animateurs] ${animateurs.length} animateurs chargés via get-animateurs`);
