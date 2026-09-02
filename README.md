@@ -37,3 +37,28 @@ Récapitulatif final de toute la série de correctifs
 6	index.html	Service Worker ne s'enregistrait jamais (mauvais hostname)	✅ Corrigé à l'instant
 7	Base Supabase	Pas de colonne updated_at, pas de contrainte anti-doublon	✅ Colonne + trigger ajoutés
 8	Base Supabase	Aucune barrière anti-doublon en base	✅ contrainte UNIQUE ajoutée et testée
+
+**********************
+02 Septembre 2026
+Sécurité : restriction des accès en lecture Supabase (RLS + Edge Function)
+
+- fiches : accès direct anon révoqué, lecture publique via nouvelle vue
+  filtrée `fiches_public` (colonnes personnelles exclues)
+- animateurs : lecture directe anon/authenticated révoquée (accès
+  uniquement via l'Edge Function get-animateurs)
+- get-animateurs : ne renvoie plus que le nom (colonne email retirée)
+- randonnees-club.html : lecture repointée vers fiches_public
+- menuAnimateurs.js : suppression de l'auto-remplissage email devenu inutile
+
+Écritures inchangées (toujours via Edge Functions en service_role).
+Interface admin (planning_gestion.html) inchangée : rôle authenticated
+conserve l'accès complet à la table fiches.
+**********************
+2 Septembre 2026 — Durcissement des accès en lecture
+#   Zone            Correctif                                             Statut
+1   Supabase RLS    fiches : REVOKE anon + vue publique fiches_public     ✅ appliqué et vérifié
+2   Supabase RLS    animateurs : REVOKE anon/authenticated                ✅ appliqué et vérifié
+3   Edge Function   get-animateurs : .select("nom") (email retiré)        ✅ déployé et vérifié
+4   randonnees-club lecture repointée vers fiches_public                  ✅ déployé
+5   menuAnimateurs  nettoyage auto-remplissage email                      ✅ déployé
+
