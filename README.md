@@ -54,7 +54,8 @@ Sécurité : restriction des accès en lecture Supabase (RLS + Edge Function)
 Interface admin (planning_gestion.html) inchangée : rôle authenticated
 conserve l'accès complet à la table fiches.
 **********************
-2 Septembre 2026 — Durcissement des accès en lecture
+2 Septembre 2026 
+Durcissement des accès en lecture
 #   Zone            Correctif                                             Statut
 1   Supabase RLS    fiches : REVOKE anon + vue publique fiches_public     ✅ appliqué et vérifié
 2   Supabase RLS    animateurs : REVOKE anon/authenticated                ✅ appliqué et vérifié
