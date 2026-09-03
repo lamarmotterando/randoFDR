@@ -10,7 +10,7 @@ courbe du profil altimétrique avec % de pentes + et -
 distance rando
 dénivelé +
 durée en marche
-calcul IBP avec IBPindes
+calcul IBP avec IBPindex
 effort, technicité et risque sur des échelles de 1 à 5
 remarques sur la rando: tourisme , difficulté spécifique
 coordonnées animateur/trice
