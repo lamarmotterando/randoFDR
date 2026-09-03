@@ -194,7 +194,7 @@ async function sauvegarderFiche(fiche) {
 /* ══════════════════════════════════════
    ENVOI EMAIL (indépendant)
 ══════════════════════════════════════ */
-async function envoyerEmail(resume, emailUser, profilPNG) {
+async function envoyerEmail(resume, profilPNG) {
   try {
     /* ✅ send-email — l'email est résolu côté serveur depuis le nom animateur
        emailUser n'est plus transmis au serveur (fin de la faille sendEmail) */
@@ -285,14 +285,9 @@ async function envoyerRando() {
   if (window._validerFormulaire && !window._validerFormulaire()) return;
 
   const resume    = document.getElementById("resumeRando")?.textContent.trim();
-  const emailUser = document.getElementById("emailUser")?.value.trim();
 
   if (!resume) {
     afficherPopup({ icone:"📋", titre:"Résumé manquant", message:"Veuillez générer le résumé avant l'envoi.", bouton:"OK" });
-    return;
-  }
-  if (!emailUser) {
-    afficherPopup({ icone:"📧", titre:"Email manquant", message:"Veuillez saisir un email.", bouton:"OK" });
     return;
   }
 
@@ -316,7 +311,7 @@ async function envoyerRando() {
        2) Mise à jour Calendar (event existant retrouvé par date)
        3) Sauvegarde Supabase ── */
     const [emailOk, calOk, saveOk] = await Promise.all([
-      envoyerEmail(resume, emailUser, profilPNG),
+      envoyerEmail(resume, profilPNG),
       mettreAJourCalendar(fiche),
       sauvegarderFiche(fiche),
     ]);
