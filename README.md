@@ -41,7 +41,6 @@ Récapitulatif final de toute la série de correctifs
 **********************
 02 Septembre 2026
 Sécurité : restriction des accès en lecture Supabase (RLS + Edge Function)
-
 - fiches : accès direct anon révoqué, lecture publique via nouvelle vue
   filtrée `fiches_public` (colonnes personnelles exclues)
 - animateurs : lecture directe anon/authenticated révoquée (accès
