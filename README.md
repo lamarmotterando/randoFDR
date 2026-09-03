@@ -29,7 +29,7 @@ Migration nouvelle clé Supabase 24 juin 2026
 21 Aout 2026
 Récapitulatif final de toute la série de correctifs
 #	Fichier	Bug corrigé	Statut
-1	envoiRando.js	rows non défini → doublon systématique à chaque envoi	✅ Corrigé et confirmé en fonctionnement
+1	envoiRando.js	rows non défini → doublon systématique à chaque envoi	  ✅ Corrigé et confirmé en fonctionnement
 2	dynamic-handler.ts	Tri SQL multi-colonnes cassé → mauvaise fiche affichée en cas de doublon	✅ Corrigé et déployé
 3	fiche_route.html (goanim)	Dépendait uniquement du tri SQL cassé	✅ Corrigé + filet de sécurité côté client
 4	visu_xy.html	Doublons affichés en double sur le site public	✅ Corrigé (dédup côté client)
