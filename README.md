@@ -30,16 +30,24 @@ Migration nouvelle clé Supabase 24 juin 2026
 Récapitulatif final de toute la série de correctifs
 #	Fichier	Bug corrigé	Statut
 1	envoiRando.js	rows non défini → doublon systématique à chaque envoi	  ✅ Corrigé et confirmé en fonctionnement
+
 2	dynamic-handler.ts	Tri SQL multi-colonnes cassé → mauvaise fiche affichée en cas de doublon	✅ Corrigé et déployé
+
 3	fiche_route.html (goanim)	Dépendait uniquement du tri SQL cassé	✅ Corrigé + filet de sécurité côté client
+
 4	visu_xy.html	Doublons affichés en double sur le site public	✅ Corrigé (dédup côté client)
+
 5	sw.js	Cache figé sur l'ancienne version d'envoiRando.js	✅ CACHE_NAME bumpé
-6	index.html	Service Worker ne s'enregistrait jamais (mauvais hostname)	✅ Corrigé à l'instant
+
+6	index.html	Service Worker ne s'enregistrait jamais (mauvais hostname)	✅ Corrigé 
+
 7	Base Supabase	Pas de colonne updated_at, pas de contrainte anti-doublon	✅ Colonne + trigger ajoutés
+
 8	Base Supabase	Aucune barrière anti-doublon en base	✅ contrainte UNIQUE ajoutée et testée
 
 **********************
 02 Septembre 2026
+#	Fichier	Bug corrigé	Statut
 Sécurité : restriction des accès en lecture Supabase (RLS + Edge Function)
 - fiches : accès direct anon révoqué, lecture publique via nouvelle vue
   filtrée `fiches_public` (colonnes personnelles exclues)
@@ -54,6 +62,7 @@ Interface admin (planning_gestion.html) inchangée : rôle authenticated
 conserve l'accès complet à la table fiches.
 **********************
 2 Septembre 2026 
+#	Fichier	Bug corrigé	Statut
 Durcissement des accès en lecture
 #   Zone            Correctif                                             Statut
 1   Supabase RLS    fiches : REVOKE anon + vue publique fiches_public     ✅ appliqué et vérifié
