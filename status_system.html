@@ -83,7 +83,6 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   footer { max-width: 860px; margin: 40px auto 0; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--txt3); text-align: center; line-height: 1.8; }
   @media (max-width: 480px) { .fiche-grid { grid-template-columns: 1fr 1fr; } header { flex-direction: column; } .last-refresh { text-align: left; } }
-
   /* ══ AUTH OVERLAY ══ */
   #auth-overlay {
     position: fixed; inset: 0; z-index: 99999;
@@ -155,11 +154,9 @@
     white-space: nowrap;
   }
   .logout-btn:hover { border-color: #f85149; color: #f85149; }
-
 </style>
 </head>
 <body>
-
 <!-- ══ AUTH OVERLAY ══ -->
 <div id="auth-overlay">
   <div class="auth-box">
@@ -180,7 +177,6 @@
     </div>
   </div>
 </div>
-
 <header>
   <div class="header-left">
     <h1>🥾 Rando<span>FDR</span> Status</h1>
@@ -192,12 +188,10 @@
   </div>
   <div id="auth-logout-zone" style="display:flex;align-items:center;gap:10px;flex-shrink:0;"></div>
 </header>
-
 <div class="global-bar loading" id="global-bar">
   <div class="global-dot"></div>
   <span id="global-msg">Vérification en cours…</span>
 </div>
-
 <div class="section">
   <div class="section-label">Métriques base de données</div>
   <div id="metrics-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:4px;">
@@ -219,7 +213,6 @@
     </div>
   </div>
 </div>
-
 <div class="section">
   <div class="section-label">Backend &amp; Services</div>
   <div class="cards" id="cards-backend"></div>
@@ -232,6 +225,17 @@
   <div class="section-label">Prochaine randonnée publiée</div>
   <div id="fiche-container"><div class="fiche-card" style="color:var(--txt3);font-size:13px;font-family:'DM Mono',monospace">Chargement…</div></div>
 </div>
+<div class="section">
+  <div class="section-label">Cohérence Google Calendar — randos vs événements (aujourd'hui → +6 mois)</div>
+  <div id="cal-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px;margin-bottom:8px;">
+    <div class="fiche-card" style="text-align:center;padding:12px 8px;"><div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Cohérentes</div><div id="cal-ok" style="font-size:20px;font-weight:600;color:var(--vert-cl);">—</div></div>
+    <div class="fiche-card" style="text-align:center;padding:12px 8px;"><div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Manquantes</div><div id="cal-ko" style="font-size:20px;font-weight:600;color:var(--red);">—</div></div>
+    <div class="fiche-card" style="text-align:center;padding:12px 8px;"><div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Doublons</div><div id="cal-dup" style="font-size:20px;font-weight:600;color:var(--amber);">—</div></div>
+    <div class="fiche-card" style="text-align:center;padding:12px 8px;"><div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Divergences</div><div id="cal-div" style="font-size:20px;font-weight:600;color:var(--blue);">—</div></div>
+    <div class="fiche-card" style="text-align:center;padding:12px 8px;"><div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Orphelins</div><div id="cal-orph" style="font-size:20px;font-weight:600;color:var(--amber);">—</div></div>
+  </div>
+  <div id="cal-details"><div class="fiche-card" style="color:var(--txt3);font-size:13px;font-family:'DM Mono',monospace">Chargement…</div></div>
+</div>
 <div class="refresh-btn">
   <button class="refresh" id="btn-refresh" onclick="lancer()">
     <span class="icon">⟳</span><span class="spin">◌</span>
@@ -239,15 +243,12 @@
   </button>
 </div>
 <footer>RandoFDR v4.4 · Supabase · GitHub Pages · Google Calendar · Resend · Open-Meteo<br>Les temps de réponse sont mesurés depuis votre navigateur</footer>
-
 <script>
 const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
 /* ✅ Clé supprimée — requêtes via dynamic-handler */
-
 let results = {};
-
 const HANDLER = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
-
+const CAL_LIST = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/calendar-list";
 async function ping(url, options = {}, timeout = 8000) {
   const t0 = Date.now(), ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
@@ -260,7 +261,6 @@ async function pingJSON(url, options = {}, timeout = 8000) {
   try { const res = await fetch(url, { ...options, signal: ctrl.signal }); clearTimeout(timer); const data = res.ok ? await res.json() : null; return { ok: res.ok, status: res.status, ms: Date.now() - t0, data }; }
   catch(e) { clearTimeout(timer); return { ok: false, status: 0, ms: Date.now() - t0, err: e.message }; }
 }
-
 const checks = [
   { id: 'supabase-rest', group: 'backend', icon: '🗄', name: 'Supabase REST API', detail: 'Table fiches — lecture',
     run: async () => { const t0 = Date.now(); try { const res = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({action:"pingDB"}) }); const ms = Date.now()-t0; const d = await res.json(); return { ok: d.ok, ms, detail: d.ok ? `HTTP ${res.status} · ${ms}ms` : `Erreur ${res.status}` }; } catch(e) { return {ok:false, ms:Date.now()-t0, detail:e.message}; } } },
@@ -270,6 +270,8 @@ const checks = [
     run: async () => { const r = await ping(`${SUPABASE_URL}/storage/v1/bucket`); return { ok: r.ok || r.status === 400 || r.status === 401, ms: r.ms, detail: `HTTP ${r.status} · ${r.ms}ms` }; } },
   { id: 'dynamic-handler', group: 'backend', icon: '⚡', name: 'Edge Function dynamic-handler', detail: 'Supabase Deno — email + Calendar',
     run: async () => { const r = await ping("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ping' }) }); const ok = r.ok || r.status === 400 || r.status === 422 || r.status === 200; return { ok, ms: r.ms, detail: ok ? `Actif · HTTP ${r.status} · ${r.ms}ms` : `Hors ligne · ${r.status}` }; } },
+  { id: 'calendar-list', group: 'backend', icon: '🗓', name: 'Edge Function calendar-list', detail: 'Lecture Google Calendar',
+    run: async () => { const t0 = Date.now(); try { const today = new Date().toISOString().slice(0,10); const res = await fetch(CAL_LIST, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ from: today, to: today }) }); const ms = Date.now()-t0; const d = await res.json(); return { ok: d.success === true, ms, detail: d.success ? `Actif · ${ms}ms` : `Erreur ${res.status}` }; } catch(e) { return { ok:false, ms:Date.now()-t0, detail:e.message }; } } },
   { id: 'openmeteo', group: 'backend', icon: '🌤', name: 'Open-Meteo', detail: 'Météo API — sans clé',
     run: async () => { const r = await ping('https://api.open-meteo.com/v1/forecast?latitude=43.9&longitude=5.4&daily=weather_code&timezone=Europe%2FParis&forecast_days=1'); return { ok: r.ok, ms: r.ms, detail: r.ok ? `${r.ms}ms` : `Erreur ${r.status}` }; } },
   { id: 'ibp-proxy', group: 'backend', icon: '📊', name: 'IBP Proxy (Vercel)', detail: 'Calcul indice difficulté',
@@ -285,7 +287,6 @@ const checks = [
   { id: 'page-randos', group: 'pages', icon: '📂', name: 'data/randos.json', detail: 'Données statiques randonnées',
     run: async () => { const r = await ping('https://lamarmotterando.github.io/randoFDR/data/randos.json'); return { ok: r.ok, ms: r.ms, detail: r.ok ? `${r.ms}ms` : `HTTP ${r.status}` }; } },
 ];
-
 function renderCard(check, state = 'loading', detail = '', ms = null) {
   const stateLabel = { ok:'OK', warn:'Dégradé', error:'Hors ligne', loading:'…', unknown:'—' };
   return `<div class="card" id="card-${check.id}"><div class="card-icon">${check.icon}</div><div class="card-info"><div class="card-name">${check.name}</div><div class="card-detail" id="detail-${check.id}">${detail || check.detail}</div></div><div class="card-status"><div class="status-dot ${state}" id="dot-${check.id}"></div><span class="status-label ${state}" id="lbl-${check.id}">${stateLabel[state]}</span><span class="status-ms" id="ms-${check.id}">${ms !== null ? ms+'ms' : ''}</span></div></div>`;
@@ -316,15 +317,12 @@ async function chargerMetriques() {
       fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/get-animateurs",
         { method:"GET", headers:{"Content-Type":"application/json"} }).then(r=>r.json()),
     ]);
-
     /* Total fiches */
     const total = Array.isArray(fiches) ? fiches.length : 0;
     document.getElementById("m-fiches").textContent = total;
-
     /* Animateurs */
     const nbAnim = Array.isArray(animateurs) ? animateurs.length : 0;
     document.getElementById("m-animateurs").textContent = nbAnim;
-
     /* Prochaine rando */
     const today = new Date();
     const dans7j = new Date(today); dans7j.setDate(today.getDate() + 7);
@@ -341,7 +339,6 @@ async function chargerMetriques() {
     } else {
       elProch.textContent = "Aucune";
     }
-
     /* Statuts */
     if (Array.isArray(fiches)) {
       const pub  = fiches.filter(f => f.statut === "publiée").length;
@@ -357,7 +354,6 @@ async function chargerMetriques() {
     document.getElementById("m-fiches").textContent = "⚠️";
   }
 }
-
 async function chargerProchaineFiche() {
   const today = new Date().toISOString().slice(0,10);
   try {
@@ -372,6 +368,47 @@ async function chargerProchaineFiche() {
     const statut = f.statut || 'publiée';
     container.innerHTML = `<div class="fiche-card"><div class="fiche-head"><span class="fiche-badge ${statut}">${statut === 'publiée' ? '✅' : statut === 'modifiée' ? '✏️' : '❌'} ${statut}</span><div class="fiche-nom">${esc(f.nom_rando||'—')}</div><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--txt3);flex-shrink:0;">J-${diffJ}</span></div><div class="fiche-grid"><div class="fiche-kv"><div class="fiche-k">Date</div><div class="fiche-v">${dateAff}</div></div><div class="fiche-kv"><div class="fiche-k">Animateur</div><div class="fiche-v">${esc(f.animateur||'—')}</div></div><div class="fiche-kv"><div class="fiche-k">RV</div><div class="fiche-v">${f.heure_rv||'—'}</div></div><div class="fiche-kv"><div class="fiche-k">Distance</div><div class="fiche-v">${f.distance?f.distance+' km':'—'}</div></div><div class="fiche-kv"><div class="fiche-k">Dénivelé</div><div class="fiche-v">${f.denivele?f.denivele+' m':'—'}</div></div><div class="fiche-kv"><div class="fiche-k">Durée</div><div class="fiche-v">${f.duree||'—'}</div></div>${f.ibp?`<div class="fiche-kv"><div class="fiche-k">IBP</div><div class="fiche-v">${f.ibp}</div></div>`:''}<div class="fiche-kv"><div class="fiche-k">ID Supabase</div><div class="fiche-v" style="font-family:'DM Mono',monospace;font-size:12px;">#${f.id}</div></div></div></div>`;
   } catch(e) { document.getElementById('fiche-container').innerHTML = `<div class="fiche-card" style="color:var(--red);font-size:13px;">⚠️ Erreur : ${e.message}</div>`; }
+}
+/* ══ VÉRIFICATION GOOGLE CALENDAR (randos vs événements) ══ */
+function calNorm(s){ return (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
+async function verifierCalendar() {
+  const from = new Date().toISOString().slice(0,10);
+  const p6 = new Date(); p6.setMonth(p6.getMonth()+6); const to = p6.toISOString().slice(0,10);
+  const setN = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  try {
+    const [fRaw, cRaw] = await Promise.all([
+      fetch(HANDLER, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ action:"getFiches", select:"id,date_rando,nom_rando,animateur,statut", filters:"date_rando=gte."+from, order:"date_rando.asc" }) }).then(r=>r.json()),
+      fetch(CAL_LIST, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ from, to }) }).then(r=>r.json()),
+    ]);
+    const events = ((cRaw && cRaw.events) || []).filter(e => e.date >= from && e.date <= to);
+    const fiches = (Array.isArray(fRaw)?fRaw:[]).filter(f => f.date_rando >= from && f.date_rando <= to && (f.statut||"").toLowerCase() !== "annulée");
+    const evByDate = {}; events.forEach(e => (evByDate[e.date] = evByDate[e.date]||[]).push(e));
+    const used = new Set(); let ok=0; const manq=[], dup=[], div=[];
+    fiches.forEach(f => {
+      const same = evByDate[f.date_rando] || []; const cible = calNorm(f.nom_rando);
+      const m = same.filter(e => { const t = calNorm(e.titre); return t && cible && (t.includes(cible) || cible.includes(t)); });
+      if (m.length === 0) { if (same.length > 0) div.push({d:f.date_rando, n:f.nom_rando, info:"titre Calendar différent"}); else manq.push({d:f.date_rando, n:f.nom_rando}); }
+      else if (m.length > 1) { dup.push({d:f.date_rando, n:f.nom_rando}); m.forEach(e=>used.add(e)); }
+      else { used.add(m[0]); ok++; }
+    });
+    const orph = events.filter(e => !used.has(e));
+    setN("cal-ok", ok); setN("cal-ko", manq.length); setN("cal-dup", dup.length); setN("cal-div", div.length); setN("cal-orph", orph.length);
+    const cont = document.getElementById("cal-details");
+    if (manq.length + dup.length + div.length + orph.length === 0) {
+      cont.innerHTML = '<div class="fiche-card" style="color:var(--vert-cl);font-size:13px;font-family:DM Mono,monospace">✅ Toutes les randos de la période sont dans Google Calendar, sans doublon ni orphelin.</div>';
+    } else {
+      const line = (badge, color, d, n) => `<div class="card"><div class="card-icon" style="background:${color}22;color:${color}">${badge}</div><div class="card-info"><div class="card-name">${esc(n)}</div><div class="card-detail">${esc(d)}</div></div></div>`;
+      let rows = "";
+      manq.forEach(x => rows += line("❌","#f85149",x.d,x.n+" — absente de Calendar"));
+      dup.forEach(x  => rows += line("⚠️","#e3b341",x.d,x.n+" — doublon Calendar"));
+      div.forEach(x  => rows += line("🔶","#58a6ff",x.d,x.n+" — "+x.info));
+      orph.forEach(e => rows += line("👻","#e3b341",e.date,(e.titre||"?")+" — événement sans fiche"));
+      cont.innerHTML = '<div class="cards">'+rows+'</div>';
+    }
+  } catch(e) {
+    setN("cal-ok","⚠️");
+    document.getElementById("cal-details").innerHTML = '<div class="fiche-card" style="color:var(--red);font-size:13px;">⚠️ Erreur vérif Calendar : '+esc(e.message)+'</div>';
+  }
 }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function initDOM() {
@@ -391,7 +428,7 @@ async function lancer() {
     catch(e) { updateCard(check.id, 'error', e.message, null); results[check.id] = 'error'; }
     updateGlobal();
   });
-  await Promise.all([...promises, chargerProchaineFiche(), chargerMetriques()]);
+  await Promise.all([...promises, chargerProchaineFiche(), chargerMetriques(), verifierCalendar()]);
   document.getElementById('refresh-time').textContent = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   btn.classList.remove('spinning');
   updateGlobal();
@@ -399,9 +436,7 @@ async function lancer() {
 let timer = setInterval(lancer, 60000);
 function appInit() { initDOM(); lancer(); }
 </script>
-
 <script>
-
 /* ══ SUPABASE AUTH — PROTECTION ADMIN ══════════════════════════
    Accès réservé aux comptes avec raw_app_meta_data.role = "admin"
    SDK : Supabase JS v2 via CDN
@@ -409,7 +444,6 @@ function appInit() { initDOM(); lancer(); }
 /* ✅ Clé anon legacy supprimée — remplacer sb_publishable_XXXX par la vraie clé du dashboard Supabase */
 const SUPABASE_ANON_KEY = "sb_publishable_M7RxCuGoLU8zdzFSPuZl8A_CvvNMZ-O";
 const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); /* auth only */
-
 async function authInit() {
   /* Vérifier session existante */
   const { data: { session } } = await _supa.auth.getSession();
@@ -421,7 +455,6 @@ async function authInit() {
     document.getElementById('auth-email').focus();
   }
 }
-
 async function authVerifierRole(user) {
   const role = user?.app_metadata?.role || user?.user_metadata?.role || '';
   if (role === 'admin') {
@@ -433,7 +466,6 @@ async function authVerifierRole(user) {
     document.getElementById('auth-err').textContent = '⛔ Accès réservé aux administrateurs';
   }
 }
-
 async function authLogin() {
   const email = document.getElementById('auth-email').value.trim();
   const pwd   = document.getElementById('auth-pwd').value;
@@ -450,7 +482,6 @@ async function authLogin() {
   await authVerifierRole(data.user);
   btn.disabled = false; btn.textContent = 'Connexion';
 }
-
 function authOuvrir(user) {
   document.getElementById('auth-overlay').classList.add('hidden');
   /* Ajouter bouton logout + email dans le header */
@@ -463,24 +494,19 @@ function authOuvrir(user) {
   /* Lancer l'application */
   if (typeof appInit === 'function') appInit();
 }
-
 async function authLogout() {
   await _supa.auth.signOut();
   location.reload();
 }
-
 /* Entrée clavier sur le formulaire */
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !document.getElementById('auth-overlay').classList.contains('hidden')) {
     authLogin();
   }
 });
-
 /* Démarrer l'auth au chargement */
 authInit();
-
 </script>
-
 <script>
 /* ── Auto-resize iframe parent (Webnode) ── */
 function sendHeight() {
