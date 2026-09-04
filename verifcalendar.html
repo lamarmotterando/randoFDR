@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vérification Google Calendar — RandoFDR</title>
+<style>
+  :root{
+    --org:#c1440e; --org2:#f49d37; --bg:#faf6f1; --card:#fff;
+    --txt:#2c1a0e; --txt3:#8a7861; --line:#ecdfcf;
+    --ok:#2a7a2a; --ko:#c1440e; --warn:#b8860b; --info:#1d6fa5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:'Outfit',system-ui,Arial,sans-serif;font-size:14px;line-height:1.5}
+  header{background:linear-gradient(135deg,var(--org),var(--org2));color:#fff;padding:18px 20px}
+  header h1{margin:0;font-size:18px;font-weight:700}
+  header p{margin:4px 0 0;font-size:12.5px;opacity:.92}
+  main{max-width:1000px;margin:0 auto;padding:18px 16px 60px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px}
+  .toolbar label{display:block;font-size:11.5px;color:var(--txt3);margin-bottom:3px;font-weight:600}
+  .toolbar input[type=date]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit}
+  button{padding:9px 18px;background:linear-gradient(135deg,var(--org),var(--org2));color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer}
+  button:disabled{opacity:.6;cursor:default}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:center}
+  .stat .n{font-size:24px;font-weight:800;line-height:1}
+  .stat .l{font-size:11px;color:var(--txt3);margin-top:4px}
+  .stat.ok .n{color:var(--ok)} .stat.ko .n{color:var(--ko)} .stat.warn .n{color:var(--warn)} .stat.info .n{color:var(--info)}
+  .tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f4ece1;font-size:11.5px;color:var(--txt3);text-transform:uppercase;letter-spacing:.03em;position:sticky;top:0}
+  tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .b-ok{background:#e5f4e5;color:var(--ok)}
+  .b-ko{background:#fbe4dc;color:var(--ko)}
+  .b-warn{background:#fbf0d5;color:var(--warn)}
+  .b-div{background:#e4eef7;color:var(--info)}
+  .sub{font-size:12px;color:var(--txt3);margin:22px 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+  .msg{padding:14px 16px;border-radius:10px;font-size:13px;margin-bottom:14px}
+  .msg.err{background:#fbe4dc;color:#7a2a12;border:1px solid #e9b8a6}
+  .msg.info{background:#e4eef7;color:#134b6e;border:1px solid #b8d4e6}
+  .empty{color:var(--txt3);padding:16px;text-align:center}
+  code{background:#f0e7da;padding:1px 5px;border-radius:4px;font-size:12px}
+  footer{max-width:1000px;margin:0 auto;padding:0 16px 40px;color:var(--txt3);font-size:11.5px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🗓️ Vérification Google Calendar</h1>
+  <p>Compare les randonnées en base (fiches Supabase) avec les événements réellement présents dans Google Calendar.</p>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div>
+      <label for="from">Du</label>
+      <input type="date" id="from">
+    </div>
+    <div>
+      <label for="to">Au</label>
+      <input type="date" id="to">
+    </div>
+    <button id="btn">🔍 Vérifier</button>
+    <div id="loading" style="font-size:12.5px;color:var(--txt3)" hidden>⏳ Analyse en cours…</div>
+  </div>
+
+  <div id="messages"></div>
+
+  <div class="cards" id="stats" hidden>
+    <div class="stat"><div class="n" id="s-total">—</div><div class="l">Randos en base</div></div>
+    <div class="stat ok"><div class="n" id="s-ok">—</div><div class="l">✅ Cohérentes</div></div>
+    <div class="stat ko"><div class="n" id="s-ko">—</div><div class="l">❌ Manquantes Calendar</div></div>
+    <div class="stat warn"><div class="n" id="s-dup">—</div><div class="l">⚠️ Doublons</div></div>
+    <div class="stat info"><div class="n" id="s-div">—</div><div class="l">🔶 Divergences</div></div>
+    <div class="stat warn"><div class="n" id="s-orph">—</div><div class="l">👻 Orphelins</div></div>
+  </div>
+
+  <div id="results"></div>
+</main>
+
+<footer>
+  RandoFDR · Outil de contrôle Calendar — lecture seule. Les fiches viennent de <code>dynamic-handler / getFiches</code>, les événements de l'Edge Function <code>calendar-list</code>.
+</footer>
+
+<script>
+/* ══ CONFIG ══════════════════════════════════════════════ */
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+const HANDLER  = SUPABASE_URL + "/functions/v1/dynamic-handler";  /* getFiches (existant) */
+const CAL_LIST = SUPABASE_URL + "/functions/v1/calendar-list";    /* nouvelle Edge Function dédiée */
+
+/* ══ UTILITAIRES ═════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const iso = d => d.toISOString().slice(0,10);
+
+/* Normalise un titre de rando pour la comparaison :
+   minuscules, sans accents, sans emoji, espaces compactés */
+function norm(s){
+  return (s||"")
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g,"")
+    .replace(/[\u{1F000}-\u{1FFFF}☀-➿]/gu,"")  /* emojis */
+    .replace(/[^a-z0-9]+/g," ")
+    .trim();
+}
+
+/* Extrait la date (YYYY-MM-DD) d'un événement Google, tout-day ou horaire */
+function dateEvent(ev){
+  if(ev.date) return ev.date.slice(0,10);
+  const s = ev.start || {};
+  return (s.date || s.dateTime || "").slice(0,10);
+}
+
+/* ══ CHARGEMENT DES FICHES (Supabase via dynamic-handler) ══ */
+async function chargerFiches(from, to){
+  const res = await fetch(HANDLER, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      action:"getFiches",
+      select:"id,date_rando,nom_rando,animateur,statut,ibp",
+      filters:"date_rando=gte."+from,
+      order:"date_rando.asc"
+    })
+  });
+  if(!res.ok) throw new Error("getFiches HTTP "+res.status);
+  const rows = await res.json();
+  /* Filtre borne haute + hors annulées, côté client (robuste) */
+  return (Array.isArray(rows)?rows:[])
+    .filter(f => f.date_rando >= from && f.date_rando <= to)
+    .filter(f => (f.statut||"").toLowerCase() !== "annulée");
+}
+
+/* ══ CHARGEMENT DES ÉVÉNEMENTS (Google Calendar via calendar-list) ══ */
+async function chargerEvents(from, to){
+  const res = await fetch(CAL_LIST, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ from, to })
+  });
+  if(!res.ok) throw new Error("calendar-list HTTP "+res.status);
+  const data = await res.json();
+  if(data && data.success === false) throw new Error(data.error || "calendar-list a renvoyé success:false");
+  /* Accepte soit {events:[...]} normalisé, soit {items:[...]} brut Google */
+  const list = data.events || data.items || (Array.isArray(data)?data:[]);
+  return list.map(ev => ({
+    id:        ev.id || "",
+    date:      dateEvent(ev),
+    titre:     ev.titre || ev.summary || "",
+    animateur: ev.animateur || ""
+  }));
+}
+
+/* ══ COMPARAISON ═════════════════════════════════════════ */
+function comparer(fiches, events){
+  const evParDate = {};
+  events.forEach(e => { (evParDate[e.date] = evParDate[e.date] || []).push(e); });
+  const evUtilises = new Set();
+
+  const lignes = fiches.map(f => {
+    const memeDate = (evParDate[f.date_rando] || []);
+    const cible = norm(f.nom_rando);
+    const matches = memeDate.filter(e => {
+      const t = norm(e.titre);
+      return t && cible && (t.includes(cible) || cible.includes(t));
+    });
+
+    let statut, detail = "";
+    if(matches.length === 0){
+      if(memeDate.length > 0){
+        statut = "div";
+        detail = "Événement(s) ce jour mais titre différent : " + memeDate.map(e=>e.titre).join(" · ");
+      } else {
+        statut = "ko";
+        detail = "Aucun événement Google à cette date.";
+      }
+    } else if(matches.length > 1){
+      statut = "dup";
+      detail = matches.length + " événements identiques (doublon).";
+      matches.forEach(e => evUtilises.add(e));
+    } else {
+      const e = matches[0]; evUtilises.add(e);
+      const anim = norm(f.animateur), animEv = norm(e.animateur);
+      if(f.animateur && e.animateur && !animEv.includes(anim.split(" ")[0]) ){
+        statut = "div";
+        detail = "Animateur divergent (fiche : " + f.animateur + " · Calendar : " + e.animateur + ")";
+      } else {
+        statut = "ok"; detail = "";
+      }
+    }
+    return { f, statut, detail };
+  });
+
+  /* Événements orphelins : présents dans Calendar sur la période, sans fiche associée */
+  const orphelins = events.filter(e =>
+    !evUtilises.has(e) && e.date >= $("from").value && e.date <= $("to").value
+  );
+
+  return { lignes, orphelins };
+}
+
+/* ══ RENDU ═══════════════════════════════════════════════ */
+const BADGE = {
+  ok:  '<span class="badge b-ok">✅ OK</span>',
+  ko:  '<span class="badge b-ko">❌ Manquant</span>',
+  dup: '<span class="badge b-warn">⚠️ Doublon</span>',
+  div: '<span class="badge b-div">🔶 Divergence</span>',
+};
+const esc = s => (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function rendre({lignes, orphelins}){
+  const c = {total:lignes.length, ok:0, ko:0, dup:0, div:0};
+  lignes.forEach(l => c[l.statut === "ok" ? "ok" : l.statut]++);
+
+  $("s-total").textContent = c.total;
+  $("s-ok").textContent    = c.ok;
+  $("s-ko").textContent    = c.ko;
+  $("s-dup").textContent   = c.dup;
+  $("s-div").textContent   = c.div;
+  $("s-orph").textContent  = orphelins.length;
+  $("stats").hidden = false;
+
+  let html = '<div class="tablewrap"><table><thead><tr>' +
+    '<th>Date</th><th>Randonnée</th><th>Animateur</th><th>Statut fiche</th><th>Calendar</th><th>Détail</th>' +
+    '</tr></thead><tbody>';
+
+  if(lignes.length === 0){
+    html += '<tr><td colspan="6" class="empty">Aucune randonnée en base sur cette période.</td></tr>';
+  } else {
+    /* Problèmes d'abord */
+    const ordre = {ko:0, dup:1, div:2, ok:3};
+    lignes.sort((a,b) => (ordre[a.statut]-ordre[b.statut]) || (a.f.date_rando < b.f.date_rando ? -1 : 1));
+    lignes.forEach(l => {
+      html += '<tr>' +
+        '<td>'+esc(l.f.date_rando)+'</td>' +
+        '<td>'+esc(l.f.nom_rando||"—")+'</td>' +
+        '<td>'+esc(l.f.animateur||"—")+'</td>' +
+        '<td>'+esc(l.f.statut||"—")+'</td>' +
+        '<td>'+BADGE[l.statut]+'</td>' +
+        '<td style="color:var(--txt3)">'+esc(l.detail)+'</td>' +
+      '</tr>';
+    });
+  }
+  html += '</tbody></table></div>';
+
+  if(orphelins.length){
+    html += '<div class="sub">👻 Événements Calendar sans fiche correspondante ('+orphelins.length+')</div>';
+    html += '<div class="tablewrap"><table><thead><tr><th>Date</th><th>Titre événement</th><th>Animateur</th></tr></thead><tbody>';
+    orphelins.sort((a,b)=>a.date<b.date?-1:1).forEach(e => {
+      html += '<tr><td>'+esc(e.date)+'</td><td>'+esc(e.titre)+'</td><td>'+esc(e.animateur||"—")+'</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
+  $("results").innerHTML = html;
+}
+
+/* ══ ORCHESTRATION ═══════════════════════════════════════ */
+async function verifier(){
+  const from = $("from").value, to = $("to").value;
+  $("messages").innerHTML = "";
+  if(!from || !to || from > to){
+    $("messages").innerHTML = '<div class="msg err">Renseignez une plage de dates valide (Du ≤ Au).</div>';
+    return;
+  }
+  $("btn").disabled = true; $("loading").hidden = false; $("results").innerHTML = ""; $("stats").hidden = true;
+  try{
+    const [fiches, events] = await Promise.all([ chargerFiches(from,to), chargerEvents(from,to) ]);
+    rendre(comparer(fiches, events));
+  }catch(e){
+    let extra = "";
+    if(String(e.message).includes("calendar-list")){
+      extra = ' — vérifiez que l\'Edge Function <code>calendar-list</code> est bien déployée et que l\'origine de ce site est autorisée (CORS).';
+    }
+    $("messages").innerHTML = '<div class="msg err">⚠️ Erreur : '+esc(e.message)+extra+'</div>';
+  }finally{
+    $("btn").disabled = false; $("loading").hidden = true;
+  }
+}
+
+/* Init : plage par défaut = aujourd'hui → +6 mois */
+(function init(){
+  const now = new Date();
+  const plus6 = new Date(); plus6.setMonth(plus6.getMonth()+6);
+  $("from").value = iso(now);
+  $("to").value   = iso(plus6);
+  $("btn").addEventListener("click", verifier);
+  verifier();
+})();
+</script>
+</body>
+</html>
