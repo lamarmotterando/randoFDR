@@ -397,13 +397,29 @@ async function verifierCalendar() {
     if (manq.length + dup.length + div.length + orph.length === 0) {
       cont.innerHTML = '<div class="fiche-card" style="color:var(--vert-cl);font-size:13px;font-family:DM Mono,monospace">✅ Toutes les randos de la période sont dans Google Calendar, sans doublon ni orphelin.</div>';
     } else {
+      let html = "";
+      /* ── Randos MANQUANTES : bloc d'alerte sur fond BLANC ── */
+      if (manq.length) {
+        let items = "";
+        manq.forEach(x => {
+          const dd = new Date(x.d + "T12:00:00");
+          const dateAff = isNaN(dd) ? x.d : dd.toLocaleDateString("fr-FR", { weekday:"short", day:"2-digit", month:"short", year:"numeric" });
+          items += `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 12px;background:#fff5f5;border:1px solid #ffd0d0;border-radius:7px;">`
+                +  `<span style="color:#1a1a1a;font-weight:700;font-size:13px;">${esc(x.n)}</span>`
+                +  `<span style="font-family:'DM Mono',monospace;font-size:12px;color:#b02a2a;white-space:nowrap;">${esc(dateAff)}</span></div>`;
+        });
+        html += `<div style="background:#ffffff;border:1.5px solid #f85149;border-radius:10px;padding:14px 16px;margin-bottom:10px;">`
+             +  `<div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:#c1121f;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">❌ ${manq.length} rando${manq.length>1?"s":""} absente${manq.length>1?"s":""} de Google Calendar — à créer</div>`
+             +  `<div style="display:flex;flex-direction:column;gap:7px;">${items}</div></div>`;
+      }
+      /* ── Autres écarts : cartes sombres classiques ── */
       const line = (badge, color, d, n) => `<div class="card"><div class="card-icon" style="background:${color}22;color:${color}">${badge}</div><div class="card-info"><div class="card-name">${esc(n)}</div><div class="card-detail">${esc(d)}</div></div></div>`;
       let rows = "";
-      manq.forEach(x => rows += line("❌","#f85149",x.d,x.n+" — absente de Calendar"));
       dup.forEach(x  => rows += line("⚠️","#e3b341",x.d,x.n+" — doublon Calendar"));
       div.forEach(x  => rows += line("🔶","#58a6ff",x.d,x.n+" — "+x.info));
       orph.forEach(e => rows += line("👻","#e3b341",e.date,(e.titre||"?")+" — événement sans fiche"));
-      cont.innerHTML = '<div class="cards">'+rows+'</div>';
+      if (rows) html += '<div class="cards">'+rows+'</div>';
+      cont.innerHTML = html;
     }
   } catch(e) {
     setN("cal-ok","⚠️");
