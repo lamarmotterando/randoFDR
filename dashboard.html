@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Tableau de bord — RandoFDR</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#2b2f36; --surface:#3a3f47; --border:#4a515b;
+    --vert-cl:#39d353; --amber:#e3b341; --red:#f85149; --blue:#58a6ff; --grey:#8b949e;
+    --txt:#ffffff; --txt2:#e9ecf1; --txt3:#cbd1d9;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;padding:32px 20px 60px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:26px;}
+  header h1{font-size:clamp(22px,5vw,30px);font-weight:800;letter-spacing:-.02em;line-height:1.1;}
+  header h1 span{color:var(--vert-cl);}
+  header p{font-family:'DM Mono',monospace;font-size:12px;color:var(--txt2);margin-top:6px;}
+  .toolbar{display:flex;align-items:center;gap:10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--txt3);}
+  button.refresh{background:var(--surface);border:1px solid var(--border);color:var(--txt2);font-family:'DM Mono',monospace;font-size:12px;padding:8px 16px;border-radius:8px;cursor:pointer;transition:all .2s;}
+  button.refresh:hover{border-color:#30363d;color:var(--txt);}
+  .section-label{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.12em;color:var(--txt3);margin:26px 0 10px;padding-left:2px;}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+  .kpi .k{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3);margin-bottom:8px;}
+  .kpi .v{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.02em;}
+  .kpi .u{font-size:12px;font-weight:500;color:var(--txt2);}
+  .kpi .sub{font-size:11px;color:var(--txt3);margin-top:6px;font-family:'DM Mono',monospace;}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr;}}
+  /* Barres horizontales */
+  .bar-row{display:grid;grid-template-columns:130px 1fr 34px;align-items:center;gap:10px;margin-bottom:8px;font-size:13px;}
+  .bar-row .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--txt);}
+  .bar-track{background:var(--bg);border-radius:6px;height:16px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:6px;transition:width .5s;}
+  .bar-row .num{font-family:'DM Mono',monospace;font-size:12px;color:var(--txt2);text-align:right;}
+  /* Prochaines sorties */
+  .sortie{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .sortie:last-child{border-bottom:none;}
+  .sortie .date{font-family:'DM Mono',monospace;font-size:11px;color:var(--vert-cl);min-width:96px;}
+  .sortie .nom{flex:1;font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sortie .anim{font-size:12px;color:var(--txt2);white-space:nowrap;}
+  .sortie .stat{font-family:'DM Mono',monospace;font-size:11px;color:var(--txt3);white-space:nowrap;}
+  /* Colonnes mois */
+  .months{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:8px;}
+  .month{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%;}
+  .month .col{width:70%;max-width:26px;background:var(--vert-cl);border-radius:4px 4px 0 0;min-height:2px;transition:height .5s;}
+  .month .mn{font-family:'DM Mono',monospace;font-size:9px;color:var(--txt3);}
+  .month .mv{font-family:'DM Mono',monospace;font-size:10px;color:var(--txt2);}
+  /* IBP tiers */
+  .tier{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px;}
+  .tier .swatch{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .tier .tlbl{min-width:120px;color:var(--txt);}
+  .tier .tbar{flex:1;background:var(--bg);border-radius:6px;height:14px;overflow:hidden;}
+  .tier .tfill{height:100%;border-radius:6px;}
+  .tier .tnum{font-family:'DM Mono',monospace;font-size:12px;color:var(--txt2);min-width:30px;text-align:right;}
+  .statuts{display:flex;gap:18px;flex-wrap:wrap;}
+  .statut{font-size:13px;font-weight:700;}
+  .empty{color:var(--txt3);font-size:13px;font-family:'DM Mono',monospace;padding:8px 0;}
+  footer{max-width:960px;margin:36px auto 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--txt3);text-align:center;line-height:1.8;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>🥾 Rando<span>FDR</span> — Tableau de bord</h1>
+      <p id="saison-label">Saison —</p>
+    </div>
+    <div class="toolbar">
+      <span id="maj">—</span>
+      <button class="refresh" id="btn" onclick="charger()">⟳ Actualiser</button>
+    </div>
+  </header>
+
+  <div class="section-label">Saison en cours</div>
+  <div class="kpis" id="kpis">
+    <div class="kpi"><div class="k">Sorties</div><div class="v" id="k-sorties">—</div></div>
+    <div class="kpi"><div class="k">Kilomètres cumulés</div><div class="v" id="k-km">—</div></div>
+    <div class="kpi"><div class="k">Dénivelé cumulé</div><div class="v" id="k-deniv">—</div></div>
+    <div class="kpi"><div class="k">Participants</div><div class="v" id="k-part">—</div></div>
+    <div class="kpi"><div class="k">Animateurs actifs</div><div class="v" id="k-anim">—</div></div>
+    <div class="kpi"><div class="k">Prochaine sortie</div><div class="v" id="k-next" style="font-size:14px;font-weight:700;">—</div><div class="sub" id="k-next-sub"></div></div>
+  </div>
+
+  <div class="section-label">Prochaines sorties</div>
+  <div class="panel"><div id="prochaines"><div class="empty">Chargement…</div></div></div>
+
+  <div class="grid2" style="margin-top:14px;">
+    <div>
+      <div class="section-label">Activité par animateur (saison)</div>
+      <div class="panel"><div id="animateurs"><div class="empty">Chargement…</div></div></div>
+    </div>
+    <div>
+      <div class="section-label">Difficulté (IBP)</div>
+      <div class="panel"><div id="ibp"><div class="empty">Chargement…</div></div></div>
+    </div>
+  </div>
+
+  <div class="section-label">Sorties par mois (saison)</div>
+  <div class="panel">
+    <div class="months" id="months"></div>
+    <div class="statuts" id="statuts" style="margin-top:16px;"></div>
+  </div>
+</div>
+<footer>RandoFDR · Tableau de bord activité · La Marmotte Châteaurenard<br>Données en direct depuis Supabase — statuts annulés exclus des totaux</footer>
+
+<script>
+const HANDLER = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
+const GET_ANIM = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/get-animateurs";
+const MOIS = ["jan","fév","mar","avr","mai","juin","juil","aoû","sep","oct","nov","déc"];
+const nf = n => (n||0).toLocaleString("fr-FR");
+const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function saison(){
+  const now=new Date(); let y=now.getFullYear();
+  if(now.getMonth()<8) y--;               // avant septembre → saison démarrée l'an passé
+  return { debut:`${y}-09-01`, fin:`${y+1}-08-31`, label:`${y}/${y+1}` };
+}
+function ibpTier(v){
+  const n=parseFloat(v);
+  if(isNaN(n)) return null;
+  if(n<=25)  return {i:0,lbl:"Facile (≤25)",     c:"#39d353"};
+  if(n<=50)  return {i:1,lbl:"Modéré (26-50)",   c:"#58a6ff"};
+  if(n<=75)  return {i:2,lbl:"Soutenu (51-75)",  c:"#e3b341"};
+  if(n<=100) return {i:3,lbl:"Difficile (76-100)",c:"#f85149"};
+  return {i:4,lbl:"Très difficile (>100)",       c:"#8b949e"};
+}
+
+async function charger(){
+  const btn=document.getElementById("btn"); btn.disabled=true; btn.textContent="⟳ …";
+  const S=saison();
+  document.getElementById("saison-label").textContent="Saison "+S.label+" (1ᵉʳ sept. → 31 août)";
+  try{
+    const [fiches, animateurs] = await Promise.all([
+      fetch(HANDLER,{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"getFiches",select:"id,date_rando,nom_rando,animateur,statut,type,distance,denivele,duree,ibp,nb_participants,lieu",order:"date_rando.asc"})}).then(r=>r.json()),
+      fetch(GET_ANIM,{method:"GET",headers:{"Content-Type":"application/json"}}).then(r=>r.json()).catch(()=>[]),
+    ]);
+    const all = Array.isArray(fiches)?fiches:[];
+    const nbAnimTotal = Array.isArray(animateurs)?animateurs.length:null;
+
+    // Saison, hors annulées
+    const saisonFiches = all.filter(f =>
+      f.date_rando >= S.debut && f.date_rando <= S.fin &&
+      (f.statut||"").toLowerCase()!=="annulée" && (f.type||"")!=="sejour");
+
+    // ── KPIs ──
+    const nbSorties = saisonFiches.length;
+    const totalKm   = saisonFiches.reduce((s,f)=>s+(parseFloat(f.distance)||0),0);
+    const totalDen  = saisonFiches.reduce((s,f)=>s+(parseInt(f.denivele)||0),0);
+    const totalPart = saisonFiches.reduce((s,f)=>s+(parseInt(f.nb_participants)||0),0);
+    const animActifs= new Set(saisonFiches.map(f=>(f.animateur||"").trim()).filter(Boolean)).size;
+
+    document.getElementById("k-sorties").textContent = nbSorties;
+    document.getElementById("k-km").innerHTML   = nf(Math.round(totalKm))+' <span class="u">km</span>';
+    document.getElementById("k-deniv").innerHTML= nf(Math.round(totalDen))+' <span class="u">m</span>';
+    document.getElementById("k-part").textContent = totalPart>0?nf(totalPart):"—";
+    document.getElementById("k-anim").innerHTML = animActifs + (nbAnimTotal? ' <span class="u">/ '+nbAnimTotal+'</span>' : '');
+
+    // Prochaine sortie (à venir)
+    const today=new Date().toISOString().slice(0,10);
+    const aVenir = all.filter(f=>f.date_rando>=today && (f.statut||"").toLowerCase()!=="annulée" && (f.type||"")!=="sejour")
+                      .sort((a,b)=>a.date_rando<b.date_rando?-1:1);
+    if(aVenir.length){
+      const p=aVenir[0], d=new Date(p.date_rando+"T12:00:00");
+      document.getElementById("k-next").textContent = esc(p.nom_rando||"—");
+      document.getElementById("k-next-sub").textContent = d.toLocaleDateString("fr-FR",{weekday:"short",day:"2-digit",month:"short"})+" · "+esc(p.animateur||"");
+    } else { document.getElementById("k-next").textContent="Aucune"; document.getElementById("k-next-sub").textContent=""; }
+
+    // ── Prochaines sorties (liste, 6) ──
+    const contP=document.getElementById("prochaines");
+    if(!aVenir.length){ contP.innerHTML='<div class="empty">Aucune sortie programmée à venir.</div>'; }
+    else{
+      contP.innerHTML = aVenir.slice(0,6).map(f=>{
+        const d=new Date(f.date_rando+"T12:00:00");
+        const dateAff=d.toLocaleDateString("fr-FR",{weekday:"short",day:"2-digit",month:"short"});
+        const stat=[f.distance?f.distance+" km":"",f.denivele?f.denivele+" m":"",f.ibp?"IBP "+f.ibp:""].filter(Boolean).join(" · ");
+        return `<div class="sortie"><span class="date">${esc(dateAff)}</span><span class="nom">${esc(f.nom_rando||"—")}</span><span class="anim">${esc(f.animateur||"")}</span><span class="stat">${esc(stat)}</span></div>`;
+      }).join("");
+    }
+
+    // ── Activité par animateur (saison) ──
+    const parAnim={};
+    saisonFiches.forEach(f=>{const a=(f.animateur||"").trim();if(a)parAnim[a]=(parAnim[a]||0)+1;});
+    const classement=Object.entries(parAnim).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const maxA=classement.length?classement[0][1]:1;
+    const contA=document.getElementById("animateurs");
+    contA.innerHTML = classement.length
+      ? classement.map(([a,n])=>`<div class="bar-row"><span class="lbl">${esc(a)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/maxA*100)}%;background:var(--vert-cl);"></div></div><span class="num">${n}</span></div>`).join("")
+      : '<div class="empty">Pas encore de sortie cette saison.</div>';
+
+    // ── Difficulté IBP ──
+    const tiers=[0,0,0,0,0]; const tinfo=[null,null,null,null,null];
+    saisonFiches.forEach(f=>{const t=ibpTier(f.ibp);if(t){tiers[t.i]++;tinfo[t.i]=t;}});
+    const maxT=Math.max(...tiers,1);
+    const labels=[{lbl:"Facile (≤25)",c:"#39d353"},{lbl:"Modéré (26-50)",c:"#58a6ff"},{lbl:"Soutenu (51-75)",c:"#e3b341"},{lbl:"Difficile (76-100)",c:"#f85149"},{lbl:"Très difficile (>100)",c:"#8b949e"}];
+    const contI=document.getElementById("ibp");
+    const totIbp=tiers.reduce((a,b)=>a+b,0);
+    contI.innerHTML = totIbp
+      ? labels.map((L,i)=>`<div class="tier"><span class="swatch" style="background:${L.c}"></span><span class="tlbl">${L.lbl}</span><div class="tbar"><div class="tfill" style="width:${Math.round(tiers[i]/maxT*100)}%;background:${L.c}"></div></div><span class="tnum">${tiers[i]}</span></div>`).join("")
+      : '<div class="empty">Aucun IBP renseigné cette saison.</div>';
+
+    // ── Sorties par mois (sept→août) ──
+    const ordreMois=[8,9,10,11,0,1,2,3,4,5,6,7]; // sept..août
+    const parMois={}; ordreMois.forEach(m=>parMois[m]=0);
+    saisonFiches.forEach(f=>{const m=new Date(f.date_rando+"T12:00:00").getMonth(); if(m in parMois)parMois[m]++;});
+    const maxM=Math.max(...Object.values(parMois),1);
+    document.getElementById("months").innerHTML = ordreMois.map(m=>{
+      const n=parMois[m]; const h=Math.round(n/maxM*100);
+      return `<div class="month"><span class="mv">${n||""}</span><div class="col" style="height:${n?Math.max(h,4):0}%;"></div><span class="mn">${MOIS[m]}</span></div>`;
+    }).join("");
+
+    // ── Statuts (toute la saison, annulées incluses ici pour info) ──
+    const saisonTout = all.filter(f=>f.date_rando>=S.debut && f.date_rando<=S.fin);
+    const pub=saisonTout.filter(f=>f.statut==="publiée").length;
+    const mod=saisonTout.filter(f=>f.statut==="modifiée").length;
+    const ann=saisonTout.filter(f=>(f.statut||"").toLowerCase()==="annulée").length;
+    document.getElementById("statuts").innerHTML =
+      `<span class="statut" style="color:var(--vert-cl)">✅ ${pub} publiées</span>`+
+      `<span class="statut" style="color:var(--amber)">✏️ ${mod} modifiées</span>`+
+      `<span class="statut" style="color:var(--red)">❌ ${ann} annulées</span>`;
+
+    document.getElementById("maj").textContent = "Maj "+new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+  }catch(e){
+    document.getElementById("prochaines").innerHTML='<div class="empty" style="color:var(--red)">⚠️ Erreur de chargement : '+esc(e.message)+'</div>';
+  }finally{
+    btn.disabled=false; btn.textContent="⟳ Actualiser";
+  }
+}
+charger();
+setInterval(charger, 300000); // rafraîchissement toutes les 5 min
+
+/* Auto-resize iframe parent (Webnode) */
+function sendHeight(){ try{ window.parent.postMessage({type:"resize",height:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)},"*"); }catch(e){} }
+new ResizeObserver(sendHeight).observe(document.body);
+window.addEventListener("load",sendHeight);
+</script>
+</body>
+</html>
