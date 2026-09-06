@@ -231,7 +231,6 @@
     <div class="fiche-card" style="text-align:center;padding:12px 8px;"><div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Cohérentes</div><div id="cal-ok" style="font-size:20px;font-weight:600;color:var(--vert-cl);">—</div></div>
     <div class="fiche-card" style="text-align:center;padding:12px 8px;"><div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Manquantes</div><div id="cal-ko" style="font-size:20px;font-weight:600;color:var(--red);">—</div></div>
     <div class="fiche-card" style="text-align:center;padding:12px 8px;"><div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Doublons</div><div id="cal-dup" style="font-size:20px;font-weight:600;color:var(--amber);">—</div></div>
-    <div class="fiche-card" style="text-align:center;padding:12px 8px;"><div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Divergences</div><div id="cal-div" style="font-size:20px;font-weight:600;color:var(--blue);">—</div></div>
     <div class="fiche-card" style="text-align:center;padding:12px 8px;"><div style="font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Orphelins</div><div id="cal-orph" style="font-size:20px;font-weight:600;color:var(--amber);">—</div></div>
   </div>
   <div id="cal-details"><div class="fiche-card" style="color:var(--txt3);font-size:13px;font-family:'DM Mono',monospace">Chargement…</div></div>
@@ -377,24 +376,27 @@ async function verifierCalendar() {
   const setN = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
   try {
     const [fRaw, cRaw] = await Promise.all([
-      fetch(HANDLER, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ action:"getFiches", select:"id,date_rando,nom_rando,animateur,statut", filters:"date_rando=gte."+from, order:"date_rando.asc" }) }).then(r=>r.json()),
+      fetch(HANDLER, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ action:"getFiches", select:"id,date_rando,nom_rando,animateur,statut,type", filters:"date_rando=gte."+from, order:"date_rando.asc" }) }).then(r=>r.json()),
       fetch(CAL_LIST, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ from, to }) }).then(r=>r.json()),
     ]);
     const events = ((cRaw && cRaw.events) || []).filter(e => e.date >= from && e.date <= to);
     const fiches = (Array.isArray(fRaw)?fRaw:[]).filter(f => f.date_rando >= from && f.date_rando <= to && (f.statut||"").toLowerCase() !== "annulée");
     const evByDate = {}; events.forEach(e => (evByDate[e.date] = evByDate[e.date]||[]).push(e));
-    const used = new Set(); let ok=0; const manq=[], dup=[], div=[];
+    // Ne comparer que les vraies randos : les fiches "autre"/"séjour" ne sont pas des sorties à retrouver au calendrier
+    const estRando = f => { const t = (f.type||"").toLowerCase(); return t !== "autre" && t !== "sejour"; };
+    const used = new Set(); let ok=0; const manq=[], dup=[];
     fiches.forEach(f => {
       const same = evByDate[f.date_rando] || []; const cible = calNorm(f.nom_rando);
       const m = same.filter(e => { const t = calNorm(e.titre); return t && cible && (t.includes(cible) || cible.includes(t)); });
-      if (m.length === 0) { if (same.length > 0) div.push({d:f.date_rando, n:f.nom_rando, info:"titre Calendar différent"}); else manq.push({d:f.date_rando, n:f.nom_rando}); }
-      else if (m.length > 1) { dup.push({d:f.date_rando, n:f.nom_rando}); m.forEach(e=>used.add(e)); }
-      else { used.add(m[0]); ok++; }
+      if (m.length > 1) { dup.push({d:f.date_rando, n:f.nom_rando}); m.forEach(e=>used.add(e)); }
+      else if (m.length === 1) { used.add(m[0]); ok++; }
+      else if (estRando(f)) { manq.push({d:f.date_rando, n:f.nom_rando}); }
+      /* sinon : fiche "autre"/"séjour" sans événement correspondant → ignorée (pas une rando) */
     });
     const orph = events.filter(e => !used.has(e));
-    setN("cal-ok", ok); setN("cal-ko", manq.length); setN("cal-dup", dup.length); setN("cal-div", div.length); setN("cal-orph", orph.length);
+    setN("cal-ok", ok); setN("cal-ko", manq.length); setN("cal-dup", dup.length); setN("cal-orph", orph.length);
     const cont = document.getElementById("cal-details");
-    if (manq.length + dup.length + div.length + orph.length === 0) {
+    if (manq.length + dup.length + orph.length === 0) {
       cont.innerHTML = '<div class="fiche-card" style="color:var(--vert-cl);font-size:13px;font-family:DM Mono,monospace">✅ Toutes les randos de la période sont dans Google Calendar, sans doublon ni orphelin.</div>';
     } else {
       let html = "";
@@ -416,7 +418,6 @@ async function verifierCalendar() {
       const line = (badge, color, d, n) => `<div class="card"><div class="card-icon" style="background:${color}22;color:${color}">${badge}</div><div class="card-info"><div class="card-name">${esc(n)}</div><div class="card-detail">${esc(d)}</div></div></div>`;
       let rows = "";
       dup.forEach(x  => rows += line("⚠️","#e3b341",x.d,x.n+" — doublon Calendar"));
-      div.forEach(x  => rows += line("🔶","#58a6ff",x.d,x.n+" — "+x.info));
       orph.forEach(e => rows += line("👻","#e3b341",e.date,(e.titre||"?")+" — événement sans fiche"));
       if (rows) html += '<div class="cards">'+rows+'</div>';
       cont.innerHTML = html;
