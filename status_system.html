@@ -382,16 +382,14 @@ async function verifierCalendar() {
     const events = ((cRaw && cRaw.events) || []).filter(e => e.date >= from && e.date <= to);
     const fiches = (Array.isArray(fRaw)?fRaw:[]).filter(f => f.date_rando >= from && f.date_rando <= to && (f.statut||"").toLowerCase() !== "annulée");
     const evByDate = {}; events.forEach(e => (evByDate[e.date] = evByDate[e.date]||[]).push(e));
-    // Ne comparer que les vraies randos : les fiches "autre"/"séjour" ne sont pas des sorties à retrouver au calendrier
-    const estRando = f => { const t = (f.type||"").toLowerCase(); return t !== "autre" && t !== "sejour"; };
     const used = new Set(); let ok=0; const manq=[], dup=[];
     fiches.forEach(f => {
       const same = evByDate[f.date_rando] || []; const cible = calNorm(f.nom_rando);
       const m = same.filter(e => { const t = calNorm(e.titre); return t && cible && (t.includes(cible) || cible.includes(t)); });
       if (m.length > 1) { dup.push({d:f.date_rando, n:f.nom_rando}); m.forEach(e=>used.add(e)); }
       else if (m.length === 1) { used.add(m[0]); ok++; }
-      else if (estRando(f)) { manq.push({d:f.date_rando, n:f.nom_rando}); }
-      /* sinon : fiche "autre"/"séjour" sans événement correspondant → ignorée (pas une rando) */
+      /* Aucun événement correspondant à cette fiche → manquante (jamais comparée à l'événement d'une autre rando le même jour) */
+      else { manq.push({d:f.date_rando, n:f.nom_rando}); }
     });
     const orph = events.filter(e => !used.has(e));
     setN("cal-ok", ok); setN("cal-ko", manq.length); setN("cal-dup", dup.length); setN("cal-orph", orph.length);
