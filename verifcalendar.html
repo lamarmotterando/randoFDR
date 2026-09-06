@@ -168,8 +168,6 @@ function comparer(fiches, events){
   const fichesParDate = {};
   fiches.forEach(f => { (fichesParDate[f.date_rando] = fichesParDate[f.date_rando] || []).push(f); });
   const evUtilises = new Set();
-  /* Ne comparer que les vraies randos : les fiches "autre"/"séjour" ne sont pas des sorties à retrouver au calendrier */
-  const estRando = f => { const t = (f.type||"").toLowerCase(); return t !== "autre" && t !== "sejour"; };
 
   const lignes = [];
   fiches.forEach(f => {
@@ -196,9 +194,7 @@ function comparer(fiches, events){
       /* Sur un jour chargé : montrer à quel événement la fiche est associée + sa difficulté */
       detail = ambigu ? ("↔ " + matches[0].titre + (diff ? "  ·  " + diff : "")) : "";
     } else {
-      /* Aucun événement correspondant. On ne signale "manquant" que pour les vraies randos ;
-         une fiche "autre"/"séjour" sans événement est ignorée (pas comparée à un événement voisin). */
-      if(!estRando(f)) return;
+      /* Aucun événement correspondant à CETTE fiche — jamais comparée à l'événement d'une autre rando le même jour. */
       statut = "ko";
       detail = "Aucun événement Google correspondant" + (ambigu ? " (jour chargé)" : "") + (diff ? "  ·  " + diff : "");
     }
