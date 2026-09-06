@@ -150,10 +150,23 @@ async function chargerEvents(from, to){
   }));
 }
 
+/* Niveau de difficulté d'après l'IBP (pour distinguer plusieurs randos le même jour) */
+function ibpNiveau(v){
+  const n = parseFloat(v);
+  if(isNaN(n)) return "";
+  if(n<=25)  return "🟢 facile";
+  if(n<=50)  return "🔵 modéré";
+  if(n<=75)  return "🟡 soutenu";
+  if(n<=100) return "🔴 difficile";
+  return "⚫ très difficile";
+}
+
 /* ══ COMPARAISON ═════════════════════════════════════════ */
 function comparer(fiches, events){
   const evParDate = {};
   events.forEach(e => { (evParDate[e.date] = evParDate[e.date] || []).push(e); });
+  const fichesParDate = {};
+  fiches.forEach(f => { (fichesParDate[f.date_rando] = fichesParDate[f.date_rando] || []).push(f); });
   const evUtilises = new Set();
   /* Ne comparer que les vraies randos : les fiches "autre"/"séjour" ne sont pas des sorties à retrouver au calendrier */
   const estRando = f => { const t = (f.type||"").toLowerCase(); return t !== "autre" && t !== "sejour"; };
@@ -167,20 +180,27 @@ function comparer(fiches, events){
       return t && cible && (t.includes(cible) || cible.includes(t));
     });
 
+    /* Jour "chargé" : plusieurs randos et/ou plusieurs événements le même jour → on détaille pour lever l'ambiguïté */
+    const ambigu = (fichesParDate[f.date_rando]||[]).length > 1 || memeDate.length > 1;
+    const niv = ibpNiveau(f.ibp);
+    const diff = f.ibp ? ("IBP " + f.ibp + (niv ? " " + niv : "")) : niv;
+
     let statut, detail = "";
     if(matches.length > 1){
       statut = "dup";
-      detail = matches.length + " événements identiques (doublon).";
+      detail = matches.length + " événements identiques (doublon)." + (diff ? "  ·  " + diff : "");
       matches.forEach(e => evUtilises.add(e));
     } else if(matches.length === 1){
       evUtilises.add(matches[0]);
-      statut = "ok"; detail = "";
+      statut = "ok";
+      /* Sur un jour chargé : montrer à quel événement la fiche est associée + sa difficulté */
+      detail = ambigu ? ("↔ " + matches[0].titre + (diff ? "  ·  " + diff : "")) : "";
     } else {
       /* Aucun événement correspondant. On ne signale "manquant" que pour les vraies randos ;
          une fiche "autre"/"séjour" sans événement est ignorée (pas comparée à un événement voisin). */
       if(!estRando(f)) return;
       statut = "ko";
-      detail = "Aucun événement Google correspondant à cette date.";
+      detail = "Aucun événement Google correspondant" + (ambigu ? " (jour chargé)" : "") + (diff ? "  ·  " + diff : "");
     }
     lignes.push({ f, statut, detail });
   });
