@@ -72,7 +72,6 @@
     <div class="stat ok"><div class="n" id="s-ok">—</div><div class="l">✅ Cohérentes</div></div>
     <div class="stat ko"><div class="n" id="s-ko">—</div><div class="l">❌ Manquantes Calendar</div></div>
     <div class="stat warn"><div class="n" id="s-dup">—</div><div class="l">⚠️ Doublons</div></div>
-    <div class="stat info"><div class="n" id="s-div">—</div><div class="l">🔶 Divergences</div></div>
     <div class="stat warn"><div class="n" id="s-orph">—</div><div class="l">👻 Orphelins</div></div>
   </div>
 
@@ -118,7 +117,7 @@ async function chargerFiches(from, to){
     headers:{"Content-Type":"application/json"},
     body: JSON.stringify({
       action:"getFiches",
-      select:"id,date_rando,nom_rando,animateur,statut,ibp",
+      select:"id,date_rando,nom_rando,animateur,statut,ibp,type",
       filters:"date_rando=gte."+from,
       order:"date_rando.asc"
     })
@@ -156,8 +155,11 @@ function comparer(fiches, events){
   const evParDate = {};
   events.forEach(e => { (evParDate[e.date] = evParDate[e.date] || []).push(e); });
   const evUtilises = new Set();
+  /* Ne comparer que les vraies randos : les fiches "autre"/"séjour" ne sont pas des sorties à retrouver au calendrier */
+  const estRando = f => { const t = (f.type||"").toLowerCase(); return t !== "autre" && t !== "sejour"; };
 
-  const lignes = fiches.map(f => {
+  const lignes = [];
+  fiches.forEach(f => {
     const memeDate = (evParDate[f.date_rando] || []);
     const cible = norm(f.nom_rando);
     const matches = memeDate.filter(e => {
@@ -166,29 +168,21 @@ function comparer(fiches, events){
     });
 
     let statut, detail = "";
-    if(matches.length === 0){
-      if(memeDate.length > 0){
-        statut = "div";
-        detail = "Événement(s) ce jour mais titre différent : " + memeDate.map(e=>e.titre).join(" · ");
-      } else {
-        statut = "ko";
-        detail = "Aucun événement Google à cette date.";
-      }
-    } else if(matches.length > 1){
+    if(matches.length > 1){
       statut = "dup";
       detail = matches.length + " événements identiques (doublon).";
       matches.forEach(e => evUtilises.add(e));
+    } else if(matches.length === 1){
+      evUtilises.add(matches[0]);
+      statut = "ok"; detail = "";
     } else {
-      const e = matches[0]; evUtilises.add(e);
-      const anim = norm(f.animateur), animEv = norm(e.animateur);
-      if(f.animateur && e.animateur && !animEv.includes(anim.split(" ")[0]) ){
-        statut = "div";
-        detail = "Animateur divergent (fiche : " + f.animateur + " · Calendar : " + e.animateur + ")";
-      } else {
-        statut = "ok"; detail = "";
-      }
+      /* Aucun événement correspondant. On ne signale "manquant" que pour les vraies randos ;
+         une fiche "autre"/"séjour" sans événement est ignorée (pas comparée à un événement voisin). */
+      if(!estRando(f)) return;
+      statut = "ko";
+      detail = "Aucun événement Google correspondant à cette date.";
     }
-    return { f, statut, detail };
+    lignes.push({ f, statut, detail });
   });
 
   /* Événements orphelins : présents dans Calendar sur la période, sans fiche associée */
@@ -204,19 +198,17 @@ const BADGE = {
   ok:  '<span class="badge b-ok">✅ OK</span>',
   ko:  '<span class="badge b-ko">❌ Manquant</span>',
   dup: '<span class="badge b-warn">⚠️ Doublon</span>',
-  div: '<span class="badge b-div">🔶 Divergence</span>',
 };
 const esc = s => (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function rendre({lignes, orphelins}){
-  const c = {total:lignes.length, ok:0, ko:0, dup:0, div:0};
+  const c = {total:lignes.length, ok:0, ko:0, dup:0};
   lignes.forEach(l => c[l.statut === "ok" ? "ok" : l.statut]++);
 
   $("s-total").textContent = c.total;
   $("s-ok").textContent    = c.ok;
   $("s-ko").textContent    = c.ko;
   $("s-dup").textContent   = c.dup;
-  $("s-div").textContent   = c.div;
   $("s-orph").textContent  = orphelins.length;
   $("stats").hidden = false;
 
@@ -228,7 +220,7 @@ function rendre({lignes, orphelins}){
     html += '<tr><td colspan="6" class="empty">Aucune randonnée en base sur cette période.</td></tr>';
   } else {
     /* Problèmes d'abord */
-    const ordre = {ko:0, dup:1, div:2, ok:3};
+    const ordre = {ko:0, dup:1, ok:2};
     lignes.sort((a,b) => (ordre[a.statut]-ordre[b.statut]) || (a.f.date_rando < b.f.date_rando ? -1 : 1));
     lignes.forEach(l => {
       html += '<tr>' +
