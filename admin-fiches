@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin fiches — La Marmotte</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --vert:#2d6a4f; --vert-cl:#d8f3dc;
+    --brun:#5c4033; --or:#b5832a; --or-cl:#fdf3e3;
+    --bg:#f7f4f0; --txt:#1a1a1a; --txt2:#5a5a5a; --bord:#e0d8d0;
+    --bleu:#1a3a5c;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;overflow-x:hidden}
+  body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh}
+  header{
+    background:var(--vert);color:#fff;display:flex;align-items:center;gap:10px;
+    padding:14px 20px;box-shadow:0 2px 8px rgba(0,0,0,.18);position:sticky;top:0;z-index:10;
+  }
+  header .logo{font-family:'Lora',serif;font-weight:600;font-size:17px}
+  header .logo small{display:block;font-size:10px;font-weight:300;opacity:.75;text-transform:uppercase;letter-spacing:.05em}
+  header .spacer{flex:1}
+  header .refresh{
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;
+    padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;
+  }
+
+  main{max-width:1180px;margin:0 auto;padding:22px 18px 60px;display:flex;gap:20px;align-items:flex-start}
+
+  .panel{background:#fff;border:1px solid var(--bord);border-radius:12px;overflow:hidden}
+
+  .liste{flex:1;min-width:0}
+  .liste-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:14px 18px;border-bottom:1px solid var(--bord)}
+  .liste-head h1{font-family:'Lora',serif;font-size:18px;font-weight:600;color:var(--bleu)}
+  .liste-head .count{font-size:12px;color:#888}
+  .liste-head .spacer{flex:1}
+  input[type=search]{
+    padding:8px 12px;border:1px solid var(--bord);border-radius:8px;font-size:13px;
+    background:var(--bg);width:100%;max-width:180px;flex:1 1 120px;font-family:inherit;
+  }
+  .btn{
+    font-family:inherit;font-size:13px;font-weight:600;border:none;border-radius:8px;
+    padding:9px 16px;cursor:pointer;
+  }
+  .btn-vert{background:var(--vert);color:#fff}
+  .btn-vert:hover{filter:brightness(1.06)}
+  .btn-ghost{background:#fff;border:1px solid var(--bord);color:var(--txt)}
+  .btn-rouge{background:#fff0f0;color:#c53030;border:1px solid #f5c2c2}
+
+  .table-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{
+    text-align:left;font-size:11px;font-weight:700;color:#666;text-transform:uppercase;
+    letter-spacing:.03em;background:#ede9e3;padding:9px 12px;
+  }
+  tbody tr{border-top:1px solid #f0ece6;cursor:pointer}
+  tbody tr:hover{background:#f4f8f6}
+  tbody tr.actif{background:#eaf4ef}
+  tbody td{padding:11px 12px;vertical-align:top}
+  .nom{font-weight:600;color:var(--bleu)}
+  .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700}
+  .badge-publiee{background:#d4edda;color:#1a6a35}
+  .badge-modifiee{background:#fff3cd;color:#92400e}
+  .badge-annulee{background:#fde2e2;color:#c53030}
+  .vide{padding:40px;text-align:center;color:#999;font-size:14px}
+
+  .edit{width:380px;flex-shrink:0;padding:20px;position:sticky;top:78px;max-height:calc(100vh - 100px);overflow:auto}
+  .edit h2{font-family:'Lora',serif;font-size:16px;font-weight:600;color:var(--bleu);margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+  .edit h2 button{background:none;border:none;font-size:18px;color:#999;cursor:pointer;line-height:1}
+  .champ{margin-bottom:13px}
+  .champ label{display:block;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}
+  .champ input,.champ select,.champ textarea{
+    width:100%;padding:9px 11px;border:1px solid var(--bord);border-radius:7px;
+    font-size:13px;font-family:inherit;background:#fff;
+  }
+  .champ textarea{resize:vertical}
+  .row2{display:flex;gap:10px}
+  .row2 .champ{flex:1}
+  .actions{display:flex;gap:10px;margin-top:18px}
+  .actions .btn{flex:1}
+  .placeholder{color:#999;font-size:13px;text-align:center;padding:30px 10px}
+
+  .toast{
+    position:fixed;top:16px;left:50%;transform:translateX(-50%);
+    padding:11px 20px;border-radius:8px;font-size:13px;font-weight:600;
+    box-shadow:0 4px 14px rgba(0,0,0,.15);z-index:100;display:none;
+  }
+  .toast.ok{background:#d4edda;color:#1a6a35}
+  .toast.err{background:#fde2e2;color:#c53030}
+
+  @media (max-width:1100px){
+    main{flex-direction:column}
+    .edit{width:100%;position:static;max-height:none}
+    .liste{width:100%}
+  }
+
+  /* ── Écran de connexion ── */
+  #vue-login{
+    min-height:100vh;display:flex;flex-direction:column;
+  }
+  .login-header{
+    width:100%;background:var(--vert);display:flex;align-items:center;gap:10px;
+    padding:14px 20px;box-shadow:0 2px 8px rgba(0,0,0,.18);
+  }
+  .login-header .logo{font-family:'Lora',serif;font-weight:600;font-size:17px;color:#fff}
+  .login-header .logo small{display:block;font-size:10px;font-weight:300;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em}
+  .login-corps{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+  .login-carte{width:100%;max-width:360px;background:#fff;border:1px solid var(--bord);border-radius:12px;padding:28px 26px}
+  .login-carte h1{font-family:'Lora',serif;font-size:20px;font-weight:600;color:var(--bleu);text-align:center;margin-bottom:4px}
+  .login-sous{font-size:13px;color:var(--txt2);text-align:center;margin-bottom:20px}
+  .login-erreur{
+    background:#fff0f0;border-left:4px solid #c53030;padding:10px 13px;border-radius:8px;
+    margin-bottom:16px;font-size:13px;font-weight:600;color:#c53030;display:none;
+  }
+  .login-carte .champ{margin-bottom:13px}
+  .login-carte button[type=submit]{width:100%;margin-top:6px;padding:12px;font-size:14px}
+</style>
+</head>
+<body>
+
+<div id="vue-login" style="display:none">
+  <div class="login-header">
+    <div class="logo">La Marmotte<small>Espace admin</small></div>
+  </div>
+  <div class="login-corps">
+    <div class="login-carte">
+      <h1>Connexion</h1>
+      <div class="login-sous">Accès réservé — usage personnel</div>
+      <div class="login-erreur" id="login-erreur"></div>
+      <form id="form-login" onsubmit="return connecter(event)">
+        <div class="champ">
+          <label>Email</label>
+          <input id="login-email" type="email" autocomplete="username" required>
+        </div>
+        <div class="champ">
+          <label>Mot de passe</label>
+          <input id="login-mdp" type="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-vert" id="btn-login">Se connecter</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="vue-admin" style="display:none">
+
+<header>
+  <div class="logo">La Marmotte<small>Admin — Fiches</small></div>
+  <div class="spacer"></div>
+  <span id="email-connecte" style="font-size:12px;opacity:.8;margin-right:6px;"></span>
+  <button class="refresh" onclick="deconnecter()">Se déconnecter</button>
+  <button class="refresh" onclick="chargerFiches()">↻ Rafraîchir</button>
+</header>
+
+<div id="toast" class="toast"></div>
+
+<main>
+  <div class="liste panel">
+    <div class="liste-head">
+      <h1>Fiches rando</h1>
+      <span class="count" id="count">—</span>
+      <div class="spacer"></div>
+      <input type="search" id="recherche" placeholder="Rechercher…" oninput="filtrer()">
+      <button class="btn btn-vert" onclick="nouvelleFiche()">+ Nouvelle fiche</button>
+    </div>
+    <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Randonnée</th><th>Statut</th><th>Animateur</th><th>Dist. / Dénv.</th></tr>
+      </thead>
+      <tbody id="corps-table">
+        <tr><td colspan="5" class="vide">Chargement…</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="edit panel" id="panneau-edit">
+    <div class="placeholder">Sélectionne une fiche à gauche, ou crée-en une nouvelle.</div>
+  </div>
+</main>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndobHhiZm5teXFkZmxteG9zZnNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3ODA5MTksImV4cCI6MjA4ODM1NjkxOX0.vf3sdnJRnnXyIx998fhPSIUPX0WS7KqDbvAwesCzOcE";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let fiches = [];
+let selectionneeId = null;
+
+/* ══ AUTHENTIFICATION ══ */
+async function verifierSession(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session){
+    afficherAdmin(session);
+  } else {
+    afficherLogin();
+  }
+}
+
+function afficherLogin(){
+  document.getElementById("vue-login").style.display = "block";
+  document.getElementById("vue-admin").style.display = "none";
+}
+
+function afficherAdmin(session){
+  document.getElementById("vue-login").style.display = "none";
+  document.getElementById("vue-admin").style.display = "block";
+  document.getElementById("email-connecte").textContent = session?.user?.email || "";
+  chargerFiches();
+}
+
+async function connecter(ev){
+  ev.preventDefault();
+  const email = document.getElementById("login-email").value.trim();
+  const mdp = document.getElementById("login-mdp").value;
+  const erreurBox = document.getElementById("login-erreur");
+  const btn = document.getElementById("btn-login");
+  erreurBox.style.display = "none";
+  btn.disabled = true;
+  btn.textContent = "Connexion…";
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: mdp });
+
+  btn.disabled = false;
+  btn.textContent = "Se connecter";
+
+  if (error){
+    /* Message brut de Supabase affiché tel quel — pas de reformulation qui masquerait la vraie cause */
+    erreurBox.textContent = error.message + (error.status ? " (code " + error.status + ")" : "");
+    erreurBox.style.display = "block";
+    return false;
+  }
+  afficherAdmin(data.session);
+  return false;
+}
+
+async function deconnecter(){
+  await sb.auth.signOut();
+  afficherLogin();
+}
+
+sb.auth.onAuthStateChange((_event, session) => {
+  if (session) afficherAdmin(session); else afficherLogin();
+});
+
+const CHAMPS_VIDES = {
+  nom_rando:"", date_rando:"", heure_rv:"", statut:"publiée", animateur:"",
+  parking_covoit:"", parking_depart:"", gps:"",
+  distance:"", denivele:"", duree:"", ibp:"", effort:"", technicite:"", risque:"",
+  couts:"", remarques:"", profil_png:""
+};
+
+function toast(msg, type){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast " + (type||"ok");
+  t.style.display = "block";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=> t.style.display="none", 3200);
+}
+
+function badgeClass(s){
+  if (s === "modifiée") return "badge-modifiee";
+  if (s === "annulée") return "badge-annulee";
+  return "badge-publiee";
+}
+
+async function chargerFiches(){
+  document.getElementById("corps-table").innerHTML = `<tr><td colspan="5" class="vide">Chargement…</td></tr>`;
+  const { data, error } = await sb.from("fiches").select("*").order("date_rando", { ascending:true });
+  if (error){ toast("Erreur de chargement : " + error.message, "err"); return; }
+  fiches = data || [];
+  rendreTable(fiches);
+}
+
+function filtrer(){
+  const q = document.getElementById("recherche").value.trim().toLowerCase();
+  if (!q){ rendreTable(fiches); return; }
+  rendreTable(fiches.filter(f =>
+    (f.nom_rando||"").toLowerCase().includes(q) ||
+    (f.animateur||"").toLowerCase().includes(q)
+  ));
+}
+
+function rendreTable(liste){
+  document.getElementById("count").textContent = liste.length + " ligne" + (liste.length>1?"s":"");
+  const corps = document.getElementById("corps-table");
+  if (!liste.length){
+    corps.innerHTML = `<tr><td colspan="5" class="vide">Aucune fiche</td></tr>`;
+    return;
+  }
+  corps.innerHTML = liste.map(f => `
+    <tr class="${f.id===selectionneeId?'actif':''}" onclick="ouvrirFiche('${f.id}')">
+      <td>${f.date_rando || "—"}</td>
+      <td class="nom">${escHtml(f.nom_rando || "—")}</td>
+      <td><span class="badge ${badgeClass(f.statut)}">${escHtml(f.statut || "publiée")}</span></td>
+      <td>${escHtml(f.animateur || "—")}</td>
+      <td>${f.distance?f.distance+" km":"—"} · ${f.denivele?f.denivele+" m":"—"}</td>
+    </tr>
+  `).join("");
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function ouvrirFiche(id){
+  selectionneeId = id;
+  const f = fiches.find(x => String(x.id) === String(id));
+  if (!f) return;
+  rendreTable(document.getElementById("recherche").value ? fiches.filter(x=>true) : fiches);
+  rendreEdit(f, false);
+}
+
+function nouvelleFiche(){
+  selectionneeId = null;
+  rendreEdit({ ...CHAMPS_VIDES }, true);
+}
+
+function rendreEdit(f, estNouvelle){
+  const p = document.getElementById("panneau-edit");
+  p.innerHTML = `
+    <h2>${estNouvelle ? "Nouvelle fiche" : "Éditer la fiche"}<button onclick="fermerEdit()">×</button></h2>
+
+    <div class="champ"><label>Nom randonnée</label><input id="f_nom_rando" value="${attr(f.nom_rando)}"></div>
+    <div class="row2">
+      <div class="champ"><label>Date</label><input id="f_date_rando" type="date" value="${attr(f.date_rando)}"></div>
+      <div class="champ"><label>Statut</label>
+        <select id="f_statut">
+          <option value="publiée" ${f.statut==="publiée"?"selected":""}>publiée</option>
+          <option value="modifiée" ${f.statut==="modifiée"?"selected":""}>modifiée</option>
+          <option value="annulée" ${f.statut==="annulée"?"selected":""}>annulée</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="champ"><label>Heure RV</label><input id="f_heure_rv" placeholder="9h00" value="${attr(f.heure_rv)}"></div>
+      <div class="champ"><label>Animateur</label><input id="f_animateur" value="${attr(f.animateur)}"></div>
+    </div>
+
+    <div class="champ"><label>Parking covoiturage</label><input id="f_parking_covoit" value="${attr(f.parking_covoit)}"></div>
+    <div class="champ"><label>Parking départ</label><input id="f_parking_depart" value="${attr(f.parking_depart)}"></div>
+    <div class="champ"><label>GPS (lat,lon)</label><input id="f_gps" placeholder="43.94,4.38" value="${attr(f.gps)}"></div>
+
+    <div class="row2">
+      <div class="champ"><label>Distance (km)</label><input id="f_distance" value="${attr(f.distance)}"></div>
+      <div class="champ"><label>Dénivelé (m)</label><input id="f_denivele" value="${attr(f.denivele)}"></div>
+    </div>
+    <div class="row2">
+      <div class="champ"><label>Durée</label><input id="f_duree" placeholder="4h30" value="${attr(f.duree)}"></div>
+      <div class="champ"><label>IBP</label><input id="f_ibp" value="${attr(f.ibp)}"></div>
+    </div>
+    <div class="row2">
+      <div class="champ"><label>Effort /5</label><input id="f_effort" value="${attr(f.effort)}"></div>
+      <div class="champ"><label>Technicité /5</label><input id="f_technicite" value="${attr(f.technicite)}"></div>
+      <div class="champ"><label>Risque /5</label><input id="f_risque" value="${attr(f.risque)}"></div>
+    </div>
+
+    <div class="champ"><label>Coûts (ex. 24,50€)</label><input id="f_couts" value="${attr(f.couts)}"></div>
+    <div class="champ"><label>Profil altimétrique (URL image)</label><input id="f_profil_png" value="${attr(f.profil_png)}"></div>
+    <div class="champ"><label>Remarques</label><textarea id="f_remarques" rows="3">${escHtml(f.remarques||"")}</textarea></div>
+
+    <div class="actions">
+      <button class="btn btn-vert" onclick="enregistrerFiche(${estNouvelle}, ${f.id ? "'"+f.id+"'" : "null"})">Enregistrer</button>
+      ${estNouvelle ? "" : `<button class="btn btn-rouge" onclick="supprimerFiche('${f.id}')">Suppr.</button>`}
+    </div>
+  `;
+}
+
+function attr(v){
+  if (v === null || v === undefined) return "";
+  return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;");
+}
+
+function lireForm(){
+  const val = id => document.getElementById(id).value.trim();
+  return {
+    nom_rando: val("f_nom_rando"),
+    date_rando: val("f_date_rando") || null,
+    heure_rv: val("f_heure_rv"),
+    statut: val("f_statut"),
+    animateur: val("f_animateur"),
+    parking_covoit: val("f_parking_covoit"),
+    parking_depart: val("f_parking_depart"),
+    gps: val("f_gps"),
+    distance: val("f_distance") || null,
+    denivele: val("f_denivele") || null,
+    duree: val("f_duree"),
+    ibp: val("f_ibp") || null,
+    effort: val("f_effort") || null,
+    technicite: val("f_technicite") || null,
+    risque: val("f_risque") || null,
+    couts: val("f_couts"),
+    profil_png: val("f_profil_png"),
+    remarques: document.getElementById("f_remarques").value.trim(),
+  };
+}
+
+async function enregistrerFiche(estNouvelle, id){
+  const payload = lireForm();
+  if (!payload.nom_rando || !payload.date_rando){
+    toast("Nom et date sont obligatoires", "err");
+    return;
+  }
+  let error;
+  if (estNouvelle){
+    ({ error } = await sb.from("fiches").insert(payload));
+  } else {
+    ({ error } = await sb.from("fiches").update(payload).eq("id", id));
+  }
+  if (error){ toast("Erreur : " + error.message, "err"); return; }
+  toast(estNouvelle ? "Fiche créée" : "Fiche enregistrée", "ok");
+  await chargerFiches();
+  fermerEdit();
+}
+
+async function supprimerFiche(id){
+  if (!confirm("Supprimer définitivement cette fiche ?")) return;
+  const { error } = await sb.from("fiches").delete().eq("id", id);
+  if (error){ toast("Erreur : " + error.message, "err"); return; }
+  toast("Fiche supprimée", "ok");
+  selectionneeId = null;
+  await chargerFiches();
+  fermerEdit();
+}
+
+function fermerEdit(){
+  selectionneeId = null;
+  document.getElementById("panneau-edit").innerHTML = `<div class="placeholder">Sélectionne une fiche à gauche, ou crée-en une nouvelle.</div>`;
+  rendreTable(fiches);
+}
+
+verifierSession();
+</script>
+</body>
+</html>
