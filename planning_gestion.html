@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planning_gestion — La Marmotte</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #2d3748; min-height: 100vh; }
+
+  #login-screen {
+    position: fixed; inset: 0; background: linear-gradient(135deg, #1b4332, #2d6a4f, #52b788);
+    display: flex; align-items: center; justify-content: center; z-index: 9999;
+  }
+  #login-screen.hidden { display: none; }
+  .login-box {
+    background: #fff; border-radius: 18px; padding: 44px 40px; width: 360px; max-width: 94vw;
+    box-shadow: 0 12px 48px rgba(0,0,0,.35); text-align: center;
+  }
+  .login-box .logo { font-size: 3rem; margin-bottom: 10px; }
+  .login-box h2 { font-size: 1.3rem; color: #2d6a4f; margin-bottom: 6px; }
+  .login-box p  { font-size: .85rem; color: #718096; margin-bottom: 28px; }
+  .login-field  { margin-bottom: 16px; text-align: left; }
+  .login-field label { font-size: .82rem; font-weight: 600; color: #4a5568; display: block; margin-bottom: 5px; }
+  .login-field input {
+    width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+    font-size: .95rem; font-family: inherit; transition: border-color .2s;
+  }
+  .login-field input:focus { outline: none; border-color: #52b788; }
+  .login-err { color: #e53e3e; font-size: .83rem; margin-top: -8px; margin-bottom: 12px; display: none; }
+  .btn-login {
+    width: 100%; padding: 13px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #2d6a4f, #52b788); color: #fff;
+    font-size: 1rem; font-weight: 700; cursor: pointer; transition: opacity .2s; margin-top: 6px;
+  }
+  .btn-login:hover { opacity: .88; }
+
+  #app { display: none; }
+  #app.visible { display: block; }
+
+  header {
+    background: linear-gradient(135deg, #2d6a4f, #52b788); color: #fff;
+    padding: 12px 20px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.2); position: sticky; top: 0; z-index: 50;
+  }
+  header h1 { font-size: 1.3rem; font-weight: 700; flex: 1; }
+  header .icon { font-size: 1.6rem; }
+  .btn-logout { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.4); color: #fff; padding: 7px 14px; border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+  .btn-logout:hover { background: rgba(255,255,255,.35); }
+
+  .main-content { max-width: 1600px; margin: 0 auto; padding: 20px 8px 40px; display: flex; flex-direction: column; gap: 20px; }
+
+  .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 14px 16px; }
+  .card-title { font-size: 1.05rem; color: #2d6a4f; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+
+  .section-divider { display: flex; align-items: center; gap: 14px; }
+  .section-divider::before, .section-divider::after {
+    content: ''; flex: 1; height: 2px;
+    background: linear-gradient(90deg, transparent, #2d6a4f44, transparent); border-radius: 2px;
+  }
+  .section-divider span {
+    font-size: .78rem; font-weight: 700; color: #2d6a4f; letter-spacing: .08em;
+    text-transform: uppercase; white-space: nowrap; padding: 4px 14px;
+    background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 20px;
+  }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .form-group { display: flex; flex-direction: column; gap: 3px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: .78rem; font-weight: 600; color: #4a5568; }
+  input[type=text], input[type=date], input[type=number], input[type=time], select, textarea {
+    padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 7px;
+    font-size: .88rem; transition: border-color .2s; width: 100%; font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #52b788; }
+  .input-unit { position: relative; }
+  .input-unit input { padding-right: 40px; }
+  .input-unit span { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); font-size: .78rem; color: #a0aec0; font-weight: 600; pointer-events: none; }
+
+  .autocomplete-wrap { position: relative; }
+  .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,.1); display: none; }
+  .autocomplete-list.open { display: block; }
+  .autocomplete-item { padding: 8px 13px; font-size: .86rem; cursor: pointer; border-bottom: 1px solid #f0f4f8; }
+  .autocomplete-item:hover, .autocomplete-item.highlighted { background: #f0fff4; color: #2d6a4f; }
+
+  .ibp-badge { display: inline-block; margin-top: 5px; padding: 3px 10px; border-radius: 20px; font-size: .76rem; font-weight: 700; opacity: 0; transition: opacity .3s; }
+  .ibp-badge.visible { opacity: 1; }
+
+  .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: .88rem; font-weight: 600; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: #52b788; color: #1a1a1a; } .btn-primary:hover { background: #40a574; }
+  .btn-edit    { background: #3182ce; color: #1a1a1a; font-size: .70rem; padding: 3px 6px; } .btn-edit:hover { background: #2c5282; }
+  .btn-delete  { background: #e53e3e; color: #1a1a1a; } .btn-delete:hover { background: #c53030; }
+  .btn-cancel  { background: #e2e8f0; color: #1a1a1a; } .btn-cancel:hover { background: #cbd5e0; }
+  .form-actions { display: flex; gap: 10px; margin-top: 10px; }
+
+  .gestion-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .sel-toolbar { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .sel-count { font-size: .81rem; color: #718096; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 4px 12px; }
+  .btn-del-multi { background: #742a2a; color: #fff; font-size: .81rem; padding: 6px 14px; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background .2s; }
+  .btn-del-multi:hover:not(:disabled) { background: #3d0000; }
+  .btn-del-multi:disabled { opacity: .4; cursor: not-allowed; }
+
+  #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #2d6a4f; color: #fff; padding: 11px 24px; border-radius: 30px; font-weight: 600; font-size: .88rem; box-shadow: 0 4px 16px rgba(0,0,0,.2); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 999; }
+  #toast.show { opacity: 1; } #toast.error { background: #e53e3e; }
+
+  .table-wrap { overflow-x: auto; width: 100%; }
+  table { width: 100%; border-collapse: collapse; font-size: .79rem; } #events-table { table-layout: fixed; } #events-table th:nth-child(1) { width: 30px; } #events-table th:nth-child(2) { width: 148px; } #events-table th:nth-child(3) { width: 160px; } #events-table th:nth-child(4) { width: 100px; } #events-table th:nth-child(5) { width: 70px; } #events-table th:nth-child(6) { width: 60px; } #events-table th:nth-child(7) { width: 60px; } #events-table th:nth-child(8) { width: 150px; }
+  thead th { background: #2d6a4f; color: #fff; padding: 6px 7px; text-align: left; white-space: nowrap; user-select: none; font-size: .78rem; }
+  thead th.sortable { cursor: pointer; } thead th.sortable:hover { background: #1b4332; }
+  thead th .sort-icon { display: inline-block; margin-left: 5px; font-size: .78rem; opacity: .45; }
+  thead th.sort-asc .sort-icon, thead th.sort-desc .sort-icon { opacity: 1; }
+  tbody tr { border-bottom: 1px solid #e2e8f0; } tbody tr:hover { background: #f7fafc; } #events-table tbody td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } #events-table tbody td.actions-cell { overflow: visible; white-space: normal; }
+  tbody tr.row-selected { background: #ebf8ff; }
+  tbody td { padding: 5px 7px; vertical-align: middle; font-size: .79rem; }
+  .actions-cell { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+  .badge       { display: inline-block; font-size: .70rem; background: #ebf8ff; color: #2b6cb0; border-radius: 20px; padding: 1px 6px; font-weight: 600; }
+  .badge.green { background: #f0fff4; color: #276749; }
+  .date-cell { white-space: nowrap; font-size: .78rem; }
+  #events-table tbody td:nth-child(8),
+  #events-table thead th:nth-child(8) { border-left: 2px solid #b5d4f4; }
+  .date-cell .jour { font-weight: 700; text-transform: capitalize; color: #2d6a4f; margin-right: 4px; }
+  .date-cell .date { color: #4a5568; }
+  .chk-col { width: 34px; text-align: center; }
+  input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #2d6a4f; }
+
+  .btn-cal { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.4); color: #fff; padding: 7px 14px; border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+  .btn-cal:hover { background: rgba(255,255,255,.35); }
+  #modal-export { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; align-items:center; justify-content:center; }
+  #modal-export.open { display:flex; }
+  #modal-export .mex-inner { background:#fff; border-radius:14px; padding:30px; width:740px; max-width:96vw; box-shadow:0 8px 32px rgba(0,0,0,.2); }
+  #modal-export h3 { font-size:1.1rem; color:#2d6a4f; margin-bottom:20px; }
+  .mex-filters { display:grid; grid-template-columns:1fr 1fr auto; gap:14px; align-items:end; margin-bottom:20px; }
+  .mex-scroll { max-height:340px; overflow-y:auto; }
+
+  #cal-popup {
+    position: fixed; top: 64px; right: 24px; z-index: 200;
+    background: #fff; border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,.22);
+    padding: 22px 20px 18px; width: 680px; max-width: 96vw;
+    display: none;
+  }
+  #cal-popup.open { display: block; }
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .cal-header h3 { font-size: .95rem; color: #2d6a4f; font-weight: 700; }
+  .cal-nav { display: flex; align-items: center; gap: 6px; }
+  .cal-nav-btn { background: #f0fff4; border: 1px solid #c6f6d5; color: #2d6a4f; width: 28px; height: 28px; border-radius: 7px; font-size: .95rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s; line-height: 1; }
+  .cal-nav-btn:hover { background: #9ae6b4; }
+  .cal-nav-label { font-size: .78rem; color: #718096; min-width: 110px; text-align: center; }
+  .cal-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #718096; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+  .cal-close:hover { background: #f0f4f8; }
+  .cal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .cal-month { font-size: .78rem; }
+  .cal-month-title { text-align: center; font-weight: 700; color: #2d6a4f; margin-bottom: 8px; font-size: .82rem; text-transform: capitalize; }
+  .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+  .cal-weekdays span { font-size: .68rem; font-weight: 700; color: #a0aec0; padding-bottom: 4px; }
+  .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-day {
+    text-align: center; padding: 4px 2px; border-radius: 5px;
+    font-size: .74rem; color: #4a5568; cursor: default; min-width: 0;
+    line-height: 1.3;
+  }
+  .cal-day.empty { visibility: hidden; }
+  .cal-day.has-rando { background: #c6f6d5; color: #1b4332; font-weight: 700; cursor: pointer; }
+  .cal-day.has-rando:hover { background: #9ae6b4; }
+  .cal-day.has-double { background: #ff8c00 !important; color: #fff !important; font-weight: 700; cursor: pointer; }
+  .cal-day.has-double:hover { background: #e67c00 !important; }
+  .cal-day.today { outline: 2px solid #2d6a4f; outline-offset: -2px; }
+  .cal-day.annulee { background: #fed7d7; color: #742a2a; text-decoration: line-through; }
+  .cal-legend { display: flex; gap: 16px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: .76rem; color: #718096; align-items: center; }
+  .cal-legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .cal-day.has-sejour { background: #ddeef8; color: #0c4472; font-weight: 600; }
+  .cal-day.has-sejour:hover { background: #b5d4f4; }
+  .cal-day.has-sejour.sejour-debut { border-radius: 5px 0 0 5px; border-left: 2px solid #185fa5; }
+  .cal-day.has-sejour.sejour-fin   { border-radius: 0 5px 5px 0; border-right: 2px solid #185fa5; }
+  .cal-day.has-sejour.sejour-seul  { border-radius: 5px; border: 2px solid #185fa5; }
+
+  .chk-warning { margin-top: 10px; font-size: .8rem; color: #742a2a; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 8px 13px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 14px; padding: 28px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.2); }
+  .modal h3 { font-size: 1.05rem; color: #2d6a4f; margin-bottom: 18px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+  .modal-confirm-icon { font-size: 2.4rem; margin-bottom: 10px; }
+  .modal-confirm-titre { font-size: 1rem; font-weight: 700; color: #c53030; margin-bottom: 12px; }
+  .modal-confirm-body { font-size: .86rem; color: #2d3748; line-height: 1.6; margin-bottom: 6px; }
+  .modal-confirm-warning { background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 11px 13px; margin: 11px 0; font-size: .83rem; color: #742a2a; line-height: 1.5; }
+  .modal-confirm-note { font-size: .8rem; color: #718096; font-style: italic; margin-top: 7px; }
+  .modal-suppr-icon { font-size: 2.4rem; margin-bottom: 10px; }
+  .modal-suppr-titre { font-size: 1rem; font-weight: 700; color: #742a2a; margin-bottom: 12px; }
+  .modal-suppr-body  { font-size: .86rem; color: #2d3748; line-height: 1.6; }
+  .modal-suppr-warning { background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 11px 13px; margin: 11px 0; font-size: .83rem; color: #742a2a; line-height: 1.5; }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 3px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-state { text-align: center; padding: 36px; color: #a0aec0; font-style: italic; font-size: .93rem; }
+  .tr-separator td { background: #f0fff4; border-top: 2px solid #2d6a4f; border-bottom: 2px solid #2d6a4f; padding: 0; }
+  .tr-separator-btn {
+    width: 100%; background: none; border: none; cursor: pointer;
+    padding: 7px 14px; font-size: .8rem; font-weight: 600; color: #2d6a4f;
+    text-align: left; display: flex; align-items: center; gap: 8px;
+    font-family: inherit;
+  }
+  .tr-separator-btn:hover { background: #c6f6d5; }
+  .tr-separator-arrow { transition: transform .2s; display: inline-block; font-size: .85rem; }
+  .tr-separator-arrow.open { transform: rotate(90deg); }
+  .tr-old { display: none; }
+  .tr-old.visible { display: table-row; }
+
+  .type-toggle { display: flex; gap: 0; border: 1.5px solid #e2e8f0; border-radius: 9px; overflow: hidden; width: fit-content; margin-bottom: 20px; }
+  .type-btn { padding: 8px 22px; background: #fff; border: none; font-size: .88rem; font-weight: 600; cursor: pointer; color: #718096; transition: all .15s; font-family: inherit; }
+  .type-btn:not(.active):hover { background: #f7fafc; }
+  .type-btn.active-rando  { background: #2d6a4f; color: #fff; }
+  .type-btn.active-sejour { background: #185fa5; color: #fff; }
+  .type-btn.active-autre  { background: #9c6b1f; color: #fff; }
+
+  .badge-autre { display: inline-block; font-size: .68rem; background: #f6e7cf; color: #7a4f12; border-radius: 20px; padding: 1px 7px; font-weight: 700; margin-right: 6px; }
+  .autre-horaire { font-size: .72rem; color: #7a4f12; margin-left: 6px; }
+  .tr-autre td { background: #fdf6ec; }
+  .tr-autre:hover td { background: #f9ecd6 !important; }
+
+  .sejour-dates-bloc { background: #e8f4fd; border: 1.5px solid #b5d4f4; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+  .sejour-dates-titre { font-size: .82rem; font-weight: 700; color: #0c4472; margin-bottom: 12px; }
+  .sejour-dates-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  .rattach-sejour-bloc { background: #f0f7ff; border: 1.5px solid #b5d4f4; border-radius: 9px; padding: 7px 10px; margin-bottom: 8px; }
+  .rattach-sejour-titre { font-size: .8rem; font-weight: 700; color: #185fa5; margin-bottom: 7px; }
+  .rattach-sejour-bloc select { border-color: #85b7eb; font-size: .88rem; }
+
+  .tr-sejour td { background: #ddeef8 !important; }
+  .tr-sejour:hover td { background: #cce4f3 !important; }
+  .tr-sejour-nom { color: #0c4472; font-weight: 700; }
+  .tr-dans-sejour td:first-child { border-left: 3px solid #85b7eb; }
+  .tr-dans-sejour td { background: #f5faff; }
+  .tr-dans-sejour:hover td { background: #e8f4fd !important; }
+
+  .tr-sejour { cursor: pointer; }
+  .sejour-toggle-arrow { display: inline-block; transition: transform .2s; margin-right: 6px; font-size: .85rem; color: #185fa5; }
+  .sejour-toggle-arrow.open { transform: rotate(90deg); }
+  .tr-dans-sejour { display: none; }
+  .tr-dans-sejour.visible { display: table-row; }
+
+  .rattach-dropdown {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: #fff;
+    border: 1.5px solid #b5d4f4;
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.25);
+    padding: 20px 20px 16px;
+    min-width: 320px;
+    max-width: 90vw;
+  }
+  .rattach-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.3);
+    z-index: 999;
+  }
+  .rattach-dropdown label { font-size: .78rem; font-weight: 700; color: #185fa5; display: block; margin-bottom: 6px; }
+  .rattach-dropdown select { width: 100%; font-size: .86rem; padding: 7px 10px; border: 1.5px solid #b5d4f4; border-radius: 7px; margin-bottom: 8px; }
+  .rattach-dropdown .rattach-actions { display: flex; gap: 8px; }
+  .rattach-dropdown .btn-rattach-ok { flex:1; padding: 7px; background: #185fa5; color: #fff; border: none; border-radius: 7px; font-size: .82rem; font-weight: 600; cursor: pointer; }
+  .rattach-dropdown .btn-rattach-ok:hover { background: #0c4472; }
+  .rattach-dropdown .btn-rattach-cancel { flex:1; padding: 7px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 7px; font-size: .82rem; font-weight: 600; cursor: pointer; }
+  .btn-rattach { background: #e8f4fd; color: #1a1a1a; border: 1px solid #b5d4f4; cursor: pointer; white-space: nowrap; }
+  .btn-rattach:hover { background: #b5d4f4; }
+  .btn-rattach.rattache { background: #ddeef8; color: #0c4472; font-style: italic; }
+
+  .modal-info-banner {
+    background: #e6f1fb; border: 1px solid #85b7eb; border-left: 3px solid #185fa5;
+    border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 18px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .modal-info-banner .banner-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+  .modal-info-banner .banner-title { font-size: .8rem; font-weight: 700; color: #0c4472; margin-bottom: 4px; }
+  .modal-info-banner .banner-body { font-size: .76rem; color: #185fa5; line-height: 1.5; margin: 0; }
+  .modal-info-banner .banner-body strong { color: #0c4472; }
+
+  /* Recherche texte */
+  .search-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 11px; padding-bottom: 11px; border-bottom: 1px solid #edf2f7; }
+  .search-wrap { position: relative; flex: 1; min-width: 220px; max-width: 420px; }
+  .search-wrap input { width: 100%; padding: 7px 30px 7px 12px; border: 1.5px solid #e2e8f0; border-radius: 7px; font-size: .86rem; font-family: inherit; color: #2d3748; }
+  .search-wrap input:focus { outline: none; border-color: #52b788; }
+  .search-wrap input.active { border-color: #52b788; }
+  .search-clear { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-size: .85rem; color: #a0aec0; cursor: pointer; display: none; }
+  .search-clear.visible { display: block; }
+  .search-badge { font-size: .74rem; color: #fff; background: #ed8936; border-radius: 20px; padding: 2px 10px; font-weight: 600; display: none; }
+  .search-badge.visible { display: inline-block; }
+  .search-info { background: #fffaf0; border: 1px solid #fbd38d; border-radius: 7px; padding: 7px 12px; margin-bottom: 12px; font-size: .78rem; color: #9c4221; display: none; }
+  .search-info.visible { display: block; }
+  .anim-contact { font-size: .73rem; color: #718096; margin-top: 4px; min-height: 14px; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<script>
+window._attendRecovery = new URLSearchParams(window.location.search).has('code');
+console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.search);
+</script>
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="logo">🏔️</div>
+    <h2>La Marmotte</h2>
+    <p>Accès réservé aux administrateurs</p>
+    <div class="login-field">
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" placeholder="votre@email.com" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label for="login-pass">Mot de passe</label>
+      <input type="password" id="login-pass" placeholder="Mot de passe" autocomplete="current-password">
+    </div>
+    <div class="login-err" id="login-err">Email ou mot de passe incorrect.</div>
+    <button class="btn-login" id="btn-login" onclick="tentativeConnexion()">🔓 Se connecter</button>
+    <div style="margin-top:14px;text-align:center">
+      <a href="#" onclick="motDePasseOublie();return false;" style="font-size:.8rem;color:#2d6a4f;text-decoration:underline dotted">Mot de passe oublié ?</a>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+
+  <header>
+    <span class="icon">🏔️</span>
+    <h1>Prévision des Randonnées — La Marmotte</h1>
+    <button class="btn-cal" id="btn-cal" onclick="toggleCal()">📅 Calendrier</button>
+    <button class="btn-cal" onclick="openModalExport()">📤 Export CSV</button>
+    <button class="btn-logout" onclick="deconnecter()">🔒 Déconnexion</button>
+  </header>
+
+  <div class="main-content">
+
+    <div class="card">
+      <div class="card-title">🆕 Nouvel événement</div>
+      <div style="margin-bottom:6px;font-size:.82rem;font-weight:600;color:#4a5568">Type d'événement</div>
+      <div class="type-toggle">
+        <button class="type-btn active-rando" id="btn-type-rando" onclick="switchType('rando')">🥾 Randonnée</button>
+        <button class="type-btn" id="btn-type-sejour" onclick="switchType('sejour')">🏕 Séjour</button>
+        <button class="type-btn" id="btn-type-autre" onclick="switchType('autre')">📌 Autres</button>
+      </div>
+
+      <div id="bloc-form-rando">
+        <div class="rattach-sejour-bloc">
+          <div class="rattach-sejour-titre">🏕 Rattacher à un séjour (optionnel)</div>
+          <select id="sejour-rattach"><option value="">— Randonnée autonome —</option></select>
+        </div>
+        <div class="form-grid">
+          <div class="form-group"><label for="date">Date *</label><input type="date" id="date" required=""></div>
+          <div class="form-group">
+            <label for="animateur-input">Animateur *</label>
+            <div class="autocomplete-wrap">
+              <input type="text" id="animateur-input" placeholder="Tapez un nom…" autocomplete="off">
+              <div class="autocomplete-list" id="animateur-list"></div>
+            </div>
+            <div class="anim-contact" id="animateur-contact"></div>
+          </div>
+          <div class="form-group full">
+            <label for="nom-input">Nom de la randonnée *</label>
+            <div class="autocomplete-wrap">
+              <input type="text" id="nom-input" placeholder="Tapez quelques lettres…" autocomplete="off">
+              <div class="autocomplete-list" id="nom-list"></div>
+            </div>
+          </div>
+          <div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <div class="form-group"><label for="ibp">Indice IBP</label><input type="number" id="ibp" placeholder="Ex : 45" min="0"><span class="ibp-badge" id="ibp-badge"></span></div>
+            <div class="form-group"><label for="distance">Distance *</label><div class="input-unit"><input type="number" id="distance" placeholder="Ex : 18" min="0" step="0.1" required=""><span>km</span></div></div>
+            <div class="form-group"><label for="denivele">Dénivelé +</label><div class="input-unit"><input type="number" id="denivele" placeholder="Ex : 850" min="0" step="1"><span>m</span></div></div>
+          </div>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" id="btn-create" onclick="creerRando()">➕ Créer l'événement</button></div>
+      </div>
+
+      <div id="bloc-form-sejour" style="display:none">
+        <div class="sejour-dates-bloc">
+          <div class="sejour-dates-titre">🗓 Dates du séjour</div>
+          <div class="sejour-dates-grid">
+            <div class="form-group"><label for="sejour-date-debut">Date de début *</label><input type="date" id="sejour-date-debut"></div>
+            <div class="form-group"><label for="sejour-date-fin">Date de fin *</label><input type="date" id="sejour-date-fin"></div>
+            <div class="form-group"><label>Nombre de jours</label><input type="text" id="sejour-nb-jours" readonly placeholder="—" style="background:#f7fafc;color:#718096;cursor:default"></div>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group full"><label for="sejour-nom">Nom du séjour *</label><input type="text" id="sejour-nom" placeholder="Ex : Séjour Écrins"></div>
+          <div class="form-group">
+            <label for="sejour-animateur">Animateur référent *</label>
+            <div class="autocomplete-wrap">
+              <input type="text" id="sejour-animateur" placeholder="Tapez un nom…" autocomplete="off">
+              <div class="autocomplete-list" id="sejour-animateur-list"></div>
+            </div>
+            <div class="anim-contact" id="sejour-animateur-contact"></div>
+          </div>
+          <div class="form-group"></div>
+        </div>
+        <div class="form-actions"><button class="btn" id="btn-create-sejour" onclick="creerSejour()" style="background:#185fa5;color:#fff">🏕 Créer le séjour</button></div>
+      </div>
+
+      <div id="bloc-form-autre" style="display:none">
+        <div class="form-grid">
+          <div class="form-group"><label for="autre-date">Date</label><input type="date" id="autre-date"></div>
+          <div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="form-group"><label for="autre-heure-debut">Heure de début</label><input type="time" id="autre-heure-debut"></div>
+            <div class="form-group"><label for="autre-heure-fin">Heure de fin</label><input type="time" id="autre-heure-fin"></div>
+          </div>
+          <div class="form-group full"><label for="autre-remarques">Remarques</label><textarea id="autre-remarques" style="min-height:70px;resize:vertical" placeholder="Description, lieu, infos…"></textarea></div>
+        </div>
+        <div class="form-actions"><button class="btn" id="btn-create-autre" onclick="creerAutre()" style="background:#9c6b1f;color:#fff">📌 Créer l'événement</button></div>
+      </div>
+    </div>
+
+    <div class="section-divider"><span>📋 Événements planifiés</span></div>
+
+    <div class="card" style="padding:12px 16px;">
+      <div class="search-row">
+        <span style="font-size:.82rem;font-weight:600;color:#4a5568;">🔍 Recherche</span>
+        <div class="search-wrap">
+          <input type="text" id="recherche" placeholder="Nom de rando ou animateur…" autocomplete="off" oninput="appliquerRecherche()">
+          <span class="search-clear" id="search-clear" onclick="effacerRecherche()">✕</span>
+        </div>
+        <span style="font-size:.76rem;color:#718096;">nom ou animateur</span>
+        <span class="search-badge" id="search-badge">historique inclus</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:.82rem;font-weight:600;color:#4a5568;">🗓 Période :</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label for="filtre-debut" style="font-size:.78rem;color:#718096;">Du</label>
+          <input type="date" id="filtre-debut" style="padding:5px 8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.83rem;font-family:inherit;" onchange="appliquerFiltreDates()">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label for="filtre-fin" style="font-size:.78rem;color:#718096;">Au</label>
+          <input type="date" id="filtre-fin" style="padding:5px 8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.83rem;font-family:inherit;" onchange="appliquerFiltreDates()">
+        </div>
+        <button onclick="reinitialiserFiltre()" style="padding:5px 12px;background:#e2e8f0;border:none;border-radius:7px;font-size:.78rem;font-weight:600;color:#4a5568;cursor:pointer;">✕ Réinitialiser</button>
+        <span id="filtre-count" style="font-size:.78rem;color:#718096;margin-left:4px;"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="gestion-header">
+        <div><p class="chk-warning">⚠️ Les cases à cocher servent à la <strong>suppression définitive</strong> des fiches — action irréversible.</p></div>
+        <div class="sel-toolbar">
+          <span class="sel-count" id="sel-count">0 sélectionné(s)</span>
+          <button class="btn-del-multi" id="btn-del-multi" disabled onclick="confirmSupprimerSelection()">🗑️ Supprimer la sélection</button>
+        </div>
+      </div>
+      <div class="search-info" id="search-info"></div>
+      <div class="table-wrap">
+        <table id="events-table">
+          <thead>
+            <tr>
+              <th class="chk-col"><input type="checkbox" id="chk-all" onchange="toggleAll(this)" title="Tout sélectionner"></th>
+              <th class="sortable" data-col="date" onclick="sortTable('date')">Date <span class="sort-icon">⇅</span></th>
+              <th>Randonnée</th>
+              <th class="sortable" data-col="animateur" onclick="sortTable('animateur')">Animateur <span class="sort-icon">⇅</span></th>
+              <th>IBP</th>
+              <th>Distance</th>
+              <th>Dénivelé +</th>
+              <th>Séjour</th>
+            </tr>
+          </thead>
+          <tbody id="events-body">
+            <tr><td colspan="7" class="empty-state">Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal" style="width:680px">
+    <h3>✏️ Modifier l'événement</h3>
+    <input type="hidden" id="edit-rowIndex">
+    <input type="hidden" id="edit-statut-original">
+    <input type="hidden" id="edit-sejour-id">
+    <input type="hidden" id="edit-nom-original">
+    <input type="hidden" id="edit-anim-original">
+    <input type="hidden" id="edit-date-original">
+    <input type="hidden" id="edit-type">
+    <input type="hidden" id="edit-statut-modifie" value="0">
+
+    <div class="modal-info-banner">
+      <span class="banner-icon">ℹ️</span>
+      <div>
+        <div class="banner-title">Paramètres modifiables ici</div>
+        <p class="banner-body">Date, heure de RV, animateur, nom, parking covoiturage, IBP, distance, dénivelé, durée, statut, remarques.<br>
+        <strong>Parking départ, km, coûts, covoiturage, profil de dénivelé</strong> — liés à la feuille de route. Toute modification nécessite de recréer une feuille de route complète depuis le formulaire sur le site.</p>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group"><label>Date *</label><input type="date" id="edit-date" oninput="onEditFieldChange()"></div>
+      <div class="form-group">
+        <label>Animateur *</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="edit-animateur" placeholder="Tapez un nom…" autocomplete="off" oninput="onEditFieldChange()">
+          <div class="autocomplete-list" id="edit-animateur-list"></div>
+        </div>
+        <div class="anim-contact" id="edit-animateur-contact"></div>
+      </div>
+      <div class="form-group full">
+        <label>Nom de la randonnée *</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="edit-nom" placeholder="Tapez quelques lettres…" autocomplete="off" oninput="onEditFieldChange()">
+          <div class="autocomplete-list" id="edit-nom-list"></div>
+        </div>
+      </div>
+      <div class="form-group"><label>Heure RV</label><input type="time" id="edit-heureRV" oninput="onEditFieldChange()"></div>
+      <div class="form-group">
+        <label>Parking covoiturage</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="edit-parking" placeholder="Tapez ou saisissez…" autocomplete="off" oninput="onEditFieldChange()">
+          <div class="autocomplete-list" id="edit-parking-list"></div>
+        </div>
+      </div>
+      <div class="form-group"><label>IBP</label><input type="number" id="edit-ibp" min="0" oninput="onEditFieldChange()"></div>
+      <div class="form-group"><label>Durée</label><input type="text" id="edit-duree" placeholder="ex: 3h30" oninput="onEditFieldChange()"></div>
+      <div class="form-group"><label>Distance *</label><div class="input-unit"><input type="number" id="edit-distance" min="0" step="0.1" required="" oninput="onEditFieldChange()"><span>km</span></div></div>
+      <div class="form-group"><label>Dénivelé +</label><div class="input-unit"><input type="number" id="edit-denivele" min="0" step="1" oninput="onEditFieldChange()"><span>m</span></div></div>
+      <div class="form-group">
+        <label>Statut</label>
+        <select id="edit-statut" onchange="onEditFieldChange()">
+          <option value="publiée">✅ Publiée</option>
+          <option value="modifiée">✏️ Modifiée</option>
+          <option value="annulée">❌ Annulée</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Remarques</label>
+        <textarea id="edit-remarques" style="min-height:65px;resize:vertical" placeholder="Notes, modifications…" oninput="onEditFieldChange()"></textarea>
+      </div>
+
+      <div id="edit-sectionParticipants" class="form-group full" style="display:none;border-top:1px solid #e0e8f0;padding-top:14px;margin-top:4px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <div style="width:3px;height:14px;background:#2e7d32;border-radius:2px;flex-shrink:0;"></div>
+          <span style="font-size:12px;font-weight:700;color:#4a6785;text-transform:uppercase;letter-spacing:0.04em;">Participants — après rando</span>
+          <span style="font-size:11px;background:#e3f0fb;color:#185fa5;padding:2px 8px;border-radius:6px;font-weight:600;">nouveau</span>
+        </div>
+        <div style="display:grid;grid-template-columns:100px 1fr;gap:12px;align-items:start;">
+          <div>
+            <label>Nombre</label>
+            <input type="number" id="edit-nb-participants" min="0" placeholder="—" readonly style="background:#f5f7fa;color:#666;cursor:default;width:100%;box-sizing:border-box;">
+            <p style="font-size:11px;color:#888;margin:4px 0 0;">calculé auto</p>
+          </div>
+          <div>
+            <label>Noms <span style="font-weight:400;color:#888;">(un par ligne — Prénom + 2-3 lettres nom)</span></label>
+            <textarea id="edit-noms-participants" rows="5" placeholder="Marie Du.&#10;Marie Dur.&#10;Paul Ber.&#10;…" oninput="syncNbParticipantsGestion()" style="width:100%;box-sizing:border-box;resize:vertical;min-height:100px;"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-delete" id="btn-modal-annuler" onclick="confirmerDepuisModal()" style="display:none;">❌ Annuler la rando</button>
+        <button class="btn btn-rattach" id="btn-modal-rattacher" onclick="rattacherDepuisModal()" style="display:none;">🏕 Rattacher</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-cancel" onclick="closeModal('modal-edit')">Fermer</button>
+        <button class="btn btn-primary" id="btn-save-edit" onclick="saveEdit()">💾 Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="max-width:460px;text-align:center">
+    <div class="modal-confirm-icon">⚠️</div>
+    <div class="modal-confirm-titre" id="confirm-titre"></div>
+    <div class="modal-confirm-body" id="confirm-body"></div>
+    <div class="modal-confirm-warning">❌ La mention <strong>"Annulée"</strong> sera affichée sur tous les points d'affichage :<br>planning du site, Google Calendar, historique.</div>
+    <div class="modal-confirm-note">Ce n'est pas une suppression — la fiche reste visible barrée.<br>Elle peut être remise en statut <strong>"Publiée"</strong> à tout moment.</div>
+    <div class="modal-actions" style="justify-content:center;margin-top:18px;gap:14px">
+      <button class="btn btn-cancel" onclick="closeModal('modal-confirm')">↩ Garder la rando</button>
+      <button class="btn btn-delete" id="btn-confirm-annuler">❌ Confirmer l'annulation</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-suppr-multi">
+  <div class="modal" style="max-width:460px;text-align:center">
+    <div class="modal-suppr-icon">🗑️</div>
+    <div class="modal-suppr-titre" id="suppr-multi-titre"></div>
+    <div class="modal-suppr-body" id="suppr-multi-body"></div>
+    <div class="modal-suppr-warning">⚠️ Cette action est <strong>irréversible</strong>. Les fiches seront définitivement supprimées de la base de données.</div>
+    <div class="modal-actions" style="justify-content:center;margin-top:18px;gap:14px">
+      <button class="btn btn-cancel" onclick="closeModal('modal-suppr-multi')">↩ Annuler</button>
+      <button class="btn" id="btn-confirm-suppr-multi" style="background:#742a2a;color:#fff;">🗑️ Confirmer la suppression</button>
+    </div>
+  </div>
+</div>
+
+<div id="cal-popup">
+  <div class="cal-header">
+    <h3>📅 Calendrier des randonnées</h3>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calNav(-3)" title="3 mois en arrière">&#8810;</button>
+      <button class="cal-nav-btn" onclick="calNav(-1)" title="Mois précédent">&lt;</button>
+      <span class="cal-nav-label" id="cal-nav-label"></span>
+      <button class="cal-nav-btn" onclick="calNav(1)" title="Mois suivant">&gt;</button>
+      <button class="cal-nav-btn" onclick="calNav(3)" title="3 mois en avant">&#8811;</button>
+      <button class="cal-nav-btn" onclick="calReset()" title="Revenir au mois actuel" style="font-size:.7rem;width:auto;padding:0 7px;">Auj.</button>
+    </div>
+    <button class="cal-close" onclick="toggleCal()">✕</button>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+  <div class="cal-legend">
+    <div class="cal-legend-dot" style="background:#c6f6d5;outline:1.5px solid #68d391;outline-offset:0"></div><span>Rando programmée</span>
+    <div class="cal-legend-dot" style="background:#ff8c00"></div><span>2 randos</span>
+    <div class="cal-legend-dot" style="background:#fed7d7"></div><span>Annulée</span>
+    <div class="cal-legend-dot" style="background:#fff;outline:2px solid #2d6a4f;outline-offset:0"></div><span>Aujourd'hui</span>
+    <div class="cal-legend-dot" style="background:#ddeef8;border:1.5px solid #185fa5"></div><span>Séjour</span>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div class="modal-overlay" id="modal-reset-pwd" style="z-index:10000;background:rgba(0,0,0,0.85);cursor:default;">
+  <div class="modal" style="max-width:400px;text-align:center;">
+    <div style="font-size:2rem;margin-bottom:10px;">🔑</div>
+    <h3 style="color:#2d6a4f;">Nouveau mot de passe</h3>
+    <p style="font-size:.85rem;color:#718096;margin-bottom:20px;">Saisissez votre nouveau mot de passe</p>
+    <div class="form-group" style="text-align:left;margin-bottom:16px;">
+      <label for="new-pwd">Nouveau mot de passe</label>
+      <input type="password" id="new-pwd" placeholder="Minimum 8 caractères" autocomplete="new-password">
+    </div>
+    <div class="form-group" style="text-align:left;margin-bottom:20px;">
+      <label for="new-pwd-confirm">Confirmer le mot de passe</label>
+      <input type="password" id="new-pwd-confirm" placeholder="Répétez le mot de passe" autocomplete="new-password">
+    </div>
+    <div id="reset-pwd-err" style="color:#e53e3e;font-size:.83rem;margin-bottom:12px;display:none;"></div>
+    <button class="btn btn-primary" onclick="enregistrerNouveauMdp()" style="width:100%;padding:12px;">💾 Enregistrer le mot de passe</button>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+/* ✅ Clé anon legacy supprimée — remplacer sb_publishable_XXXX par la vraie clé du dashboard Supabase */
+const SUPABASE_KEY = "sb_publishable_M7RxCuGoLU8zdzFSPuZl8A_CvvNMZ-O";
+const BASE_URL     = "https://lamarmotterando.github.io/randoFDR/data/";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { detectSessionInUrl: true, flowType: 'pkce', persistSession: true }
+});
+
+let animateurs   = [];
+let randos       = [];
+let parkings     = [];
+let allRows      = [];
+let sortCol      = "date";
+let sortDir      = "desc";
+let filtreDebut  = null;
+let filtreFin    = null;
+let rechercheTexte = "";
+
+const sejourOuverts = new Map();
+
+async function authHeaders(extra = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || SUPABASE_KEY;
+  return { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${token}`, ...extra };
+}
+async function authHeadersJson() {
+  return await authHeaders({ "Content-Type": "application/json", "Prefer": "return=minimal" });
+}
+
+async function tentativeConnexion() {
+  const email = document.getElementById("login-email").value.trim();
+  const pass  = document.getElementById("login-pass").value;
+  const err   = document.getElementById("login-err");
+  const btn   = document.getElementById("btn-login");
+  if (!email || !pass) { err.textContent = "Veuillez saisir votre email et mot de passe."; err.style.display = "block"; return; }
+  btn.textContent = "Connexion…"; btn.disabled = true;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    err.textContent = "Email ou mot de passe incorrect."; err.style.display = "block";
+    document.getElementById("login-pass").value = ""; document.getElementById("login-pass").focus();
+    btn.textContent = "🔓 Se connecter"; btn.disabled = false; return;
+  }
+  const role = data?.user?.app_metadata?.role;
+  if (role !== 'admin') {
+    await supabase.auth.signOut();
+    err.textContent = "Accès réservé aux administrateurs."; err.style.color = "#e53e3e"; err.style.display = "block";
+    document.getElementById("login-pass").value = "";
+    btn.textContent = "🔓 Se connecter"; btn.disabled = false; return;
+  }
+  err.style.display = "none";
+  document.getElementById("login-screen").classList.add("hidden");
+  document.getElementById("app").classList.add("visible");
+  btn.textContent = "🔓 Se connecter"; btn.disabled = false;
+  initApp();
+}
+
+async function deconnecter() {
+  await supabase.auth.signOut();
+  document.getElementById("login-screen").classList.remove("hidden");
+  document.getElementById("app").classList.remove("visible");
+  document.getElementById("login-email").value = "";
+  document.getElementById("login-pass").value = "";
+  document.getElementById("login-err").style.display = "none";
+}
+
+async function motDePasseOublie() {
+  const email = document.getElementById("login-email").value.trim();
+  if (!email) { document.getElementById("login-err").textContent = "Saisissez votre email ci-dessus puis cliquez sur ce lien."; document.getElementById("login-err").style.display = "block"; return; }
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: "https://lamarmotterando.github.io/randoFDR/planning_gestion.html" });
+  const err = document.getElementById("login-err");
+  if (error) { err.textContent = "Erreur : " + error.message; err.style.color = "#e53e3e"; }
+  else { err.textContent = "Email de réinitialisation envoyé à " + email; err.style.color = "#2d6a4f"; }
+  err.style.display = "block";
+}
+
+async function enregistrerNouveauMdp() {
+  const pwd = document.getElementById("new-pwd").value;
+  const confirm = document.getElementById("new-pwd-confirm").value;
+  const err = document.getElementById("reset-pwd-err");
+  if (pwd.length < 8) { err.textContent = "Le mot de passe doit faire au moins 8 caractères."; err.style.display = "block"; return; }
+  if (pwd !== confirm) { err.textContent = "Les deux mots de passe ne correspondent pas."; err.style.display = "block"; return; }
+  const { error } = await supabase.auth.updateUser({ password: pwd });
+  if (error) { err.textContent = "Erreur : " + error.message; err.style.display = "block"; }
+  else {
+    document.getElementById("modal-reset-pwd").classList.remove("open");
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('app').style.display = '';
+    const loginErr = document.getElementById("login-err");
+    loginErr.textContent = "✅ Mot de passe mis à jour. Connectez-vous avec votre nouveau mot de passe.";
+    loginErr.style.color = "#2d6a4f"; loginErr.style.display = "block";
+    await supabase.auth.signOut();
+  }
+}
+
+window.enregistrerNouveauMdp = enregistrerNouveauMdp;
+window.tentativeConnexion = tentativeConnexion;
+window.deconnecter        = deconnecter;
+window.motDePasseOublie   = motDePasseOublie;
+
+document.getElementById("login-pass").addEventListener("keydown",  e => { if (e.key === "Enter") tentativeConnexion(); });
+document.getElementById("login-email").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("login-pass").focus(); });
+
+supabase.auth.onAuthStateChange(async (event, session) => {
+  console.log("[Auth] event:", event, "recovery attendu:", window._attendRecovery);
+  if (event === 'PASSWORD_RECOVERY') {
+    sessionStorage.removeItem('supabase_recovery'); window._attendRecovery = false;
+    history.replaceState(null, '', window.location.pathname);
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('visible');
+    document.getElementById('modal-reset-pwd').classList.add('open'); return;
+  }
+  if (event === 'SIGNED_IN' && session) {
+    if (window._attendRecovery) {
+      window._attendRecovery = false; history.replaceState(null, '', window.location.pathname);
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app').classList.remove('visible');
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('modal-reset-pwd').classList.add('open'); return;
+    }
+    const role = session?.user?.app_metadata?.role;
+    if (role === 'admin') {
+      document.getElementById("login-screen").classList.add("hidden");
+      document.getElementById("modal-reset-pwd").classList.remove("open");
+      document.getElementById("app").classList.add("visible");
+      if (!document.getElementById("app").dataset.initialized) { document.getElementById("app").dataset.initialized = "1"; initApp(); }
+    }
+  }
+});
+
+const { data: { session } } = await supabase.auth.getSession();
+if (session && !window._attendRecovery) {
+  const role = session?.user?.app_metadata?.role;
+  if (role === 'admin') {
+    document.getElementById("login-screen").classList.add("hidden");
+    document.getElementById("app").classList.add("visible");
+    document.getElementById("app").dataset.initialized = "1";
+    initApp();
+  } else { await supabase.auth.signOut(); }
+}
+
+function appliquerFiltreDates() {
+  filtreDebut = document.getElementById("filtre-debut").value || null;
+  filtreFin   = document.getElementById("filtre-fin").value   || null;
+  renderTable();
+}
+function reinitialiserFiltre() {
+  document.getElementById("filtre-debut").value = ""; document.getElementById("filtre-fin").value = "";
+  filtreDebut = null; filtreFin = null;
+  document.getElementById("recherche").value = ""; rechercheTexte = "";
+  majRechercheUI();
+  renderTable();
+}
+
+function appliquerRecherche() {
+  rechercheTexte = document.getElementById("recherche").value.trim().toLowerCase();
+  majRechercheUI();
+  renderTable();
+}
+function effacerRecherche() {
+  document.getElementById("recherche").value = "";
+  rechercheTexte = "";
+  majRechercheUI();
+  renderTable();
+}
+function majRechercheUI() {
+  const actif = rechercheTexte.length > 0;
+  document.getElementById("recherche").classList.toggle("active", actif);
+  document.getElementById("search-clear").classList.toggle("visible", actif);
+  document.getElementById("search-badge").classList.toggle("visible", actif);
+}
+window.appliquerRecherche = appliquerRecherche;
+window.effacerRecherche   = effacerRecherche;
+
+function initApp() {
+  loadData(); loadEvents(); populateSejourSelect();
+  const now = new Date();
+  const debut = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fin   = new Date(now.getFullYear(), now.getMonth() + 4, 0);
+  document.getElementById("filtre-debut").value = debut.toISOString().split("T")[0];
+  document.getElementById("filtre-fin").value   = fin.toISOString().split("T")[0];
+  filtreDebut = debut.toISOString().split("T")[0]; filtreFin = fin.toISOString().split("T")[0];
+  const d0 = new Date(); const dow0 = d0.getDay(); const diff0 = dow0 === 0 ? 1 : dow0 === 1 ? 7 : (8 - dow0);
+  d0.setDate(d0.getDate() + diff0); document.getElementById("date").value = d0.toISOString().split("T")[0];
+}
+
+function toDisplay(val) {
+  if (!val) return ""; const s = String(val).trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y,m,d] = s.split("-"); return d+"/"+m+"/"+y; }
+  return s;
+}
+function jourSemaine(val) {
+  if (!val) return ""; const s = String(val).trim(); let d;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [jj,mm,yyyy] = s.split("/"); d = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(jj)); }
+  else if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [yyyy,mm,jj] = s.split("-"); d = new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(jj)); }
+  else return "";
+  return d.toLocaleDateString("fr-FR", { weekday: "long" });
+}
+function niveauIBP(v) {
+  const n = parseFloat(v); if (isNaN(n) || v === "") return null;
+  if (n <= 25)  return { label: "🟢 N1 — Facile",          bg: "#00dd00", color: "#ffffff" };
+  if (n <= 50)  return { label: "🔵 N2 — Assez Facile",    bg: "#0077ff", color: "#ffffff" };
+  if (n <= 75)  return { label: "🟡 N3 — Peu Difficile",   bg: "#ff8800", color: "#ffffff" };
+  if (n <= 100) return { label: "🔴 N4 — Assez Difficile", bg: "#ff1a1a", color: "#ffffff" };
+  return              { label: "⚫ N5 — Difficile",         bg: "#343a40", color: "#ffffff" };
+}
+
+function afficherContactAnimateur(nom, targetId) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  const match = animateurs.find(a => (a.nom || "").toLowerCase() === String(nom || "").trim().toLowerCase());
+  if (!match) { el.textContent = ""; return; }
+  const parts = [];
+  if (match.email)     parts.push("📧 " + match.email);
+  if (match.telephone) parts.push("📞 " + match.telephone);
+  el.textContent = parts.join("   ·   ");
+}
+window.afficherContactAnimateur = afficherContactAnimateur;
+
+async function loadData() {
+  async function callHandler(body) {
+    const res = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error("Handler " + res.status);
+    return res.json();
+  }
+  try {
+    const [a, r, p] = await Promise.all([
+      /* ✅ Édition admin authentifiée : nom + email + téléphone via get-animateurs-admin (JWT admin requis) */
+      authHeaders({ "Content-Type": "application/json" }).then(h =>
+        fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/get-animateurs-admin", { method: "GET", headers: h })
+      ).then(r => { if (!r.ok) throw new Error("get-animateurs-admin " + r.status); return r.json(); }),
+      callHandler({ action: "getFiches", select: "nom_rando", order: "nom_rando.asc" }),
+      fetch(BASE_URL + "parkings.js").then(res => res.text()).then(txt => {
+        const m = txt.match(/\[([^\]]+)\]/s);
+        if (!m) return [];
+        return m[1].split(",").map(s => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
+      })
+    ]);
+    animateurs = Array.isArray(a) ? a.filter(x => x.nom && x.nom !== "") : [];
+    randos = Array.isArray(r) ? [...new Set(r.map(x => x.nom_rando).filter(Boolean))].sort() : [];
+    parkings = p;
+    initAutocomplete();
+    console.log("[Animateurs] " + animateurs.length + " animateurs chargés via get-animateurs-admin");
+  } catch(e) { console.error("Erreur chargement:", e); }
+}
+
+function initAutocomplete() {
+  setupAutocomplete("animateur-input",   "animateur-list",        () => animateurs.map(a => a.nom));
+  setupAutocomplete("nom-input",         "nom-list",              () => randos);
+  setupAutocomplete("edit-animateur",    "edit-animateur-list",   () => animateurs.map(a => a.nom));
+  setupAutocomplete("edit-nom",          "edit-nom-list",         () => randos);
+  setupAutocomplete("edit-parking",      "edit-parking-list",     () => parkings);
+  setupAutocomplete("sejour-animateur",  "sejour-animateur-list", () => animateurs.map(a => a.nom));
+
+  /* Affichage email/téléphone sous les 3 champs animateur */
+  const ciblesContact = {
+    "animateur-input":  "animateur-contact",
+    "edit-animateur":   "edit-animateur-contact",
+    "sejour-animateur": "sejour-animateur-contact",
+  };
+  Object.keys(ciblesContact).forEach(inputId => {
+    const inp = document.getElementById(inputId);
+    if (!inp) return;
+    const targetId = ciblesContact[inputId];
+    inp.addEventListener("input", () => afficherContactAnimateur(inp.value, targetId));
+    inp.addEventListener("blur", () => setTimeout(() => afficherContactAnimateur(inp.value, targetId), 160));
+  });
+}
+function setupAutocomplete(inputId, listId, getItems) {
+  const input = document.getElementById(inputId);
+  const list  = document.getElementById(listId);
+  let hi = -1;
+  input.addEventListener("input", () => {
+    const f = input.value.toLowerCase().trim();
+    list.innerHTML = ""; hi = -1;
+    if (!f) { list.classList.remove("open"); return; }
+    const matches = getItems().filter(i => i.toLowerCase().includes(f)).slice(0, 10);
+    if (!matches.length) { list.classList.remove("open"); return; }
+    matches.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "autocomplete-item"; div.textContent = item;
+      div.addEventListener("mousedown", () => { input.value = item; list.classList.remove("open"); onEditFieldChange(); });
+      list.appendChild(div);
+    });
+    list.classList.add("open");
+  });
+  input.addEventListener("keydown", e => {
+    const items = list.querySelectorAll(".autocomplete-item");
+    if (!items.length) return;
+    if      (e.key === "ArrowDown") { e.preventDefault(); hi = Math.min(hi+1, items.length-1); }
+    else if (e.key === "ArrowUp")   { e.preventDefault(); hi = Math.max(hi-1, 0); }
+    else if (e.key === "Enter" && hi >= 0) { e.preventDefault(); input.value = items[hi].textContent; list.classList.remove("open"); hi = -1; onEditFieldChange(); return; }
+    items.forEach((el, i) => el.classList.toggle("highlighted", i === hi));
+  });
+  input.addEventListener("blur", () => setTimeout(() => list.classList.remove("open"), 150));
+}
+
+document.getElementById("ibp").addEventListener("input", function() {
+  const badge = document.getElementById("ibp-badge"); const info = niveauIBP(this.value);
+  if (!info) { badge.className = "ibp-badge"; return; }
+  badge.textContent = info.label; badge.style.background = info.bg; badge.style.color = info.color;
+  badge.className = "ibp-badge visible";
+});
+document.getElementById("sejour-date-debut").addEventListener("change", calcNbJours);
+document.getElementById("sejour-date-fin").addEventListener("change",   calcNbJours);
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById("toast"); t.textContent = msg;
+  t.className = "show" + (isError ? " error" : "");
+  setTimeout(() => t.className = "", 3500);
+}
+
+function onEditFieldChange() {
+  if (document.getElementById("edit-statut-modifie").value === "1") return;
+  if (document.getElementById("edit-statut-original").value === "publiée") {
+    document.getElementById("edit-statut").value = "modifiée";
+    document.getElementById("edit-statut-modifie").value = "1";
+  }
+}
+window.onEditFieldChange = onEditFieldChange;
+
+function switchType(type) {
+  const blocs = { rando: "bloc-form-rando", sejour: "bloc-form-sejour", autre: "bloc-form-autre" };
+  const btns  = { rando: "btn-type-rando",  sejour: "btn-type-sejour",  autre: "btn-type-autre" };
+  const actif = { rando: "active-rando",    sejour: "active-sejour",    autre: "active-autre" };
+  Object.keys(blocs).forEach(k => {
+    const bloc = document.getElementById(blocs[k]); if (bloc) bloc.style.display = (k === type) ? "" : "none";
+    const btn  = document.getElementById(btns[k]);  if (btn)  btn.className = "type-btn" + (k === type ? " " + actif[k] : "");
+  });
+}
+function calcNbJours() {
+  const d1 = document.getElementById("sejour-date-debut").value;
+  const d2 = document.getElementById("sejour-date-fin").value;
+  const el = document.getElementById("sejour-nb-jours");
+  if (!d1 || !d2) { el.value = "—"; return; }
+  const diff = Math.round((new Date(d2) - new Date(d1)) / 86400000);
+  el.value = diff > 0 ? diff + 1 + " jour" + (diff + 1 > 1 ? "s" : "") : "—";
+}
+
+async function populateSejourSelect() {
+  const sel = document.getElementById("sejour-rattach"); if (!sel) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?select=id,nom_rando,date_rando,date_fin_sejour&type=eq.sejour&order=date_rando.asc`, { headers: await authHeaders() });
+    const sejours = await res.json();
+    sel.innerHTML = "<option value=''>— Randonnée autonome —</option>";
+    sejours.forEach(s => {
+      const opt = document.createElement("option"); opt.value = s.id;
+      opt.textContent = `${s.nom_rando} · ${toDisplay(s.date_rando)}${toDisplay(s.date_fin_sejour) ? " → " + toDisplay(s.date_fin_sejour) : ""}`;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.warn("Erreur chargement séjours:", e); }
+}
+
+async function creerSejour() {
+  const debut = document.getElementById("sejour-date-debut").value;
+  const fin   = document.getElementById("sejour-date-fin").value;
+  const nom   = document.getElementById("sejour-nom").value.trim();
+  const anim  = document.getElementById("sejour-animateur").value.trim();
+  if (!debut || !fin || !nom || !anim) { showToast("Veuillez remplir tous les champs obligatoires (*)", true); return; }
+  if (fin < debut) { showToast("La date de fin doit être après la date de début.", true); return; }
+  setBusy("btn-create-sejour", true);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches`, {
+      method: "POST", headers: await authHeadersJson(),
+      body: JSON.stringify({ date_rando: debut, date_fin_sejour: fin, nom_rando: nom, animateur: anim, type: "sejour", statut: "publiée", distance: 0 })
+    });
+    if (res.ok) {
+      showToast("🏕 Séjour créé !");
+      document.getElementById("sejour-nom").value = ""; document.getElementById("sejour-animateur").value = "";
+      document.getElementById("sejour-date-debut").value = ""; document.getElementById("sejour-date-fin").value = "";
+      document.getElementById("sejour-nb-jours").value = "—";
+      loadEvents(); populateSejourSelect();
+    } else showToast("Erreur : " + (await res.text()), true);
+  } catch(e) { showToast("Erreur réseau : " + e.message, true); }
+  setBusy("btn-create-sejour", false);
+}
+
+async function creerAutre() {
+  const date = document.getElementById("autre-date").value;
+  const hDeb = document.getElementById("autre-heure-debut").value;
+  const hFin = document.getElementById("autre-heure-fin").value;
+  const rem  = document.getElementById("autre-remarques").value.trim();
+  /* Aucun champ obligatoire pour le type « Autres » */
+  setBusy("btn-create-autre", true);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches`, {
+      method: "POST", headers: await authHeadersJson(),
+      body: JSON.stringify({
+        type: "autre", statut: "publiée",
+        date_rando: date || null,
+        heure_rv: hDeb || null,                 /* heure de début */
+        duree: hFin || null,                    /* heure de fin (réutilisation de la colonne duree) */
+        remarques: rem || null,
+        nom_rando: rem || "Autre événement",    /* sert de libellé dans le tableau */
+        distance: 0
+      })
+    });
+    if (res.ok) {
+      showToast("📌 Événement « Autres » créé !");
+      document.getElementById("autre-date").value = "";
+      document.getElementById("autre-heure-debut").value = "";
+      document.getElementById("autre-heure-fin").value = "";
+      document.getElementById("autre-remarques").value = "";
+      loadEvents();
+    } else showToast("Erreur : " + (await res.text()), true);
+  } catch(e) { showToast("Erreur réseau : " + e.message, true); }
+  setBusy("btn-create-autre", false);
+}
+
+function setBusy(btnId, busy) {
+  const btn = document.getElementById(btnId); if (!btn) return;
+  if (busy) { btn.dataset.label = btn.innerHTML; btn.innerHTML = "<span class='spinner'></span> En cours…"; }
+  else        btn.innerHTML = btn.dataset.label;
+  btn.disabled = busy;
+}
+
+async function creerRando() {
+  const date = document.getElementById("date").value;
+  const nom  = document.getElementById("nom-input").value.trim();
+  const anim = document.getElementById("animateur-input").value.trim();
+  const ibp  = document.getElementById("ibp").value.trim();
+  const dist = document.getElementById("distance").value.trim();
+  const den  = document.getElementById("denivele").value.trim();
+  if (!date || !nom || !anim) { showToast("Veuillez remplir les champs obligatoires (*)", true); return; }
+  if (!dist) { showToast("La distance est obligatoire (*)", true); return; }
+  setBusy("btn-create", true);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches`, {
+      method: "POST", headers: await authHeadersJson(),
+      body: JSON.stringify({
+        date_rando: date, nom_rando: nom, animateur: anim, parking_covoit: null,
+        ibp: ibp ? parseFloat(ibp) : null, distance: dist ? parseFloat(dist) : null,
+        denivele: den ? parseInt(den) : null, statut: "publiée", type: "rando",
+        sejour_id: document.getElementById("sejour-rattach").value ? parseInt(document.getElementById("sejour-rattach").value) : null
+      })
+    });
+    if (res.ok) {
+      const calOk = await syncCalendar("calendarCreate", {
+        dateRando: date, nomRando: nom, animateur: anim, tel: "", heureRV: "", parking: "",
+        parkingDepart: "", gps: "", distance: dist||"", denivele: den||"", duree: "",
+        ibp: ibp||"", effort: "", technicite: "", risque: "", couts: "", covoit4: "", covoit5: "", profilUrl: ""
+      });
+      showToast(calOk ? "✅ Randonnée créée et ajoutée au Calendar !" : "✅ Randonnée créée (Calendar non mis à jour)", !calOk);
+      ["ibp","distance","denivele"].forEach(id => document.getElementById(id).value = "");
+      ["nom-input","animateur-input"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("ibp-badge").className = "ibp-badge";
+      const last = new Date(date + "T12:00:00"); const dow = last.getDay(); const next = new Date(last);
+      next.setDate(last.getDate() + (dow === 1 ? 3 : dow === 4 ? 4 : 3));
+      document.getElementById("date").value = next.toISOString().split("T")[0];
+      loadEvents();
+    } else showToast("Erreur : " + (await res.text()), true);
+  } catch(e) { showToast("Erreur réseau : " + e.message, true); }
+  setBusy("btn-create", false);
+}
+
+async function loadEvents() {
+  resetSelection();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?select=*&order=date_rando.asc`, { headers: await authHeaders() });
+    allRows = await res.json();
+    renderTable();
+  } catch(e) { showToast("Erreur réseau lors du chargement.", true); }
+}
+
+function toggleAll(master) {
+  document.querySelectorAll(".row-chk").forEach(c => c.checked = master.checked);
+  updateSelectionToolbar();
+}
+function updateSelectionToolbar() {
+  const all = document.querySelectorAll(".row-chk"); const checked = document.querySelectorAll(".row-chk:checked"); const n = checked.length;
+  document.getElementById("sel-count").textContent = n + " sélectionné(s)";
+  document.getElementById("btn-del-multi").disabled = n === 0;
+  const chkAll = document.getElementById("chk-all");
+  chkAll.checked = n > 0 && n === all.length; chkAll.indeterminate = n > 0 && n < all.length;
+  document.querySelectorAll("#events-body tr").forEach(tr => { const c = tr.querySelector(".row-chk"); tr.classList.toggle("row-selected", !!(c && c.checked)); });
+}
+function resetSelection() {
+  document.getElementById("sel-count").textContent = "0 sélectionné(s)";
+  document.getElementById("btn-del-multi").disabled = true;
+  const chkAll = document.getElementById("chk-all");
+  if (chkAll) { chkAll.checked = false; chkAll.indeterminate = false; }
+}
+
+function confirmSupprimerSelection() {
+  const ids = [...document.querySelectorAll(".row-chk:checked")].map(c => c.dataset.id); if (!ids.length) return;
+  const lignes = allRows.filter(r => ids.includes(String(r.id)));
+  const noms   = lignes.map(r => `• ${r.nom_rando || "—"} (${toDisplay(r.date_rando)})`).join("<br>");
+  document.getElementById("suppr-multi-titre").textContent = `Supprimer ${ids.length} fiche${ids.length > 1 ? "s" : ""} définitivement ?`;
+  document.getElementById("suppr-multi-body").innerHTML = noms;
+  const btn = document.getElementById("btn-confirm-suppr-multi"); const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener("click", () => { closeModal("modal-suppr-multi"); supprimerSelection(ids); });
+  document.getElementById("modal-suppr-multi").classList.add("open");
+}
+
+async function supprimerSelection(ids) {
+  document.getElementById("btn-del-multi").disabled = true; let erreurs = 0;
+  /* ✅ Suppression via Edge Function dédiée delete-fiche (token admin obligatoire) */
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) { showToast("Session expirée — reconnectez-vous.", true); loadEvents(); return; }
+
+  for (const id of ids) {
+    try {
+      const fiche = allRows.find(r => String(r.id) === String(id));
+      if (fiche && fiche.date_rando && fiche.type !== "autre") await syncCalendar("calendarDelete", { dateRando: fiche.date_rando, animateur: fiche.animateur || "" });
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-fiche`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) erreurs++;
+    } catch(e) { erreurs++; }
+  }
+  showToast(erreurs === 0 ? `🗑️ ${ids.length} fiche${ids.length > 1 ? "s supprimées" : " supprimée"}.` : `${erreurs} erreur(s) lors de la suppression.`, erreurs > 0);
+  loadEvents();
+}
+
+let _oldEventsOpen = false;
+
+function toggleSejourRows(sejourId) {
+  const wasOuvert = sejourOuverts.get(sejourId) ?? false;
+  sejourOuverts.set(sejourId, !wasOuvert);
+  const isOuvert = !wasOuvert;
+  const arrow = document.getElementById(`arrow-sejour-${sejourId}`);
+  if (arrow) arrow.classList.toggle("open", isOuvert);
+  document.querySelectorAll(`[data-parent-sejour="${sejourId}"]`).forEach(tr => tr.classList.toggle("visible", isOuvert));
+}
+window.toggleSejourRows = toggleSejourRows;
+
+function formatMaj(ev) {
+  const iso = ev.updated_at || ev.created_at;
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const pad = n => String(n).padStart(2, "0");
+  return `maj ${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function buildEventRow(ev, extraClass) {
+  const tr = document.createElement("tr");
+  const isSejour = ev.type === "sejour";
+
+  if (isSejour) {
+    tr.className = "tr-sejour" + (extraClass ? " " + extraClass : "");
+    tr.dataset.sejourId = ev.id;
+    const debutAff = toDisplay(ev.date_rando);
+    const finAff   = toDisplay(ev.date_fin_sejour);
+    const nbJours  = ev.date_fin_sejour ? Math.round((new Date(ev.date_fin_sejour) - new Date(ev.date_rando)) / 86400000) + 1 : "";
+    const nbRandos = allRows.filter(r => r.sejour_id === ev.id).length;
+    const isOuvert = sejourOuverts.get(ev.id) ?? false;
+    const arrowClass = "sejour-toggle-arrow" + (isOuvert ? " open" : "");
+    tr.innerHTML = `
+      <td class="chk-col"><input type="checkbox" class="row-chk" data-id="${ev.id}" onchange="updateSelectionToolbar()"></td>
+      <td><span class="date-cell"><span class="date">${debutAff}${finAff ? " → " + finAff : ""}</span></span></td>
+      <td colspan="5">
+        <span class="${arrowClass}" id="arrow-sejour-${ev.id}">▶</span>
+        <span class="tr-sejour-nom">🏕 ${ev.nom_rando || "—"}</span>
+        <span style="font-size:.76rem;color:#2a6496;margin-left:10px">${nbJours ? nbJours + " jours" : ""} · ${ev.animateur || "—"} · ${nbRandos} rando${nbRandos > 1 ? "s" : ""}</span>
+      </td>`;
+    tr.style.cursor = "pointer";
+    tr.addEventListener("click", (e) => {
+      if (e.target.closest("input[type=checkbox]")) return;
+      toggleSejourRows(ev.id);
+    });
+    tr.addEventListener("dblclick", (e) => {
+      if (e.target.closest("input[type=checkbox]")) return;
+      openEdit(ev);
+    });
+    return tr;
+  }
+
+  if (ev.type === "autre") {
+    tr.className = "tr-autre" + (extraClass ? " " + extraClass : "");
+    const dateAff = toDisplay(ev.date_rando); const jour = jourSemaine(ev.date_rando);
+    const dateHtml = jour
+      ? `<span class="date-cell"><span class="jour">${jour}</span><span class="date">${dateAff}</span></span>`
+      : `<span class="date-cell"><span class="date">${dateAff || "—"}</span></span>`;
+    const hDeb = ev.heure_rv || ""; const hFin = ev.duree || "";
+    const horaire = (hDeb || hFin) ? `<span class="autre-horaire">🕒 ${hDeb || "?"}${hFin ? " – " + hFin : ""}</span>` : "";
+    const libelle = ev.remarques || ev.nom_rando || "Autre événement";
+    tr.innerHTML = `
+      <td class="chk-col"><input type="checkbox" class="row-chk" data-id="${ev.id}" onchange="updateSelectionToolbar()"></td>
+      <td>${dateHtml}</td>
+      <td><span class="badge-autre">📌 Autre</span><strong>${libelle}</strong>${horaire}</td>
+      <td>—</td>
+      <td style="text-align:center">—</td>
+      <td>—</td>
+      <td>—</td>
+      <td><span style="color:#ccc;font-size:.8rem">—</span></td>`;
+    tr.style.cursor = "pointer";
+    tr.addEventListener("click", (e) => {
+      if (e.target.closest("input[type=checkbox]")) return;
+      openEdit(ev);
+    });
+    return tr;
+  }
+
+  if (extraClass) tr.className = extraClass;
+  const dateAff = toDisplay(ev.date_rando); const jour = jourSemaine(ev.date_rando);
+  const statut = ev.statut || "publiée"; const annulee = statut === "annulée";
+  const dateHtml = jour ? `<span class="date-cell"><span class="jour">${jour}</span><span class="date">${dateAff}</span></span>` : `<span class="date-cell"><span class="date">${dateAff||"—"}</span></span>`;
+  tr.style.opacity = annulee ? "0.5" : "1";
+  if (ev.sejour_id) {
+    tr.classList.add("tr-dans-sejour");
+    tr.dataset.parentSejour = ev.sejour_id;
+    if (sejourOuverts.get(ev.sejour_id)) tr.classList.add("visible");
+  }
+
+  const majTxt = formatMaj(ev);
+  tr.innerHTML = `
+    <td class="chk-col"><input type="checkbox" class="row-chk" data-id="${ev.id}" onchange="updateSelectionToolbar()"></td>
+    <td>${dateHtml}</td>
+    <td>
+      <strong style="${annulee ? 'text-decoration:line-through' : ''}">${ev.nom_rando||"—"}</strong>${annulee ? " <span style='color:#e53e3e;font-size:.73rem'>❌ Annulée</span>" : ""}
+      ${majTxt ? `<div style="font-size:.68rem;color:#a0aec0;font-weight:400;white-space:normal;line-height:1.3;margin-top:1px;">🕓 ${majTxt}</div>` : ""}
+    </td>
+    <td>${ev.animateur||"—"}</td>
+    <td style="text-align:center;font-weight:700;">${(() => {
+      if (!ev.ibp) return "—"; const n = parseFloat(ev.ibp);
+      const bg = n <= 25 ? "#00dd00" : n <= 50 ? "#0077ff" : n <= 75 ? "#ff8800" : n <= 100 ? "#ff1a1a" : "#343a40";
+      return "<span style=\"background:"+bg+";color:#fff;border-radius:4px;padding:2px 7px;font-size:.75rem;font-weight:700;\">"+ev.ibp+"</span>";
+    })()}</td>
+    <td>${ev.distance ? "<span class='badge green'>"+ev.distance+" km</span>": "—"}</td>
+    <td>${ev.denivele ? "<span class='badge green'>"+ev.denivele+" m</span>" : "—"}</td>
+    <td style="white-space:nowrap">${(() => {
+      if (!ev.sejour_id) return "<span style='color:#ccc;font-size:.8rem'>—</span>";
+      const s = allRows.find(r => r.id === ev.sejour_id);
+      return s ? "<span style='background:#ddeef8;color:#0c4472;border-radius:5px;padding:2px 7px;font-size:.76rem;font-weight:700'>🏕 "+s.nom_rando+"</span>" : "<span style='color:#aaa;font-size:.8rem'>—</span>";
+    })()}</td>`;
+  tr.style.cursor = "pointer";
+  tr.addEventListener("click", (e) => {
+    if (e.target.closest("input[type=checkbox]")) return;
+    openEdit(ev);
+  });
+  return tr;
+}
+
+function toggleOldEvents() {
+  _oldEventsOpen = !_oldEventsOpen;
+  document.querySelectorAll(".tr-old").forEach(tr => tr.classList.toggle("visible", _oldEventsOpen));
+  const arrow = document.querySelector(".tr-separator-arrow");
+  if (arrow) arrow.classList.toggle("open", _oldEventsOpen);
+  const lbl = document.getElementById("old-events-label");
+  if (lbl) lbl.textContent = _oldEventsOpen ? "Masquer les anciens événements" : lbl.dataset.label;
+}
+
+function matchRecherche(ev) {
+  if (!rechercheTexte) return true;
+  const nom  = (ev.nom_rando || "").toLowerCase();
+  const anim = (ev.animateur || "").toLowerCase();
+  return nom.includes(rechercheTexte) || anim.includes(rechercheTexte);
+}
+
+function renderTable() {
+  const tbody = document.getElementById("events-body");
+  tbody.innerHTML = "";
+  const enRecherche = rechercheTexte.length > 0;
+  const infoEl = document.getElementById("search-info");
+
+  if (!allRows.length) { tbody.innerHTML = "<tr><td colspan='7' class='empty-state'>Aucun événement trouvé.</td></tr>"; updateSortIcons(); infoEl.classList.remove("visible"); return; }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayISO = today.toISOString().split("T")[0];
+
+  if (enRecherche) {
+    const resultats = allRows
+      .filter(ev => {
+        const d = ev.date_rando || "";
+        if (filtreDebut && d < filtreDebut) return false;
+        if (filtreFin   && d > filtreFin)   return false;
+        return matchRecherche(ev);
+      })
+      .sort((a, b) => (b.date_rando||"").localeCompare(a.date_rando||""));
+
+    if (!resultats.length) {
+      tbody.innerHTML = `<tr><td colspan='7' class='empty-state'>Aucune randonnée ne correspond à « ${rechercheTexte} ».</td></tr>`;
+      infoEl.innerHTML = `🔍 Recherche « <strong>${rechercheTexte}</strong> » — aucun résultat.`;
+      infoEl.classList.add("visible");
+      const countEl = document.getElementById("filtre-count"); if (countEl) countEl.textContent = "0 résultat";
+      updateSortIcons(); return;
+    }
+
+    resultats.forEach(ev => tbody.appendChild(buildEventRow(ev, "")));
+    infoEl.innerHTML = `🔍 Recherche « <strong>${rechercheTexte}</strong> » — <strong>${resultats.length}</strong> randonnée${resultats.length > 1 ? "s" : ""} (passées et à venir), de la plus récente à la plus ancienne. Le filtre Du/Au reste actif.`;
+    infoEl.classList.add("visible");
+    const countEl = document.getElementById("filtre-count");
+    if (countEl) countEl.textContent = resultats.length + " résultat" + (resultats.length > 1 ? "s" : "");
+    updateSortIcons(); return;
+  }
+
+  infoEl.classList.remove("visible");
+
+  const sorted = [...allRows].sort((a, b) => {
+    let va = sortCol === "date" ? (a.date_rando||"") : (a.animateur||"").toLowerCase();
+    let vb = sortCol === "date" ? (b.date_rando||"") : (b.animateur||"").toLowerCase();
+    if (va < vb) return sortDir === "asc" ? -1 : 1;
+    if (va > vb) return sortDir === "asc" ?  1 : -1;
+    return 0;
+  });
+
+  const rowsAfterFilter = sorted.filter(ev => {
+    const d = ev.date_rando || "";
+    if (filtreDebut && d < filtreDebut) return false;
+    if (filtreFin   && d > filtreFin)   return false;
+    return true;
+  });
+
+  const countEl = document.getElementById("filtre-count");
+  if (countEl) countEl.textContent = (filtreDebut || filtreFin) ? rowsAfterFilter.length + " événement" + (rowsAfterFilter.length > 1 ? "s" : "") : "";
+
+  const futurs = rowsAfterFilter.filter(ev => (ev.date_rando||"") >= todayISO);
+  const passes = rowsAfterFilter.filter(ev => (ev.date_rando||"") <  todayISO);
+
+  if (futurs.length === 0) {
+    const tr = document.createElement("tr"); tr.innerHTML = "<td colspan='7' class='empty-state'>Aucun événement à venir.</td>"; tbody.appendChild(tr);
+  } else {
+    futurs.forEach(ev => tbody.appendChild(buildEventRow(ev, "")));
+  }
+
+  if (passes.length > 0) {
+    const trSep = document.createElement("tr"); trSep.className = "tr-separator";
+    trSep.innerHTML = `<td colspan="7"><button class="tr-separator-btn" onclick="toggleOldEvents()"><span class="tr-separator-arrow">▶</span><span id="old-events-label" data-label="Afficher les ${passes.length} ancien${passes.length > 1 ? 's' : ''} événement${passes.length > 1 ? 's' : ''}">Afficher les ${passes.length} ancien${passes.length > 1 ? 's' : ''} événement${passes.length > 1 ? 's' : ''}</span></button></td>`;
+    tbody.appendChild(trSep);
+    const passesDesc = [...passes].sort((a, b) => (b.date_rando||"").localeCompare(a.date_rando||""));
+    passesDesc.forEach(ev => {
+      const tr = buildEventRow(ev, "tr-old" + (_oldEventsOpen ? " visible" : ""));
+      tbody.appendChild(tr);
+    });
+  }
+  updateSortIcons();
+}
+
+function updateSortIcons() {
+  document.querySelectorAll("thead th.sortable").forEach(th => {
+    th.classList.remove("sort-asc","sort-desc"); const icon = th.querySelector(".sort-icon");
+    if (th.dataset.col === sortCol) { th.classList.add(sortDir === "asc" ? "sort-asc" : "sort-desc"); icon.textContent = sortDir === "asc" ? "↑" : "↓"; }
+    else icon.textContent = "⇅";
+  });
+}
+function sortTable(col) { sortDir = sortCol === col ? (sortDir === "asc" ? "desc" : "asc") : "asc"; sortCol = col; renderTable(); }
+
+function openEdit(ev) {
+  document.getElementById("edit-statut-modifie").value = "0";
+
+  document.getElementById("edit-type").value = ev.type || "rando";
+
+  document.getElementById("edit-rowIndex").value  = ev.id;
+  document.getElementById("edit-date").value      = ev.date_rando      || "";
+  document.getElementById("edit-nom").value       = ev.nom_rando       || "";
+  document.getElementById("edit-animateur").value = ev.animateur       || "";
+  document.getElementById("edit-heureRV").value   = ev.heure_rv        || "";
+  document.getElementById("edit-parking").value   = ev.parking_covoit  || "";
+  document.getElementById("edit-ibp").value       = ev.ibp             || "";
+  document.getElementById("edit-duree").value     = ev.duree           || "";
+  document.getElementById("edit-distance").value  = ev.distance        || "";
+  document.getElementById("edit-denivele").value  = ev.denivele        || "";
+  document.getElementById("edit-statut").value    = ev.statut          || "publiée";
+  document.getElementById("edit-remarques").value = ev.remarques       || "";
+  afficherContactAnimateur(ev.animateur || "", "edit-animateur-contact");
+
+  const aujourdHui = new Date().toISOString().split("T")[0];
+  const estPassee  = ev.date_rando < aujourdHui;
+  const estAnnulee = (ev.statut === "annulée");
+  const secPart = document.getElementById("edit-sectionParticipants");
+  secPart.style.display = (estPassee && !estAnnulee && (ev.type || "rando") === "rando") ? "block" : "none";
+  document.getElementById("edit-noms-participants").value = ev.noms_participants || "";
+  document.getElementById("edit-nb-participants").value   = ev.nb_participants   || "";
+
+  document.getElementById("edit-statut-original").value = ev.statut     || "publiée";
+  document.getElementById("edit-sejour-id").value       = ev.sejour_id  != null ? ev.sejour_id : "";
+  document.getElementById("edit-nom-original").value    = ev.nom_rando  || "";
+  document.getElementById("edit-anim-original").value   = ev.animateur  || "";
+  document.getElementById("edit-date-original").value   = ev.date_rando || "";
+
+  const btnAnnuler   = document.getElementById("btn-modal-annuler");
+  const btnRattacher = document.getElementById("btn-modal-rattacher");
+  const isSejour     = ev.type === "sejour";
+  const isAnnulee    = (ev.statut === "annulée");
+  btnAnnuler.style.display   = (!isAnnulee && !isSejour) ? "inline-flex" : "none";
+  btnRattacher.style.display = (!isAnnulee && !isSejour) ? "inline-flex" : "none";
+  btnRattacher.textContent   = ev.sejour_id ? "🏕 Changer séjour" : "🏕 Rattacher";
+
+  document.getElementById("modal-edit").classList.add("open");
+}
+
+function syncNbParticipantsGestion() {
+  const lignes = document.getElementById("edit-noms-participants").value.split("\n").filter(l => l.trim() !== "");
+  document.getElementById("edit-nb-participants").value = lignes.length > 0 ? lignes.length : "";
+}
+
+async function saveEdit() {
+  const id        = document.getElementById("edit-rowIndex").value;
+  const date      = document.getElementById("edit-date").value;
+  const nom       = document.getElementById("edit-nom").value.trim();
+  const anim      = document.getElementById("edit-animateur").value.trim();
+  const heureRV   = document.getElementById("edit-heureRV").value.trim();
+  const parking   = document.getElementById("edit-parking").value.trim();
+  const ibp       = document.getElementById("edit-ibp").value.trim();
+  const duree     = document.getElementById("edit-duree").value.trim();
+  const dist      = document.getElementById("edit-distance").value.trim();
+  const den       = document.getElementById("edit-denivele").value.trim();
+  const statut    = document.getElementById("edit-statut").value;
+  const remarques = document.getElementById("edit-remarques").value.trim();
+  const nbPart    = document.getElementById("edit-nb-participants").value;
+  const nomsPart  = document.getElementById("edit-noms-participants").value.trim();
+  if (!date || !nom || !anim) { showToast("Champs obligatoires manquants.", true); return; }
+  const type = document.getElementById("edit-type").value || "rando";
+  if (type === "rando" && !dist) { showToast("La distance est obligatoire.", true); return; }
+  setBusy("btn-save-edit", true);
+  const secPart = document.getElementById("edit-sectionParticipants");
+  const participantsVisibles = secPart.style.display !== "none";
+  try {
+    const patch = {
+      date_rando: date, nom_rando: nom, animateur: anim,
+      heure_rv: heureRV || null, parking_covoit: parking || null,
+      ibp: ibp ? parseFloat(ibp) : null, duree: duree || null,
+      distance: dist ? parseFloat(dist) : null, denivele: den ? parseInt(den) : null,
+      statut, remarques: remarques || null,
+      ...(participantsVisibles && { nb_participants: nbPart ? parseInt(nbPart) : null, noms_participants: nomsPart || null }),
+    };
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, { method: "PATCH", headers: await authHeadersJson(), body: JSON.stringify(patch) });
+    if (res.ok) {
+      const ficheActuelle = allRows.find(x => x.id == id) || {};
+      if (type === "rando") {
+        syncCalendar("calendarUpdate", {
+          dateRando: date, dateRandoOld: ficheActuelle.date_rando || date,
+          nomRando: statut === "annulée" ? `❌ ANNULÉE — ${nom}` : nom,
+          animateur: anim, heureRV: heureRV || "", parking: parking || "",
+          parkingDepart: ficheActuelle.parking_depart || "", gps: ficheActuelle.gps || "",
+          distance: dist || "", denivele: den || "", duree: duree || "", ibp: ibp || "",
+          effort: ficheActuelle.effort || "", technicite: ficheActuelle.technicite || "",
+          risque: ficheActuelle.risque || "", couts: ficheActuelle.couts || "",
+        });
+      }
+      showToast("✅ Événement modifié !"); closeModal("modal-edit"); loadEvents();
+    } else showToast("Erreur : " + (await res.text()), true);
+  } catch(e) { showToast("Erreur réseau.", true); }
+  setBusy("btn-save-edit", false);
+}
+
+function confirmerDepuisModal() {
+  const id = document.getElementById("edit-rowIndex").value;
+  const nom = document.getElementById("edit-nom-original").value;
+  const animateur = document.getElementById("edit-anim-original").value;
+  const dateRando = document.getElementById("edit-date-original").value;
+  closeModal("modal-edit"); confirmDelete(id, nom, animateur, dateRando);
+}
+function rattacherDepuisModal() {
+  const randoId = parseInt(document.getElementById("edit-rowIndex").value);
+  const sejourIdActuel = document.getElementById("edit-sejour-id").value ? parseInt(document.getElementById("edit-sejour-id").value) : null;
+  closeModal("modal-edit");
+  ouvrirRattach({ stopPropagation: () => {} }, document.body, randoId, sejourIdActuel);
+}
+function confirmDelete(id, nom, animateur, dateRando) {
+  document.getElementById("confirm-titre").textContent = `Annuler "${nom}" ?`;
+  document.getElementById("confirm-body").textContent  = `Randonnée du ${toDisplay(dateRando)} — Animateur : ${animateur || "—"}`;
+  const btn = document.getElementById("btn-confirm-annuler"); const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener("click", () => { closeModal("modal-confirm"); deleteEvent(id, nom, animateur, dateRando); });
+  document.getElementById("modal-confirm").classList.add("open");
+}
+async function deleteEvent(id, nom, animateur, dateRando) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${id}`, { method: "PATCH", headers: await authHeadersJson(), body: JSON.stringify({ statut: "annulée" }) });
+    if (res.ok) {
+      const calOkAnn = await syncCalendar("calendarUpdate", { dateRando, dateRandoOld: dateRando, nomRando: `❌ ANNULÉE — ${nom}`, animateur: animateur || "" });
+      showToast(calOkAnn ? "❌ Randonnée annulée et Calendar mis à jour." : "❌ Randonnée annulée (Calendar non mis à jour)", !calOkAnn);
+      loadEvents();
+    } else showToast("Erreur lors de l'annulation.", true);
+  } catch(e) { showToast("Erreur réseau.", true); }
+}
+
+async function syncCalendar(action, ficheData) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/dynamic-handler`, {
+      method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+      body: JSON.stringify({ action, fiche: ficheData })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) { console.warn("[Calendar sync] Echec:", res.status, JSON.stringify(data)); return false; }
+    console.log("[Calendar sync] OK:", action); return true;
+  } catch(e) { console.warn("[Calendar sync] Erreur reseau:", e.message); return false; }
+}
+
+let calOffset = 0;
+function toggleCal() { const popup = document.getElementById("cal-popup"); const isOpen = popup.classList.toggle("open"); if (isOpen) { calOffset = 0; renderCal(); } }
+function calNav(delta) { calOffset += delta; renderCal(); }
+function calReset() { calOffset = 0; renderCal(); }
+function renderCal() {
+  const grid = document.getElementById("cal-grid"); grid.innerHTML = "";
+  const today = new Date(); today.setHours(0,0,0,0);
+  const debut = new Date(today.getFullYear(), today.getMonth() + calOffset, 1);
+  const fin   = new Date(today.getFullYear(), today.getMonth() + calOffset + 2, 1);
+  const label = document.getElementById("cal-nav-label");
+  if (label) label.textContent = debut.toLocaleDateString("fr-FR", { month: "short", year: "numeric" }) + " – " + fin.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+  const randoDates = new Map(); const annuleeDates = new Set(); const sejourPeriodes = []; const sejourDates = new Map();
+  allRows.forEach(ev => {
+    if (!ev.date_rando) return; const iso = ev.date_rando.substring(0, 10);
+    if (ev.type === "autre") return;
+    if (ev.type === "sejour") { const d = new Date(ev.date_rando); const f = ev.date_fin_sejour ? new Date(ev.date_fin_sejour) : d; sejourPeriodes.push({ debut: d, fin: f, nom: ev.nom_rando || "Séjour" }); }
+    else if ((ev.statut || "") === "annulée") { annuleeDates.add(iso); }
+    else { if (!randoDates.has(iso)) randoDates.set(iso, []); randoDates.get(iso).push(ev); }
+  });
+  sejourPeriodes.forEach(({ debut, fin, nom }) => {
+    const d = new Date(debut);
+    while (d <= fin) { const iso = d.toISOString().split("T")[0]; sejourDates.set(iso, { nom, isDebut: d.getTime() === debut.getTime(), isFin: d.getTime() === fin.getTime(), seul: d.getTime() === debut.getTime() && d.getTime() === fin.getTime() }); d.setDate(d.getDate() + 1); }
+  });
+  for (let m = 0; m < 3; m++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + calOffset + m, 1);
+    const month = d.getMonth(); const year = d.getFullYear(); const titre = d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    const premier = new Date(year, month, 1).getDay(); const offset = (premier === 0) ? 6 : premier - 1; const nbJours = new Date(year, month + 1, 0).getDate();
+    const div = document.createElement("div"); div.className = "cal-month";
+    div.innerHTML = `<div class="cal-month-title">${titre}</div><div class="cal-weekdays"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="cal-days" id="cal-days-${m}"></div>`;
+    grid.appendChild(div);
+    const daysEl = document.getElementById("cal-days-" + m);
+    for (let i = 0; i < offset; i++) { const e = document.createElement("div"); e.className = "cal-day empty"; e.textContent = " "; daysEl.appendChild(e); }
+    for (let j = 1; j <= nbJours; j++) {
+      const iso = `${year}-${String(month+1).padStart(2,"0")}-${String(j).padStart(2,"0")}`;
+      const cell = document.createElement("div"); cell.className = "cal-day"; cell.textContent = j;
+      const dt = new Date(year, month, j); if (dt.getTime() === today.getTime()) cell.classList.add("today");
+      if (annuleeDates.has(iso)) { cell.classList.add("annulee"); cell.title = "Rando annulée"; }
+      else if (randoDates.has(iso)) {
+        const evList = randoDates.get(iso); cell.classList.add(evList.length >= 2 ? "has-double" : "has-rando");
+        cell.title = evList.map(e => e.nom_rando + (e.animateur ? " — " + e.animateur : "")).join(" | ");
+        cell.addEventListener("click", () => { toggleCal(); setTimeout(() => { const id = evList[0]?.id; if (id) { const row = document.querySelector(`[data-id="${id}"]`); if (row) { const tr = row.closest("tr"); if (tr) { tr.scrollIntoView({ behavior: "smooth", block: "center" }); tr.style.outline = "2px solid #ff8c00"; setTimeout(() => { tr.style.outline = ""; }, 2000); } } } }, 300); });
+      }
+      if (sejourDates.has(iso)) { const sj = sejourDates.get(iso); cell.classList.add("has-sejour"); if (sj.seul) cell.classList.add("sejour-seul"); else if (sj.isDebut) cell.classList.add("sejour-debut"); else if (sj.isFin) cell.classList.add("sejour-fin"); cell.title = (cell.title ? cell.title + " | " : "") + "🏕 " + sj.nom; }
+      daysEl.appendChild(cell);
+    }
+  }
+}
+
+let _dropdownActif = null; let _overlayActif = null;
+function ouvrirRattach(event, btn, randoId, sejourIdActuel) {
+  event.stopPropagation();
+  if (_dropdownActif) { _dropdownActif.remove(); _dropdownActif = null; }
+  const div = document.createElement("div"); div.className = "rattach-dropdown";
+  const sejours = allRows.filter(r => r.type === "sejour");
+  let options = `<option value="">— Aucun séjour (autonome) —</option>`;
+  sejours.forEach(s => { const sel = s.id === sejourIdActuel ? " selected" : ""; options += `<option value="${s.id}"${sel}>${s.nom_rando} · ${toDisplay(s.date_rando)}${toDisplay(s.date_fin_sejour) ? " → " + toDisplay(s.date_fin_sejour) : ""}</option>`; });
+  div.innerHTML = `<label>🏕 Rattacher à un séjour</label><select id="rattach-sel-${randoId}">${options}</select><div class="rattach-actions"><button class="btn-rattach-cancel" onclick="fermerRattach()">Annuler</button><button class="btn-rattach-ok" onclick="sauvegarderRattach(${randoId}, this)">✔ Enregistrer</button></div>`;
+  const overlay = document.createElement("div"); overlay.className = "rattach-overlay"; overlay.addEventListener("click", fermerRattach);
+  document.body.appendChild(overlay); document.body.appendChild(div);
+  _dropdownActif = div; _overlayActif = overlay;
+}
+function fermerRattach() { if (_dropdownActif) { _dropdownActif.remove(); _dropdownActif = null; } if (_overlayActif) { _overlayActif.remove(); _overlayActif = null; } }
+async function sauvegarderRattach(randoId, btnOk) {
+  const sel = document.getElementById(`rattach-sel-${randoId}`); if (!sel) return;
+  const sejourId = sel.value ? parseInt(sel.value) : null;
+  btnOk.textContent = "…"; btnOk.disabled = true;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches?id=eq.${randoId}`, { method: "PATCH", headers: await authHeadersJson(), body: JSON.stringify({ sejour_id: sejourId }) });
+    if (res.ok) { showToast(sejourId ? "🏕 Rando rattachée au séjour !" : "✅ Rattachement retiré."); fermerRattach(); loadEvents(); }
+    else { showToast("Erreur : " + (await res.text()), true); btnOk.textContent = "✔ Enregistrer"; btnOk.disabled = false; }
+  } catch(e) { showToast("Erreur réseau.", true); btnOk.textContent = "✔ Enregistrer"; btnOk.disabled = false; }
+}
+
+window.appliquerFiltreDates      = appliquerFiltreDates;
+window.confirmerDepuisModal      = confirmerDepuisModal;
+window.rattacherDepuisModal      = rattacherDepuisModal;
+window.reinitialiserFiltre       = reinitialiserFiltre;
+window.creerRando                = creerRando;
+window.creerSejour               = creerSejour;
+window.creerAutre                = creerAutre;
+window.switchType                = switchType;
+window.calcNbJours               = calcNbJours;
+window.sortTable                 = sortTable;
+window.toggleAll                 = toggleAll;
+window.updateSelectionToolbar    = updateSelectionToolbar;
+window.confirmSupprimerSelection = confirmSupprimerSelection;
+window.toggleOldEvents           = toggleOldEvents;
+window.openEdit                  = openEdit;
+window.saveEdit                  = saveEdit;
+window.syncNbParticipantsGestion = syncNbParticipantsGestion;
+window.confirmDelete             = confirmDelete;
+window.deleteEvent               = deleteEvent;
+window.toggleCal                 = toggleCal;
+window.calNav                    = calNav;
+window.calReset                  = calReset;
+window.ouvrirRattach             = ouvrirRattach;
+window.fermerRattach             = fermerRattach;
+window.sauvegarderRattach        = sauvegarderRattach;
+window.closeModal                = closeModal;
+window.openModalExport           = openModalExport;
+window.closeModalExport          = closeModalExport;
+window.exportLoad                = exportLoad;
+window.exportCSV                 = exportCSV;
+window.setBusy                   = setBusy;
+window.showToast                 = showToast;
+window.loadEvents                = loadEvents;
+window.renderTable               = renderTable;
+
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+document.querySelectorAll(".modal-overlay").forEach(o => {
+  if (o.id === "modal-reset-pwd") return;
+  o.addEventListener("click", function(e) { if (e.target === this) this.classList.remove("open"); });
+});
+
+let exportData = [];
+function openModalExport() {
+  const now = new Date(); const fmt = d => d.toISOString().slice(0, 10);
+  const f = document.getElementById("export-from"); const t = document.getElementById("export-to");
+  if (f && !f.value) f.value = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+  if (t && !t.value) t.value = fmt(new Date(now.getFullYear(), now.getMonth() + 3, 0));
+  document.getElementById("modal-export").classList.add("open");
+}
+function closeModalExport() { document.getElementById("modal-export").classList.remove("open"); }
+window.addEventListener("load", function() {
+  var mel = document.getElementById("modal-export");
+  if (mel) mel.addEventListener("click", function(e) { if (e.target === this) this.classList.remove("open"); });
+});
+async function exportLoad() {
+  const from = document.getElementById("export-from").value; const to = document.getElementById("export-to").value;
+  const tbody = document.getElementById("export-body"); const count = document.getElementById("export-count"); const btn = document.getElementById("btn-dl-csv");
+  if (!from || !to) { showToast("Veuillez saisir une date de début et de fin.", true); return; }
+  tbody.innerHTML = "<tr><td colspan='7' class='empty-state'>Chargement…</td></tr>"; btn.disabled = true; count.textContent = "—"; exportData = [];
+  try {
+    const url = SUPABASE_URL + "/rest/v1/fiches?select=date_rando,nom_rando,ibp,distance,denivele,animateur&date_rando=gte." + from + "&date_rando=lte." + to + "&statut=neq.annulée&order=date_rando.asc";
+    const res = await fetch(url, { headers: await authHeaders() }); if (!res.ok) throw new Error("HTTP " + res.status);
+    exportData = await res.json(); renderExportTable(exportData);
+  } catch(e) { tbody.innerHTML = "<tr><td colspan='7' class='empty-state'>Erreur : " + e.message + "</td></tr>"; showToast("Erreur réseau.", true); }
+}
+function renderExportTable(data) {
+  const tbody = document.getElementById("export-body"); const count = document.getElementById("export-count"); const btn = document.getElementById("btn-dl-csv");
+  if (!data.length) { tbody.innerHTML = "<tr><td colspan='7' class='empty-state'>Aucune randonnée sur cette période.</td></tr>"; count.textContent = "0 randonnée"; btn.disabled = true; return; }
+  tbody.innerHTML = data.map(r => "<tr><td style='text-transform:capitalize;font-weight:600;color:#2d6a4f'>" + (jourSemaine(r.date_rando)||"—") + "</td><td>" + (toDisplay(r.date_rando)||"—") + "</td><td><strong>" + (r.nom_rando||"—") + "</strong></td><td>" + (r.ibp!=null?r.ibp:"—") + "</td><td>" + (r.distance!=null?r.distance+" km":"—") + "</td><td>" + (r.denivele!=null?r.denivele+" m":"—") + "</td><td>" + (r.animateur||"—") + "</td></tr>").join("");
+  count.textContent = data.length + " randonnée" + (data.length > 1 ? "s" : ""); btn.disabled = false;
+}
+function exportCSV() {
+  if (!exportData.length) return;
+  const sep = ";"; const header = ["Jour","Date","Destination","IBP","Km","Dénivelé","Animateur"].join(sep);
+  const rows = exportData.map(r => [jourSemaine(r.date_rando)||"",toDisplay(r.date_rando)||"",r.nom_rando||"",r.ibp!=null?r.ibp:"",r.distance!=null?r.distance:"",r.denivele!=null?r.denivele:"",r.animateur||""].join(sep));
+  const blob = new Blob(["\uFEFF" + [header, ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "randos_" + document.getElementById("export-from").value + "_" + document.getElementById("export-to").value + ".csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+</script>
+
+<div id="modal-export">
+  <div class="mex-inner">
+    <h3>📤 Export randos prévisionnelles</h3>
+    <div class="mex-filters">
+      <div class="form-group"><label for="export-from">Date début</label><input type="date" id="export-from"></div>
+      <div class="form-group"><label for="export-to">Date fin</label><input type="date" id="export-to"></div>
+      <button class="btn btn-primary" onclick="exportLoad()" style="align-self:end">Charger</button>
+    </div>
+    <div class="mex-scroll table-wrap">
+      <table>
+        <thead><tr><th>Jour</th><th>Date</th><th>Destination</th><th>IBP</th><th>Km</th><th>Dénivelé</th><th>Animateur</th></tr></thead>
+        <tbody id="export-body"><tr><td colspan="7" class="empty-state">Choisir une plage de dates puis cliquer sur Charger</td></tr></tbody>
+      </table>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px">
+      <span id="export-count" style="font-size:.88rem;color:#718096">—</span>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-cancel" onclick="closeModalExport()">Fermer</button>
+        <button class="btn btn-primary" id="btn-dl-csv" onclick="exportCSV()" disabled>⬇️ Télécharger CSV</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
