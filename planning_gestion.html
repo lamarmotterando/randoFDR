@@ -869,25 +869,41 @@ async function loadData() {
     if (!res.ok) throw new Error("Handler " + res.status);
     return res.json();
   }
-  try {
-    const [a, r, p] = await Promise.all([
-      /* ✅ Édition admin authentifiée : nom + email + téléphone via get-animateurs-admin (JWT admin requis) */
-      authHeaders({ "Content-Type": "application/json" }).then(h =>
-        fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/get-animateurs-admin", { method: "GET", headers: h })
-      ).then(r => { if (!r.ok) throw new Error("get-animateurs-admin " + r.status); return r.json(); }),
-      callHandler({ action: "getFiches", select: "nom_rando", order: "nom_rando.asc" }),
-      fetch(BASE_URL + "parkings.js").then(res => res.text()).then(txt => {
-        const m = txt.match(/\[([^\]]+)\]/s);
-        if (!m) return [];
-        return m[1].split(",").map(s => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
-      })
-    ]);
-    animateurs = Array.isArray(a) ? a.filter(x => x.nom && x.nom !== "") : [];
-    randos = Array.isArray(r) ? [...new Set(r.map(x => x.nom_rando).filter(Boolean))].sort() : [];
-    parkings = p;
-    initAutocomplete();
-    console.log("[Animateurs] " + animateurs.length + " animateurs chargés via get-animateurs-admin");
-  } catch(e) { console.error("Erreur chargement:", e); }
+
+  const [aRes, rRes, pRes] = await Promise.allSettled([
+    /* ✅ Édition admin authentifiée : nom + email via get-animateurs-admin (JWT admin requis) */
+    authHeaders({ "Content-Type": "application/json" }).then(h =>
+      fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/get-animateurs-admin", { method: "GET", headers: h })
+    ).then(r => { if (!r.ok) throw new Error("get-animateurs-admin " + r.status); return r.json(); }),
+    callHandler({ action: "getFiches", select: "nom_rando", order: "nom_rando.asc" }),
+    fetch(BASE_URL + "parkings.js").then(res => res.text()).then(txt => {
+      const m = txt.match(/\[([^\]]+)\]/s);
+      if (!m) return [];
+      return m[1].split(",").map(s => s.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
+    })
+  ]);
+
+  if (aRes.status === "fulfilled") {
+    animateurs = Array.isArray(aRes.value) ? aRes.value.filter(x => x.nom && x.nom !== "") : [];
+  } else {
+    animateurs = [];
+    console.error("Erreur chargement animateurs:", aRes.reason);
+  }
+  if (rRes.status === "fulfilled") {
+    randos = Array.isArray(rRes.value) ? [...new Set(rRes.value.map(x => x.nom_rando).filter(Boolean))].sort() : [];
+  } else {
+    randos = [];
+    console.error("Erreur chargement randos:", rRes.reason);
+  }
+  if (pRes.status === "fulfilled") {
+    parkings = pRes.value;
+  } else {
+    parkings = [];
+    console.error("Erreur chargement parkings:", pRes.reason);
+  }
+
+  initAutocomplete();
+  console.log("[Animateurs] " + animateurs.length + " animateurs chargés via get-animateurs-admin");
 }
 
 function initAutocomplete() {
