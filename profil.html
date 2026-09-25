@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Profil altimétrique</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&amp;family=Source+Sans+3:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root { --vert:#2d6a4f; --brun:#5c4033; --bg:#f7f4f0; --txt:#1a1a1a; --txt2:#5a5a5a; }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  html, body { width:100%; height:100%; }
+  body { font-family:'Source Sans 3',sans-serif; background:var(--bg); color:var(--txt);
+         display:flex; flex-direction:column; min-height:100vh; min-height:100dvh; }
+  header { background:var(--vert); display:flex; align-items:center; gap:10px;
+           padding:12px 16px; padding-top:calc(12px + env(safe-area-inset-top,0px)); box-shadow:0 2px 8px rgba(0,0,0,.18); }
+  .logo { font-family:'Lora',serif; font-size:16px; font-weight:600; color:#fff; flex:1; min-width:0; }
+  .back-btn { color:#fff; text-decoration:none; font-size:14px; font-weight:600; padding:6px 12px;
+              border:1px solid rgba(255,255,255,.5); border-radius:8px; white-space:nowrap; }
+  main { flex:1; display:flex; flex-direction:column; padding:14px 12px calc(14px + env(safe-area-inset-bottom,0px)); min-height:0; }
+  h1 { font-family:'Lora',serif; font-size:19px; color:var(--brun); overflow-wrap:anywhere; }
+  .date { font-size:14px; color:var(--txt2); margin:2px 0 10px; }
+  .zone { flex:1; position:relative; min-height:280px; background:#fff; border-radius:10px; padding:6px; touch-action:pan-y; }
+  .zone img { width:100%; height:auto; display:block; border-radius:8px; }
+  .legende { display:flex; flex-wrap:wrap; gap:6px 12px; font-size:12px; color:var(--txt2); margin-top:10px; }
+  .legende i { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-2px; margin-right:4px; }
+  .etat { text-align:center; padding:40px 16px; color:var(--txt2); }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">La Marmotte</div>
+  <a href="#" class="back-btn" id="retour">← Retour</a>
+</header>
+<main>
+  <h1 id="titre"></h1>
+  <div class="date" id="date"></div>
+  <div class="zone" id="zone"><div class="etat">Chargement…</div></div>
+  <div class="legende" id="legende" hidden>
+    <span><i style="background:rgb(200,0,0)"></i>≥ 20 %</span>
+    <span><i style="background:rgb(255,80,0)"></i>15-20 %</span>
+    <span><i style="background:rgb(255,150,0)"></i>10-15 %</span>
+    <span><i style="background:rgb(255,200,0)"></i>5-10 %</span>
+    <span><i style="background:rgb(255,220,0)"></i>plat</span>
+    <span><i style="background:rgb(150,200,255)"></i>-5 à -10 %</span>
+    <span><i style="background:rgb(80,150,255)"></i>-10 à -15 %</span>
+    <span><i style="background:rgb(0,60,200)"></i>&lt; -15 %</span>
+  </div>
+</main>
+
+<script>
+const HANDLER = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
+const PROFIL_FN = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/profil";
+
+const id = parseInt(new URLSearchParams(location.search).get("id"), 10);
+const zone = document.getElementById("zone");
+
+document.getElementById("retour").addEventListener("click", e => {
+  e.preventDefault();
+  if (history.length > 1) history.back(); else location.href = "goanim.html";
+});
+
+/* Mêmes seuils que js/profilAltitude.js — à garder synchronisés */
+function couleurPente(p) {
+  if (p >= 20)  return "rgb(200,0,0)";
+  if (p >= 15)  return "rgb(255,80,0)";
+  if (p >= 10)  return "rgb(255,150,0)";
+  if (p >= 5)   return "rgb(255,200,0)";
+  if (p > -5)   return "rgb(255,220,0)";
+  if (p > -10)  return "rgb(150,200,255)";
+  if (p > -15)  return "rgb(80,150,255)";
+  if (p > -20)  return "rgb(40,100,255)";
+  return "rgb(0,60,200)";
+}
+
+async function post(url, body) {
+  const res = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(body) });
+  if (!res.ok) throw new Error(url + " " + res.status);
+  return res.json();
+}
+
+function getFiche(select) {
+  return post(HANDLER, { action:"getFiches", select, filters:"id=eq." + id, limit:1 }).then(d => d?.[0] || null);
+}
+
+function profilValide(p) {
+  return p && Array.isArray(p.d) && p.d.length >= 2 && p.a?.length === p.d.length && p.s?.length === p.d.length;
+}
+
+function afficherImage(png) {
+  zone.innerHTML = "";
+  if (!png) { zone.innerHTML = '<div class="etat">Profil indisponible.</div>'; return; }
+  const img = document.createElement("img");
+  img.alt = "Profil altimétrique";
+  img.src = png;
+  zone.appendChild(img);
+}
+
+function afficherGraphique(p) {
+  zone.innerHTML = "";
+  const canvas = document.createElement("canvas");
+  zone.appendChild(canvas);
+  document.getElementById("legende").hidden = false;
+  new Chart(canvas, {
+    type: "line",
+    data: { datasets: [{
+      data: p.a.map((a, i) => ({ x:p.d[i], y:a })),
+      borderColor: "black", borderWidth: 2.5,
+      segment: { borderColor: c => couleurPente(p.s[c.p0DataIndex]) },
+      pointRadius: 0, tension: 0
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false, parsing: false,
+      interaction: { mode:"nearest", axis:"x", intersect:false },
+      plugins: {
+        legend: { display:false },
+        tooltip: { callbacks: {
+          label: c => `Alt ${c.raw.y} m | ${c.raw.x.toFixed(2)} km | pente ${p.s[c.dataIndex].toFixed(1)} %`
+        }}
+      },
+      scales: {
+        x: { type:"linear", title:{ display:true, text:"Distance (km)" } },
+        y: { title:{ display:true, text:"Altitude (m)" } }
+      }
+    }
+  });
+}
+
+(async function () {
+  if (!Number.isInteger(id) || id <= 0) { zone.innerHTML = '<div class="etat">Fiche introuvable.</div>'; return; }
+  try {
+    /* Titre + données interactives en parallèle ; l'échec de l'un n'empêche pas l'autre */
+    const [fiche, prof] = await Promise.all([
+      getFiche("id,nom_rando,date_rando").catch(() => null),
+      post(PROFIL_FN, { action:"get", id }).then(r => r?.profil_data).catch(() => null)
+    ]);
+    if (fiche) {
+      document.getElementById("titre").textContent = fiche.nom_rando || "";
+      const d = fiche.date_rando ? new Date(fiche.date_rando + "T12:00:00") : null;
+      if (d && !isNaN(d)) document.getElementById("date").textContent =
+        "📅 " + d.toLocaleDateString("fr-FR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
+    }
+    if (profilValide(prof) && typeof Chart !== "undefined") { afficherGraphique(prof); return; }
+    /* Fallback : image statique de la fiche */
+    const f2 = await getFiche("id,profil_png");
+    afficherImage(f2?.profil_png);
+  } catch (e) {
+    console.warn("Profil :", e);
+    zone.innerHTML = '<div class="etat">Profil indisponible.</div>';
+  }
+})();
+</script>
+</body>
+</html>
