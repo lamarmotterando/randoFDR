@@ -2,7 +2,7 @@
    sw.js — Service Worker randoFDR
    Cache les ressources essentielles pour usage hors ligne
    ============================================================ */
-const CACHE_NAME = 'randofdr-v8';
+const CACHE_NAME = 'randofdr-v9';
 /* Fichiers à mettre en cache au démarrage */
 const CACHE_STATIC = [
   '/randoFDR/',
