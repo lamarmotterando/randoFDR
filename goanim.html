@@ -156,6 +156,15 @@
     margin-bottom: 16px;
     display: block;
   }
+  .profil-interactif {
+    position: relative;
+    width: 100%;
+    height: 240px;
+    margin-bottom: 16px;
+    background: #fff;
+    border-radius: 10px;
+    touch-action: pan-y;
+  }
   .sep { border: none; border-top: 1px solid var(--bord); margin: 12px 0; }
 
   .ligne {
@@ -359,6 +368,7 @@
   <div class="etat"><div class="spinner"></div>Chargement…</div>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
 /* ✅ Clé supprimée — requêtes via dynamic-handler */
@@ -672,7 +682,7 @@ function afficher(f, tel, main) {
 
   html += `<div class="fiche-titre">${esc(f.nom_rando)||"—"}</div>`;
   html += `<div class="fiche-date">📅 ${dateAff}</div>`;
-  if (f.profil_png) html += `<a href="profil.html?id=${encodeURIComponent(f.id)}" style="display:block;text-decoration:none;"><img src="${f.profil_png}" class="profil-img" alt="Profil altimétrique" style="margin-bottom:4px;"><div style="text-align:center;font-size:12px;color:var(--txt2);margin-bottom:12px;">👆 Toucher pour explorer la courbe</div></a>`;
+  if (f.profil_png) html += `<img src="${f.profil_png}" class="profil-img" id="profil-img-${f.id}" alt="Profil altimétrique">`;
   html += animHtml;
   if (rv) html += `<div class="ligne" style="margin-top:8px;"><span class="lbl">⏰ RV :</span><span class="val">${rv} → 🏁 Départ ${depart}</span></div>`;
   html += `<hr class="sep">`;
@@ -710,6 +720,79 @@ function afficher(f, tel, main) {
 
   main.innerHTML = html;
   if (!annulee) requestAnimationFrame(() => chargerMeteo(f.gps, f.date_rando, mid));
+  if (f.profil_png && f.id) chargerProfilInteractif(f.id);
+}
+
+/* ══ PROFIL INTERACTIF ══
+   Best-effort : toute erreur laisse l'image profil_png en place. */
+const PROFIL_FN = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/profil";
+
+/* Mêmes seuils que js/profilAltitude.js — à garder synchronisés */
+function couleurPente(p) {
+  if (p >= 20)  return "rgb(200,0,0)";
+  if (p >= 15)  return "rgb(255,80,0)";
+  if (p >= 10)  return "rgb(255,150,0)";
+  if (p >= 5)   return "rgb(255,200,0)";
+  if (p > -5)   return "rgb(255,220,0)";
+  if (p > -10)  return "rgb(150,200,255)";
+  if (p > -15)  return "rgb(80,150,255)";
+  if (p > -20)  return "rgb(40,100,255)";
+  return "rgb(0,60,200)";
+}
+
+async function chargerProfilInteractif(id) {
+  let wrap = null;
+  try {
+    if (typeof Chart === "undefined") return;
+    const img = document.getElementById("profil-img-" + id);
+    if (!img) return;
+    const res = await fetch(PROFIL_FN, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "get", id })
+    });
+    if (!res.ok) return;
+    const p = (await res.json())?.profil_data;
+    if (!p || !Array.isArray(p.d) || p.d.length < 2 || p.a?.length !== p.d.length || p.s?.length !== p.d.length) return;
+
+    wrap = document.createElement("div");
+    wrap.className = "profil-interactif";
+    const canvas = document.createElement("canvas");
+    wrap.appendChild(canvas);
+    img.after(wrap);
+
+    new Chart(canvas, {
+      type: "line",
+      data: { datasets: [{
+        data: p.a.map((a, i) => ({ x: p.d[i], y: a })),
+        borderColor: "black",
+        borderWidth: 2,
+        segment: { borderColor: c => couleurPente(p.s[c.p0DataIndex]) },
+        pointRadius: 0,
+        tension: 0
+      }]},
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        parsing: false,
+        interaction: { mode: "nearest", axis: "x", intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: {
+            label: c => `Alt ${c.raw.y} m | ${c.raw.x.toFixed(2)} km | pente ${p.s[c.dataIndex].toFixed(1)}%`
+          }}
+        },
+        scales: {
+          x: { type: "linear", title: { display: true, text: "Distance (km)" } },
+          y: { title: { display: true, text: "Altitude (m)" } }
+        }
+      }
+    });
+    img.style.display = "none";   /* masquer l'image seulement une fois le graphique créé */
+  } catch (e) {
+    console.warn("Profil interactif :", e);
+    wrap?.remove();               /* échec : l'image reste visible */
+  }
 }
 
 charger();
