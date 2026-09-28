@@ -942,7 +942,7 @@ async function sauvegarderModif() {
     if (f) Object.assign(f, patch);
 
     /* 🆕 Confirmation participants — 1ère saisie uniquement, meilleur effort */
-    if (participantsVisibles && !ancienNbParticipants && patch.nb_participants) {
+    if (participantsVisibles && (ancienNbParticipants === null || ancienNbParticipants === undefined) && patch.nb_participants) {
       confirmerParticipants(id);
     }
 
