@@ -370,6 +370,17 @@ const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
 const SUPABASE_KEY = "sb_publishable_M7RxCuGoLU8zdzFSPuZl8A_CvvNMZ-O";
 /* Toutes les ecritures passent par l'Edge Function dynamic-handler (service_role cote serveur) */
 const URL_HANDLER = SUPABASE_URL + "/functions/v1/dynamic-handler";
+/* Clé club : transmise par l'iframe de l'espace membres Webnode (randonnees-club.html#k=XXXX).
+   Requise pour l'import CSV des participants (update-participants). */
+const CLE_CLUB = (() => {
+  let k = "";
+  try { k = new URLSearchParams(location.hash.slice(1)).get("k") || ""; } catch(e) {}
+  try {
+    if (k) sessionStorage.setItem("cle_club", k);
+    else   k = sessionStorage.getItem("cle_club") || "";
+  } catch(e) {}
+  return k;
+})();
 
 let toutes    = [];
 let filtrees  = [];
@@ -1236,7 +1247,7 @@ async function lancerImport() {
       const res = await fetch(SUPABASE_URL + '/functions/v1/update-participants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: fiche.id, nb: row.nb })
+        body: JSON.stringify({ id: fiche.id, nb: row.nb, cle_club: CLE_CLUB })
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success !== false) {
