@@ -220,7 +220,7 @@ async function sauvegarderProfilData(fiche) {
     const res = await fetch(PROFIL_FN, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ action: "save", id, profil_data: window.profilData })
+      body:    JSON.stringify({ action: "save", id, profil_data: window.profilData, cle_club: CLE_CLUB })
     });
     if (!res.ok) throw new Error("profil HTTP " + res.status);
     console.log("[profil] ✅ profil interactif enregistré id:", id);
@@ -240,7 +240,7 @@ async function envoyerEmail(resume, profilPNG) {
     const res  = await fetch(SEND_EMAIL, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ resume, nomAnimateur, profilPNG })
+      body:    JSON.stringify({ resume, nomAnimateur, profilPNG, cle_club: CLE_CLUB })
     });
     const data = await res.json();
     console.log("[Email] réponse:", data);
