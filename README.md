@@ -244,5 +244,13 @@ CRON_SECRET
 - **Service Worker** (`sw.js`) : penser à incrémenter le nom de cache (`CACHE_NAME`) à chaque changement d'un fichier mis en cache, sinon les navigateurs servent l'ancienne version.
 
 ---
+## Sécurité oct2026
 
+- **Lecture publique** : les pages publiques lisent les fiches via `fiches_public` (vue en `security_invoker`) ou via l'action `getFiches` de `dynamic-handler`. Celle-ci n'accepte que des colonnes, filtres et tris en liste blanche. `noms_participants` n'est jamais exposée publiquement.
+- **Écriture (formulaire animateur)** : `saveFiche`, `calendarUpdate`, `update-fiche`, `send-email` et `profil` (save) exigent une **clé club**. Elle est transmise par l'iframe de l'espace membres Webnode (`index.html#k=…`) et comparée au secret Supabase `CLE_CLUB`. La clé n'est jamais stockée dans ce dépôt.
+- **Administration** : `planning_gestion.html` utilise Supabase Auth. Les écritures sont contrôlées par RLS (rôle `admin` dans `app_metadata`). Les inscriptions publiques sont désactivées.
+- **Modification par code** (`planningFDR.html`) : un code à 6 chiffres est envoyé par e-mail à l'animateur de la fiche. Un seul code est actif, avec 5 essais maximum et une validité de 10 minutes.
+- **Rotation de la clé club** : au départ d'un animateur ou une fois par saison. Générer une nouvelle clé (`openssl rand -hex 24`), puis la mettre à jour **à la fois** dans le secret Supabase `CLE_CLUB` et dans l'iframe Webnode.
+- **Mise à jour du front** : à chaque modification d'un fichier JS, incrémenter `CACHE_NAME` dans `sw.js`, sinon les navigateurs gardent l'ancien code en cache.
+- **Sauvegarde** : dump quotidien de la base (rôles, schéma, données) par GitHub Actions, dans un dépôt privé distinct.
 *La Marmotte Châteaurenard — [lamarmottechateaurenard.com](https://lamarmottechateaurenard.com)*
