@@ -191,7 +191,7 @@ async function sauvegarderFiche(fiche) {
       const resUpd = await fetch(UPDATE_FICHE, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ id: idExistant, fiche: patch })
+        body:    JSON.stringify({ id: idExistant, fiche: patch, cle_club: CLE_CLUB })
       });
       if (!resUpd.ok) throw new Error("update-fiche HTTP " + resUpd.status);
       console.log("[Supabase] Fiche prévisionnelle mise à jour ✅ id:", idExistant);
