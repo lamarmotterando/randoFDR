@@ -96,12 +96,27 @@ const PROFIL_FN      = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/pr
 /* ✅ send-email : Edge Function dédiée — l'email animateur est résolu côté serveur */
 /* ✅ update-fiche : Edge Function dédiée — champs animateur uniquement, sans auth */
 
+/* ══ CLÉ CLUB ══
+   Transmise par l'iframe de la page membres Webnode : index.html#k=XXXX
+   (le fragment # n'est jamais envoyé au serveur). Mémorisée pour la session
+   au cas où le fragment disparaîtrait de l'URL. */
+const CLE_CLUB = (() => {
+  let k = "";
+  try { k = new URLSearchParams(location.hash.slice(1)).get("k") || ""; } catch(e) {}
+  try {
+    if (k) sessionStorage.setItem("cle_club", k);
+    else   k = sessionStorage.getItem("cle_club") || "";
+  } catch(e) {}
+  return k;
+})();
+
 async function callHandler(body) {
   const res = await fetch(HANDLER, {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(body),
+    body:    JSON.stringify({ ...body, cle_club: CLE_CLUB }),
   });
+  if (res.status === 401) throw new Error("Clé club absente ou invalide — ouvrez le formulaire depuis l'espace membres du site");
   if (!res.ok) throw new Error(`Handler error: ${res.status}`);
   const text = await res.text();
   return text ? JSON.parse(text) : null;
@@ -283,7 +298,7 @@ async function mettreAJourCalendar(fiche) {
           "Content-Type":  "application/json",
           "Content-Type":  "application/json"
         },
-        body: JSON.stringify({ action: "calendarUpdate", fiche: ficheCalendar })
+        body: JSON.stringify({ action: "calendarUpdate", fiche: ficheCalendar, cle_club: CLE_CLUB })
       }
     );
     const data = await res.json().catch(() => ({}));
