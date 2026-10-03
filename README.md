@@ -228,14 +228,6 @@ supabase functions deploy <nom-de-la-fonction>
 ```
 Les fonctions publiques appelées sans jeton (ex. `get-animateurs`, `calendar-list`) sont déployées avec `--no-verify-jwt`.
 
-**Secrets Supabase requis** (non versionnés) :
-```
-SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_CALENDAR_ID
-RESEND_API_KEY
-CRON_SECRET
-```
-
 ## Maintenance
 
 - **Nouvelle table / colonne sensible** : elle est lisible par défaut → prévoir un `REVOKE` ou l'exposer via une vue/fonction filtrée.
@@ -246,11 +238,51 @@ CRON_SECRET
 ---
 ## Sécurité oct2026
 
-- **Lecture publique** : les pages publiques lisent les fiches via `fiches_public` (vue en `security_invoker`) ou via l'action `getFiches` de `dynamic-handler`. Celle-ci n'accepte que des colonnes, filtres et tris en liste blanche. `noms_participants` n'est jamais exposée publiquement.
-- **Écriture (formulaire animateur)** : `saveFiche`, `calendarUpdate`, `update-fiche`, `send-email` et `profil` (save) exigent une **clé club**. Elle est transmise par l'iframe de l'espace membres Webnode (`index.html#k=…`) et comparée au secret Supabase `CLE_CLUB`. La clé n'est jamais stockée dans ce dépôt.
-- **Administration** : `planning_gestion.html` utilise Supabase Auth. Les écritures sont contrôlées par RLS (rôle `admin` dans `app_metadata`). Les inscriptions publiques sont désactivées.
-- **Modification par code** (`planningFDR.html`) : un code à 6 chiffres est envoyé par e-mail à l'animateur de la fiche. Un seul code est actif, avec 5 essais maximum et une validité de 10 minutes.
-- **Rotation de la clé club** : au départ d'un animateur ou une fois par saison. Générer une nouvelle clé (`openssl rand -hex 24`), puis la mettre à jour **à la fois** dans le secret Supabase `CLE_CLUB` et dans l'iframe Webnode.
-- **Mise à jour du front** : à chaque modification d'un fichier JS, incrémenter `CACHE_NAME` dans `sw.js`, sinon les navigateurs gardent l'ancien code en cache.
-- **Sauvegarde** : dump quotidien de la base (rôles, schéma, données) par GitHub Actions, dans un dépôt privé distinct.
+### Lecture publique
+- Les pages publiques lisent les fiches via la vue `fiches_public` (`security_invoker`, lecture seule) ou via l'action `getFiches` de `dynamic-handler`, qui n'accepte que des colonnes, filtres et tris en **liste blanche**.
+- `noms_participants` n'est jamais lisible publiquement : colonne non accordée à `anon`, et transmise uniquement par `code-modif` après validation du code de l'animateur.
+- `animateurs` et `codes_validation` ne sont pas accessibles depuis le navigateur : seules les Edge Functions (clé service) y accèdent.
+
+### Écriture sans connexion
+| Accès | Fonctions concernées | Protection |
+|---|---|---|
+| Formulaire animateur, import CSV participants | `saveFiche`, `calendarUpdate`, `update-fiche`, `send-email`, `profil` (save), `update-participants` | **clé club** |
+| Feuille de Route (modification d'une fiche) | `code-modif` | **code e-mail** (6 chiffres, 10 min, un seul code actif, 5 essais, 3 codes maximum par heure et par fiche) |
+| Feuille de Route (agenda) | `calendarCreate` / `calendarUpdate` par `id` | contenu relu en base, jamais fourni par le navigateur |
+| Relance des participants | `rappel-participants` | en-tête `x-cron-secret` (cron-job.org) |
+| Confirmation des participants | `confirmation-participants` | **une seule** confirmation par fiche |
+
+- La **clé club** est transmise par les iframes de l'espace membres Webnode (`…#k=…`) et comparée au secret Supabase `CLE_CLUB`. Le fragment `#` n'est jamais envoyé au serveur.
+
+### Administration
+- `planning_gestion.html` utilise Supabase Auth. Les écritures sont contrôlées par RLS (rôle `admin` dans `app_metadata`). `delete-fiche`, `get-animateurs-admin` et `calendarDelete` vérifient le rôle admin côté serveur.
+- Les inscriptions publiques sont désactivées.
+
+### Protection contre l'injection de code (XSS)
+- Un trigger (`trg_fiches_neutraliser_html`) neutralise à chaque enregistrement, quel que soit le chemin, les caractères `<` `>` `"` `` ` `` des champs texte de `fiches` (remplacés par `‹` `›` `”` `'`).
+- `profil_png` n'accepte qu'une URL https ou une image base64 (png, jpeg, webp).
+- Les e-mails générés échappent les valeurs insérées.
+
+### Base et stockage
+- RLS active sur toutes les tables, et aucun droit inutile pour `anon`.
+- Stockage : aucun dépôt anonyme. Les profils PNG sont déposés par `send-email` avec la clé service.
+
+### Clés et comptes
+- Seules les **nouvelles clés** sont actives : publishable côté front, `sb_secret_…` côté serveur (`SUPA_SERVICE_ROLE_KEY_NEW`). Les anciennes clés JWT sont désactivées.
+- Aucune clé secrète ni la clé club n'existe dans l'historique Git (vérifié en octobre 2026).
+- 2FA obligatoire sur les comptes GitHub (dépôts et accès au dashboard Supabase) et sur les comptes Google associés.
+- Bibliothèques CDN à **version figée** (`supabase-js@2`, `chart.js@4`, `leaflet@1.9.4`).
+
+### Opérations courantes
+- **Rotation de la clé club** : au départ d'un animateur ou une fois par saison. Générer une nouvelle clé (`openssl rand -hex 24`), puis la mettre à jour aux **trois** endroits : le secret Supabase `CLE_CLUB`, l'iframe du formulaire et l'iframe de `randonnees-club`.
+- **Mise à jour du front** : à chaque modification d'un fichier, incrémenter `CACHE_NAME` dans `sw.js`.
+- **Sauvegarde** : dump quotidien de la base (rôles, schéma, données) par GitHub Actions, dans un dépôt **privé** distinct.
+
+### Secrets Supabase (non versionnés)
+```
+SUPABASE_URL, SUPA_SERVICE_ROLE_KEY_NEW
+CLE_CLUB, CRON_SECRET
+GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_CALENDAR_ID
+RESEND_API_KEY
+
 *La Marmotte Châteaurenard — [lamarmottechateaurenard.com](https://lamarmottechateaurenard.com)*
