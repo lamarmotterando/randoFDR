@@ -550,12 +550,23 @@ async function chargerMeteo(gpsStr, dateStr, id) {
 }
 
 
+/* ══ CLÉ CLUB — lue dans #k= (iframe Webnode membres), gardée pour la session ══ */
+const CLE_CLUB = (() => {
+  let k = "";
+  try { k = new URLSearchParams(location.hash.slice(1)).get("k") || ""; } catch(e) {}
+  try {
+    if (k) sessionStorage.setItem("cle_club", k);
+    else   k = sessionStorage.getItem("cle_club") || "";
+  } catch(e) {}
+  return k;
+})();
+
 /* ══ PROXY dynamic-handler — aucune clé exposée ══ */
 async function callHandler(body) {
   const res = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(body)
+    body:    JSON.stringify(body.action === "getAnimateurTel" ? { ...body, cle_club: CLE_CLUB } : body)
   });
   if (!res.ok) throw new Error("Handler " + res.status);
   return res.json();
