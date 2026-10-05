@@ -953,8 +953,9 @@ async function sauvegarderModif() {
     const ancienNbParticipants = f ? f.nb_participants : null;
     if (f) Object.assign(f, patch);
 
-    /* 🆕 Confirmation participants — 1ère saisie uniquement, meilleur effort */
-    if (participantsVisibles && (ancienNbParticipants === null || ancienNbParticipants === undefined) && patch.nb_participants) {
+    /* Confirmation participants — à chaque enregistrement avec participants ;
+       la fonction n'envoie un mail que si le nombre ou les noms ont changé. Meilleur effort. */
+    if (participantsVisibles && patch.nb_participants) {
       confirmerParticipants(id);
     }
 
