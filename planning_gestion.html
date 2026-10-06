@@ -268,6 +268,8 @@
   .rattach-dropdown .btn-rattach-cancel { flex:1; padding: 7px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 7px; font-size: .82rem; font-weight: 600; cursor: pointer; }
   .btn-rattach { background: #e8f4fd; color: #1a1a1a; border: 1px solid #b5d4f4; cursor: pointer; white-space: nowrap; }
   .btn-rattach:hover { background: #b5d4f4; }
+  .btn-relance { background: #fff8e1; color: #1a1a1a; border: 1px solid #f6c453; cursor: pointer; white-space: nowrap; }
+  .btn-relance:hover { background: #fde9a8; }
   .btn-rattach.rattache { background: #ddeef8; color: #0c4472; font-style: italic; }
 
   .modal-info-banner {
@@ -540,6 +542,7 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
           <div style="width:3px;height:14px;background:#2e7d32;border-radius:2px;flex-shrink:0;"></div>
           <span style="font-size:12px;font-weight:700;color:#4a6785;text-transform:uppercase;letter-spacing:0.04em;">Participants — après rando</span>
           <span style="font-size:11px;background:#e3f0fb;color:#185fa5;padding:2px 8px;border-radius:6px;font-weight:600;">nouveau</span>
+          <button type="button" class="btn btn-relance" id="btn-modal-relancer" onclick="relancerAnimateurDepuisModal()" style="display:none;margin-left:auto;padding:6px 12px;font-size:.8rem;" title="Envoie à l'animateur le mail « Compléter ma fiche »">📧 Relancer l'animateur</button>
         </div>
         <div style="display:grid;grid-template-columns:100px 1fr;gap:12px;align-items:start;">
           <div>
@@ -1444,6 +1447,11 @@ function openEdit(ev) {
   btnRattacher.style.display = (!isAnnulee && !isSejour) ? "inline-flex" : "none";
   btnRattacher.textContent   = ev.sejour_id ? "🏕 Changer séjour" : "🏕 Rattacher";
 
+  /* Relance participants : rando passée, non annulée, participants non saisis */
+  const btnRelancer = document.getElementById("btn-modal-relancer");
+  btnRelancer.style.display = (estPassee && !estAnnulee && (ev.type || "rando") === "rando" && !ev.nb_participants) ? "inline-flex" : "none";
+  btnRelancer.disabled = false; btnRelancer.textContent = "📧 Relancer l'animateur";
+
   document.getElementById("modal-edit").classList.add("open");
 }
 
@@ -1508,6 +1516,42 @@ function confirmerDepuisModal() {
   const animateur = document.getElementById("edit-anim-original").value;
   const dateRando = document.getElementById("edit-date-original").value;
   closeModal("modal-edit"); confirmDelete(id, nom, animateur, dateRando);
+}
+/* Relance de l'animateur : mail « Compléter ma fiche » via rappel-participants (session admin obligatoire) */
+async function relancerAnimateurDepuisModal() {
+  const id        = parseInt(document.getElementById("edit-rowIndex").value);
+  const nom       = document.getElementById("edit-nom-original").value;
+  const animateur = document.getElementById("edit-anim-original").value;
+  if (!id) return;
+  if (!confirm(`Envoyer à ${animateur || "l'animateur"} le mail de rappel pour « ${nom} » ?`)) return;
+
+  const btn = document.getElementById("btn-modal-relancer");
+  btn.disabled = true; btn.textContent = "⏳ Envoi…";
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      showToast("Session expirée — reconnectez-vous.", true);
+      btn.disabled = false; btn.textContent = "📧 Relancer l'animateur"; return;
+    }
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/rappel-participants`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ id })
+    });
+    const data = await res.json().catch(() => ({}));
+    const r = data.resultats?.[0];
+    if (res.ok && r?.success) {
+      showToast(`📧 Rappel envoyé à ${animateur || "l'animateur"}.`);
+      btn.textContent = "✅ Rappel envoyé"; return;
+    }
+    if (res.status === 401) showToast("Accès refusé — reconnectez-vous en admin.", true);
+    else if (r?.statut === "email introuvable") showToast("Aucun e-mail enregistré pour cet animateur.", true);
+    else showToast("Rappel non envoyé : " + (data.message || r?.error || data.error || ("HTTP " + res.status)), true);
+  } catch(e) {
+    showToast("Erreur réseau.", true);
+  }
+  btn.disabled = false; btn.textContent = "📧 Relancer l'animateur";
 }
 function rattacherDepuisModal() {
   const randoId = parseInt(document.getElementById("edit-rowIndex").value);
@@ -1622,6 +1666,7 @@ async function sauvegarderRattach(randoId, btnOk) {
 window.appliquerFiltreDates      = appliquerFiltreDates;
 window.confirmerDepuisModal      = confirmerDepuisModal;
 window.rattacherDepuisModal      = rattacherDepuisModal;
+window.relancerAnimateurDepuisModal = relancerAnimateurDepuisModal;
 window.reinitialiserFiltre       = reinitialiserFiltre;
 window.creerRando                = creerRando;
 window.creerSejour               = creerSejour;
