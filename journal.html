@@ -57,6 +57,8 @@
   .ignoré { background: #eceeed; color: #555; }
   .action { font-weight: 700; }
   a.fiche { color: #185fa5; cursor: pointer; text-decoration: underline; }
+  .rando { display: block; font-size: .76rem; color: #5d6b62; margin-top: 2px; }
+  .rando.suppr { font-style: italic; }
   .vide { padding: 30px; text-align: center; color: #667; }
   .note { font-size: .78rem; color: #6b7a70; margin-top: 10px; }
 </style>
@@ -123,7 +125,7 @@
 
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Date</th><th>Action</th><th>Fiche</th><th>Origine</th><th>Résultat</th><th>Détail</th><th>Source</th></tr></thead>
+        <thead><tr><th>Date</th><th>Action</th><th>Fiche / rando</th><th>Origine</th><th>Résultat</th><th>Détail</th><th>Source</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="vide hidden" id="vide">Aucune action pour ces critères.</div>
@@ -141,6 +143,24 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSessi
 
 const $ = id => document.getElementById(id);
 let lignes = [];
+const randos = new Map();   /* id → { date_rando, nom_rando } (lecture admin, colonnes publiques seulement) */
+
+/* Récupère date + nom des fiches citées dans le journal (une seule requête par lot de 200 id) */
+async function chargerRandos() {
+  const ids = [...new Set(lignes.map(l => l.fiche_id).filter(id => id && !randos.has(id)))];
+  for (let i = 0; i < ids.length; i += 200) {
+    const lot = ids.slice(i, i + 200);
+    const { data } = await supabase.from("fiches").select("id,date_rando,nom_rando").in("id", lot);
+    (data || []).forEach(f => randos.set(f.id, f));
+    lot.forEach(id => { if (!randos.has(id)) randos.set(id, null); });   /* fiche supprimée */
+  }
+}
+function libelleRando(id) {
+  const f = randos.get(id);
+  if (!f) return null;
+  const d = f.date_rando ? new Date(f.date_rando + "T12:00:00").toLocaleDateString("fr-FR") : "?";
+  return `${d} · ${f.nom_rando || "?"}`;
+}
 
 /* Libellés lisibles des actions */
 const LIBELLES = {
@@ -189,6 +209,7 @@ async function charger() {
   const { data, error } = await q;
   if (error) { $("summary").innerHTML = ""; $("rows").innerHTML = ""; $("vide").textContent = "Erreur de lecture : " + error.message; $("vide").classList.remove("hidden"); return; }
   lignes = data || [];
+  await chargerRandos();
   $("maj").textContent = "Actualisé à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + " · auto toutes les 4 h";
   afficher();
 }
@@ -218,7 +239,7 @@ function afficher() {
   const fiche = parseInt($("f-fiche").value);
   $("fiche-active").classList.toggle("hidden", !(fiche > 0));
   if (fiche > 0) {
-    $("fiche-active").textContent = `Historique de la fiche ${fiche} `;
+    $("fiche-active").textContent = `Historique de la fiche ${fiche}${libelleRando(fiche) ? " — " + libelleRando(fiche) : ""} `;
     const x = document.createElement("button"); x.className = "btn btn-light"; x.textContent = "✕ Toutes les fiches";
     x.onclick = () => { $("f-fiche").value = ""; charger(); };
     $("fiche-active").append(x);
@@ -231,7 +252,13 @@ function afficher() {
     td(new Date(l.date).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }), "date");
     td(LIBELLES[l.action] || l.action, "action");
     const cf = td("");
-    if (l.fiche_id) { const a = document.createElement("a"); a.className = "fiche"; a.textContent = l.fiche_id; a.title = "Voir tout l'historique de cette fiche"; a.onclick = () => { $("f-fiche").value = l.fiche_id; $("f-periode").value = "365"; charger(); }; cf.append(a); }
+    if (l.fiche_id) {
+      const a = document.createElement("a"); a.className = "fiche"; a.textContent = l.fiche_id; a.title = "Voir tout l'historique de cette fiche";
+      a.onclick = () => { $("f-fiche").value = l.fiche_id; $("f-periode").value = "365"; charger(); };
+      const r = document.createElement("span"); const lib = libelleRando(l.fiche_id);
+      r.className = "rando" + (lib ? "" : " suppr"); r.textContent = lib || "fiche supprimée";
+      cf.append(a, r);
+    }
     td(l.origine || "—");
     const cr = td(""); const p = document.createElement("span"); p.className = "pill " + l.resultat; p.textContent = l.resultat; cr.append(p);
     td(l.detail || "");
@@ -246,8 +273,8 @@ function afficher() {
 $("btn-csv").onclick = () => {
   const L = filtrees();
   const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const csv = ["date;action;fiche;origine;resultat;detail;source"]
-    .concat(L.map(l => [l.date, LIBELLES[l.action] || l.action, l.fiche_id, l.origine, l.resultat, l.detail, l.source].map(esc).join(";")))
+  const csv = ["date;action;fiche;rando;origine;resultat;detail;source"]
+    .concat(L.map(l => [l.date, LIBELLES[l.action] || l.action, l.fiche_id, l.fiche_id ? (libelleRando(l.fiche_id) || "fiche supprimée") : "", l.origine, l.resultat, l.detail, l.source].map(esc).join(";")))
     .join("\r\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
