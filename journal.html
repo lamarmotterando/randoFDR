@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache">
+<meta name="robots" content="noindex, nofollow">
+<title>Journal — RandoFDR</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f4f6f3; color: #1f2a24; font-size: 14px; }
+  .hidden { display: none !important; }
+
+  /* Connexion */
+  #login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .login-box { background: #fff; border-radius: 14px; padding: 28px; width: 360px; max-width: 100%; box-shadow: 0 6px 24px rgba(0,0,0,.12); }
+  .login-box h1 { font-size: 1.2rem; color: #2d6a4f; margin-bottom: 4px; }
+  .login-box p { color: #667; font-size: .85rem; margin-bottom: 18px; }
+  .login-box label { display: block; font-size: .8rem; font-weight: 700; color: #445; margin: 10px 0 4px; }
+  .login-box input { width: 100%; padding: 10px; border: 1px solid #cdd5cf; border-radius: 8px; font-size: .95rem; }
+  #login-err { color: #c53030; font-size: .83rem; margin-top: 10px; min-height: 1em; }
+
+  .btn { border: none; border-radius: 8px; padding: 9px 16px; font-weight: 700; font-size: .85rem; cursor: pointer; }
+  .btn-primary { background: #2d6a4f; color: #fff; width: 100%; margin-top: 16px; padding: 11px; }
+  .btn-light { background: #e8eee9; color: #1f2a24; }
+  .btn:hover { filter: brightness(.95); }
+
+  /* Page */
+  header { background: #2d6a4f; color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  header h1 { font-size: 1.15rem; flex: 1; }
+  header .who { font-size: .8rem; opacity: .85; }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+
+  .filters { background: #fff; border-radius: 12px; padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .filters label { display: block; font-size: .72rem; font-weight: 700; color: #5d6b62; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+  .filters select, .filters input[type=number] { padding: 7px 8px; border: 1px solid #cdd5cf; border-radius: 7px; font-size: .88rem; background: #fff; }
+  .filters input[type=number] { width: 100px; }
+  .chk { display: flex; align-items: center; gap: 6px; font-size: .88rem; padding-bottom: 6px; }
+  .filters .spacer { flex: 1; }
+
+  .summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 10px; }
+  .chip { background: #fff; border-radius: 20px; padding: 5px 12px; font-size: .82rem; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .chip b { font-size: .95rem; }
+  .chip.err b { color: #c53030; }
+  #fiche-active { background: #fff3cd; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; font-size: .85rem; display: flex; gap: 10px; align-items: center; }
+
+  .table-wrap { background: #fff; border-radius: 12px; overflow-x: auto; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  table { width: 100%; border-collapse: collapse; min-width: 760px; }
+  th { text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #5d6b62; background: #f0f3f0; padding: 9px 10px; position: sticky; top: 0; }
+  td { padding: 8px 10px; border-top: 1px solid #edf0ed; vertical-align: top; font-size: .86rem; }
+  tr:hover td { background: #fafcfa; }
+  td.date { white-space: nowrap; color: #445; font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; border-radius: 10px; padding: 1px 8px; font-size: .75rem; font-weight: 700; }
+  .ok { background: #e3f4ea; color: #1b5e20; }
+  .erreur { background: #fde8e8; color: #9b1c1c; }
+  .ignoré { background: #eceeed; color: #555; }
+  .action { font-weight: 700; }
+  a.fiche { color: #185fa5; cursor: pointer; text-decoration: underline; }
+  .vide { padding: 30px; text-align: center; color: #667; }
+  .note { font-size: .78rem; color: #6b7a70; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ══ Connexion admin ══ -->
+<div id="login">
+  <div class="login-box">
+    <h1>📜 Journal RandoFDR</h1>
+    <p>Accès réservé aux administrateurs (même compte que planning_gestion).</p>
+    <label for="email">Email</label>
+    <input type="email" id="email" autocomplete="email">
+    <label for="pass">Mot de passe</label>
+    <input type="password" id="pass" autocomplete="current-password">
+    <button class="btn btn-primary" id="btn-login">🔓 Se connecter</button>
+    <div id="login-err"></div>
+  </div>
+</div>
+
+<!-- ══ Journal ══ -->
+<div id="app" class="hidden">
+  <header>
+    <h1>📜 Journal des actions — RandoFDR</h1>
+    <span class="who" id="who"></span>
+    <button class="btn btn-light" id="btn-logout">Déconnexion</button>
+  </header>
+  <main>
+    <div class="filters">
+      <div>
+        <label for="f-periode">Période</label>
+        <select id="f-periode">
+          <option value="1">24 dernières heures</option>
+          <option value="7" selected>7 derniers jours</option>
+          <option value="30">30 derniers jours</option>
+          <option value="90">90 derniers jours</option>
+          <option value="365">12 mois</option>
+        </select>
+      </div>
+      <div>
+        <label for="f-type">Type</label>
+        <select id="f-type">
+          <option value="">Tout</option>
+          <option value="fiche">Fiches (création, modif, annulation…)</option>
+          <option value="mail">Mails envoyés</option>
+          <option value="secretariat">Mails au secrétariat</option>
+          <option value="rappel">Rappels et relances</option>
+          <option value="refus">Refus et codes invalides</option>
+        </select>
+      </div>
+      <div>
+        <label for="f-fiche">N° de fiche</label>
+        <input type="number" id="f-fiche" min="1" placeholder="tous">
+      </div>
+      <label class="chk"><input type="checkbox" id="f-err"> Erreurs seulement</label>
+      <span class="spacer"></span>
+      <button class="btn btn-light" id="btn-refresh">↻ Actualiser</button>
+      <button class="btn btn-light" id="btn-csv">⬇ Export CSV</button>
+    </div>
+
+    <div class="summary" id="summary"></div>
+    <div id="fiche-active" class="hidden"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Action</th><th>Fiche</th><th>Origine</th><th>Résultat</th><th>Détail</th><th>Source</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="vide hidden" id="vide">Aucune action pour ces critères.</div>
+    </div>
+    <p class="note">Historique conservé 12 mois. Le journal ne contient jamais les noms des participants, les adresses e-mail ni les codes.</p>
+  </main>
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+const SUPABASE_KEY = "sb_publishable_M7RxCuGoLU8zdzFSPuZl8A_CvvNMZ-O";   /* clé publique (même que planning_gestion) */
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true } });
+
+const $ = id => document.getElementById(id);
+let lignes = [];
+
+/* Libellés lisibles des actions */
+const LIBELLES = {
+  fiche_creee: "Fiche créée", fiche_modifiee: "Fiche modifiée", fiche_annulee: "Fiche annulée", fiche_supprimee: "Fiche supprimée",
+  mail_fdr: "Mail feuille de route", mail_code: "Mail code", mail_confirmation: "Mail confirmation (animateur)", mail_secretariat: "Mail secrétariat", mail_rappel: "Mail rappel",
+  rappel_cron: "Rappel automatique", relance_admin: "Relance admin", code_refuse: "Code refusé", code_valide: "Code validé",
+  modif_par_code: "Modification par code", acces_refuse: "Accès refusé",
+};
+const TYPES = {
+  fiche:  a => a.startsWith("fiche_") || a === "modif_par_code",
+  mail:   a => a.startsWith("mail_"),
+  secretariat: a => a === "mail_secretariat",
+  rappel: a => ["rappel_cron", "relance_admin", "mail_rappel"].includes(a),
+  refus:  a => ["acces_refuse", "code_refuse"].includes(a),
+};
+
+/* ── Connexion ── */
+async function afficherApp(session) {
+  if (session?.user?.app_metadata?.role !== "admin") return false;
+  $("who").textContent = session.user.email || "";
+  $("login").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  await charger();
+  return true;
+}
+
+$("btn-login").onclick = async () => {
+  const err = $("login-err"); err.textContent = "";
+  const { data, error } = await supabase.auth.signInWithPassword({ email: $("email").value.trim(), password: $("pass").value });
+  if (error) { err.textContent = "Email ou mot de passe incorrect."; return; }
+  if (!(await afficherApp(data.session))) {
+    await supabase.auth.signOut();
+    err.textContent = "Accès réservé aux administrateurs.";
+  }
+};
+$("pass").addEventListener("keydown", e => { if (e.key === "Enter") $("btn-login").click(); });
+$("btn-logout").onclick = async () => { await supabase.auth.signOut(); location.reload(); };
+
+/* ── Chargement ── */
+async function charger() {
+  const jours = Number($("f-periode").value);
+  const depuis = new Date(Date.now() - jours * 86400000).toISOString();
+  let q = supabase.from("journal").select("*").gte("date", depuis).order("date", { ascending: false }).limit(3000);
+  const fiche = parseInt($("f-fiche").value);
+  if (fiche > 0) q = q.eq("fiche_id", fiche);
+  const { data, error } = await q;
+  if (error) { $("summary").innerHTML = ""; $("rows").innerHTML = ""; $("vide").textContent = "Erreur de lecture : " + error.message; $("vide").classList.remove("hidden"); return; }
+  lignes = data || [];
+  afficher();
+}
+
+function filtrees() {
+  const type = $("f-type").value, errSeul = $("f-err").checked;
+  return lignes.filter(l => (!type || TYPES[type](l.action)) && (!errSeul || l.resultat === "erreur"));
+}
+
+function afficher() {
+  const L = filtrees();
+  /* résumé */
+  const n = f => L.filter(f).length;
+  const chips = [
+    ["Actions", L.length, ""],
+    ["Fiches", n(l => TYPES.fiche(l.action)), ""],
+    ["Mails", n(l => TYPES.mail(l.action)), ""],
+    ["Erreurs", n(l => l.resultat === "erreur"), "err"],
+  ];
+  $("summary").innerHTML = "";
+  chips.forEach(([t, v, c]) => {
+    const s = document.createElement("span"); s.className = "chip " + c;
+    s.append(t + " : "); const b = document.createElement("b"); b.textContent = v; s.append(b);
+    $("summary").append(s);
+  });
+  /* fiche active */
+  const fiche = parseInt($("f-fiche").value);
+  $("fiche-active").classList.toggle("hidden", !(fiche > 0));
+  if (fiche > 0) {
+    $("fiche-active").textContent = `Historique de la fiche ${fiche} `;
+    const x = document.createElement("button"); x.className = "btn btn-light"; x.textContent = "✕ Toutes les fiches";
+    x.onclick = () => { $("f-fiche").value = ""; charger(); };
+    $("fiche-active").append(x);
+  }
+  /* tableau (textContent uniquement : aucune injection possible) */
+  const tb = $("rows"); tb.innerHTML = "";
+  L.forEach(l => {
+    const tr = document.createElement("tr");
+    const td = (txt, cls) => { const c = document.createElement("td"); if (cls) c.className = cls; c.textContent = txt ?? ""; tr.append(c); return c; };
+    td(new Date(l.date).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }), "date");
+    td(LIBELLES[l.action] || l.action, "action");
+    const cf = td("");
+    if (l.fiche_id) { const a = document.createElement("a"); a.className = "fiche"; a.textContent = l.fiche_id; a.title = "Voir tout l'historique de cette fiche"; a.onclick = () => { $("f-fiche").value = l.fiche_id; $("f-periode").value = "365"; charger(); }; cf.append(a); }
+    td(l.origine || "—");
+    const cr = td(""); const p = document.createElement("span"); p.className = "pill " + l.resultat; p.textContent = l.resultat; cr.append(p);
+    td(l.detail || "");
+    td(l.source || "");
+    tb.append(tr);
+  });
+  $("vide").textContent = "Aucune action pour ces critères.";
+  $("vide").classList.toggle("hidden", L.length > 0);
+}
+
+/* ── Export CSV ── */
+$("btn-csv").onclick = () => {
+  const L = filtrees();
+  const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = ["date;action;fiche;origine;resultat;detail;source"]
+    .concat(L.map(l => [l.date, LIBELLES[l.action] || l.action, l.fiche_id, l.origine, l.resultat, l.detail, l.source].map(esc).join(";")))
+    .join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+  a.download = `journal-randofdr-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+};
+
+$("btn-refresh").onclick = charger;
+$("f-periode").onchange = charger;
+$("f-fiche").onchange = charger;
+$("f-type").onchange = afficher;
+$("f-err").onchange = afficher;
+
+/* Session déjà ouverte (ex. depuis planning_gestion) */
+const { data: { session } } = await supabase.auth.getSession();
+if (session) await afficherApp(session);
+</script>
+</body>
+</html>
