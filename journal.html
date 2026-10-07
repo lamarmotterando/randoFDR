@@ -37,6 +37,7 @@
   .filters input[type=number] { width: 100px; }
   .chk { display: flex; align-items: center; gap: 6px; font-size: .88rem; padding-bottom: 6px; }
   .filters .spacer { flex: 1; }
+  .maj { font-size: .75rem; color: #6b7a70; padding-bottom: 8px; }
 
   .summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 10px; }
   .chip { background: #fff; border-radius: 20px; padding: 5px 12px; font-size: .82rem; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
@@ -112,6 +113,7 @@
       </div>
       <label class="chk"><input type="checkbox" id="f-err"> Erreurs seulement</label>
       <span class="spacer"></span>
+      <span class="maj" id="maj"></span>
       <button class="btn btn-light" id="btn-refresh">↻ Actualiser</button>
       <button class="btn btn-light" id="btn-csv">⬇ Export CSV</button>
     </div>
@@ -187,6 +189,7 @@ async function charger() {
   const { data, error } = await q;
   if (error) { $("summary").innerHTML = ""; $("rows").innerHTML = ""; $("vide").textContent = "Erreur de lecture : " + error.message; $("vide").classList.remove("hidden"); return; }
   lignes = data || [];
+  $("maj").textContent = "Actualisé à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + " · auto toutes les 4 h";
   afficher();
 }
 
@@ -253,6 +256,16 @@ $("btn-csv").onclick = () => {
 };
 
 $("btn-refresh").onclick = charger;
+
+/* Actualisation automatique toutes les 4 heures, tant que la page reste ouverte et connectée.
+   Si la session a expiré entre-temps, on revient à l'écran de connexion. */
+const QUATRE_HEURES = 4 * 60 * 60 * 1000;
+setInterval(async () => {
+  if ($("app").classList.contains("hidden")) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user?.app_metadata?.role === "admin") charger();
+  else location.reload();
+}, QUATRE_HEURES);
 $("f-periode").onchange = charger;
 $("f-fiche").onchange = charger;
 $("f-type").onchange = afficher;
