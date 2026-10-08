@@ -107,6 +107,7 @@
           <option value="secretariat">Mails au secrétariat</option>
           <option value="rappel">Rappels et relances</option>
           <option value="refus">Refus et codes invalides</option>
+          <option value="sauvegarde">Sauvegardes</option>
         </select>
       </div>
       <div>
@@ -168,6 +169,7 @@ const LIBELLES = {
   mail_fdr: "Mail feuille de route", mail_code: "Mail code", mail_confirmation: "Mail confirmation (animateur)", mail_secretariat: "Mail secrétariat", mail_rappel: "Mail rappel",
   rappel_cron: "Rappel automatique", relance_admin: "Relance admin", code_refuse: "Code refusé", code_valide: "Code validé",
   modif_par_code: "Modification par code", acces_refuse: "Accès refusé",
+  sauvegarde: "Sauvegarde base",
 };
 const TYPES = {
   fiche:  a => a.startsWith("fiche_") || a === "modif_par_code",
@@ -175,6 +177,7 @@ const TYPES = {
   secretariat: a => a === "mail_secretariat",
   rappel: a => ["rappel_cron", "relance_admin", "mail_rappel"].includes(a),
   refus:  a => ["acces_refuse", "code_refuse"].includes(a),
+  sauvegarde: a => a === "sauvegarde",
 };
 
 /* ── Connexion ── */
