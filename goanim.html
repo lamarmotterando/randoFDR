@@ -165,6 +165,11 @@
     border-radius: 10px;
     touch-action: pan-y;
   }
+  .btn-carte {
+    display: block; text-align: center; margin: -6px 0 16px; padding: 9px 12px;
+    background: #2d6a4f; color: #fff; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none;
+  }
+  .btn-carte small { display: block; font-weight: 400; font-size: 12px; opacity: .85; }
   .sep { border: none; border-top: 1px solid var(--bord); margin: 12px 0; }
 
   .ligne {
@@ -760,10 +765,14 @@ async function chargerProfilInteractif(id) {
     const res = await fetch(PROFIL_FN, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "get", id })
+      body: JSON.stringify(CLE_CLUB ? { action: "get", id, cle_club: CLE_CLUB } : { action: "get", id })
     });
     if (!res.ok) return;
     const p = (await res.json())?.profil_data;
+    /* Carte de suivi : seulement si le tracé est disponible (membres, GPX enregistré avec coordonnées) */
+    const avecCarte = Array.isArray(p?.la) && p.la.length === p?.d?.length && !!CLE_CLUB;
+    const urlCarte = km => "carte.html?id=" + encodeURIComponent(id) +
+      (km != null ? "&km=" + km.toFixed(2) : "") + "#k=" + encodeURIComponent(CLE_CLUB);
     if (!p || !Array.isArray(p.d) || p.d.length < 2 || p.a?.length !== p.d.length || p.s?.length !== p.d.length) return;
 
     wrap = document.createElement("div");
@@ -796,10 +805,21 @@ async function chargerProfilInteractif(id) {
         scales: {
           x: { type: "linear", title: { display: true, text: "Distance (km)" } },
           y: { title: { display: true, text: "Altitude (m)" } }
-        }
+        },
+        /* 🆕 clic sur la courbe → carte de suivi centrée sur ce point */
+        onClick: avecCarte ? (evt, _el, chart) => {
+          const km = chart.scales.x.getValueForPixel(evt.x);
+          if (Number.isFinite(km)) window.open(urlCarte(km), "_blank", "noopener");
+        } : undefined
       }
     });
     img.style.display = "none";   /* masquer l'image seulement une fois le graphique créé */
+    if (avecCarte) {
+      const a = document.createElement("a");
+      a.className = "btn-carte"; a.href = urlCarte(null); a.target = "_blank"; a.rel = "noopener";
+      a.innerHTML = "🗺 Carte et suivi GPS<small>ou touchez la courbe pour voir un point précis</small>";
+      wrap.after(a);
+    }
   } catch (e) {
     console.warn("Profil interactif :", e);
     wrap?.remove();               /* échec : l'image reste visible */
