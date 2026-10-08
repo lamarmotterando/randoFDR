@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Carte de suivi — La Marmotte</title>
+<!-- ══════════════════════════════════════════════════════════════════
+     carte.html — carte de suivi d'une randonnée (v1)
+     Ouverte depuis goanim.html : carte.html?id=<fiche>[&km=<km>]#k=<clé club>
+     • Tracé GPX (coordonnées réservées aux membres : clé club)
+     • Position GPS du téléphone « accrochée » au tracé : km faits / restants,
+       altitude, pente, D+ restant
+     • Mode « point choisi » : toucher le profil ou le tracé
+     • Préparation hors réseau : tuiles IGN de la zone + page + tracé
+       (effacées automatiquement après la date de la rando) ; sw-carte.js
+       permet de rouvrir la page sans réseau
+     Fond de carte : IGN Plan (Géoplateforme, data.geopf.fr)
+═══════════════════════════════════════════════════════════════════ -->
+<link rel="stylesheet" href="js/lib/leaflet/leaflet.css">
+<script src="js/lib/leaflet/leaflet.js"></script>
+<style>
+  :root { --vert:#2d6a4f; --brun:#5c4033; --bg:#f7f4f0; --txt:#1a1a1a; --txt2:#5a5a5a; --bord:#e5e0d8; --bleu:#1a73e8; --orange:#e8590c; }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; }
+  body { font-family:'Source Sans 3', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background:var(--bg); color:var(--txt);
+         display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; }
+  header { background:var(--vert); color:#fff; display:flex; align-items:center; gap:8px;
+           padding:8px 10px; padding-top:calc(8px + env(safe-area-inset-top,0px)); flex-shrink:0; }
+  header button { background:none; color:#fff; border:1px solid rgba(255,255,255,.55); border-radius:8px; padding:4px 10px;
+                  font:inherit; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  header .t { flex:1; min-width:0; }
+  header .t b { font-family:'Lora', Georgia, serif; font-size:15px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  header .t small { font-size:12px; opacity:.88; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .mode { display:flex; gap:6px; padding:6px 8px 0; flex-shrink:0; }
+  .mode button { flex:1; font:inherit; font-size:13px; font-weight:600; padding:6px; border-radius:20px; border:1.5px solid var(--vert);
+                 color:var(--vert); background:#fff; cursor:pointer; }
+  .mode button.on { background:var(--vert); color:#fff; }
+
+  .carte-zone { position:relative; margin:6px 8px 0; flex:1; min-height:200px; border-radius:12px; overflow:hidden; background:#e9ecdf; }
+  #carte { position:absolute; inset:0; }
+  .badge-gps { position:absolute; top:8px; left:8px; z-index:500; background:rgba(255,255,255,.95); border-radius:14px; padding:3px 9px;
+               font-size:12px; font-weight:600; color:#1e7d3a; box-shadow:0 1px 4px rgba(0,0,0,.15); pointer-events:none; max-width:70%; }
+  .badge-gps.attente { color:#666; } .badge-gps.alerte { color:#9a6700; }
+  .alerte-trace { position:absolute; left:50%; top:40px; transform:translateX(-50%); z-index:500; background:#fff4e5; color:#8a4b00;
+                  border:1px solid #f0b46a; font-size:12.5px; font-weight:600; padding:5px 10px; border-radius:10px; white-space:nowrap; display:none; pointer-events:none; }
+  .btn-centre { position:absolute; right:10px; bottom:22px; z-index:500; width:42px; height:42px; border-radius:50%; border:none; background:#fff;
+                box-shadow:0 1px 6px rgba(0,0,0,.3); font-size:20px; cursor:pointer; }
+  .sans-carte { position:absolute; inset:0; display:none; place-items:center; text-align:center; padding:16px; color:var(--txt2); font-size:14px; }
+
+  .prep { display:flex; align-items:center; gap:8px; margin:6px 8px 0; font-size:12.5px; color:var(--txt2); flex-shrink:0; }
+  .prep button { font:inherit; font-size:12.5px; font-weight:600; padding:5px 10px; border-radius:8px; border:1.5px solid var(--vert);
+                 background:#fff; color:var(--vert); cursor:pointer; white-space:nowrap; }
+  .prep button:disabled { opacity:.5; cursor:default; }
+  .prep .etat-prep { flex:1; min-width:0; }
+  .prep progress { width:100%; height:6px; display:none; }
+
+  .cartouche { margin:6px 8px 0; background:#fff; border-radius:12px; padding:8px; box-shadow:0 1px 4px rgba(0,0,0,.08); flex-shrink:0; }
+  .tuiles { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .tuile { text-align:center; padding:4px 2px; border-radius:8px; background:#f7f6f3; }
+  .tuile .v { font-size:19px; font-weight:700; line-height:1.15; font-variant-numeric:tabular-nums; }
+  .tuile .v small { font-size:12px; font-weight:600; }
+  .tuile .l { font-size:10.5px; color:inherit; opacity:.75; text-transform:uppercase; letter-spacing:.03em; }
+  .ligne2 { display:flex; justify-content:space-between; gap:8px; font-size:12.5px; color:var(--txt2); margin-top:6px; padding:0 2px; }
+  .ligne2 b { color:var(--txt); }
+  .barre { height:6px; background:#e8e4dc; border-radius:3px; margin-top:6px; overflow:hidden; }
+  .barre i { display:block; height:100%; width:0; background:var(--vert); border-radius:3px; }
+
+  .profil { margin:6px 8px calc(8px + env(safe-area-inset-bottom,0px)); background:#fff; border-radius:12px; height:110px; flex-shrink:0; position:relative; }
+  #profil { width:100%; height:100%; display:block; touch-action:none; cursor:crosshair; }
+
+  .message { margin:24px 16px; background:#fff; border-radius:12px; padding:18px; font-size:15px; line-height:1.5; text-align:center; color:var(--txt2); }
+  .cache { display:none !important; }
+  @media (max-height:640px) { .profil { height:84px; } .tuile .v { font-size:17px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <button id="btn-fermer" type="button">← Fiche</button>
+  <div class="t"><b id="titre">Carte de suivi</b><small id="sous-titre">Chargement…</small></div>
+</header>
+
+<div id="app" class="cache" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+  <div class="mode">
+    <button id="m-gps" type="button" class="on">📍 Ma position</button>
+    <button id="m-point" type="button">👆 Point choisi</button>
+  </div>
+
+  <div class="carte-zone">
+    <div id="carte"></div>
+    <div class="sans-carte" id="sans-carte">Fond de carte indisponible hors réseau.<br>Le suivi GPS fonctionne quand même (cartouche et profil ci-dessous).</div>
+    <div class="badge-gps attente" id="badge-gps">○ Recherche GPS…</div>
+    <div class="alerte-trace" id="alerte-trace"></div>
+    <button class="btn-centre" id="btn-centre" type="button" title="Recentrer sur ma position">◎</button>
+  </div>
+
+  <div class="prep">
+    <button id="btn-prep" type="button">📥 Préparer hors réseau</button>
+    <div class="etat-prep"><span id="etat-prep"></span><progress id="prog" max="1" value="0"></progress></div>
+  </div>
+
+  <div class="cartouche">
+    <div class="tuiles">
+      <div class="tuile"><div class="v" id="v-fait">–</div><div class="l">km faits</div></div>
+      <div class="tuile"><div class="v" id="v-reste">–</div><div class="l">km restants</div></div>
+      <div class="tuile"><div class="v" id="v-alt">–</div><div class="l">altitude</div></div>
+      <div class="tuile" id="t-pente"><div class="v" id="v-pente">–</div><div class="l">pente</div></div>
+    </div>
+    <div class="ligne2"><span>D+ restant <b id="v-dplus">–</b></span><span>Plus haut à venir <b id="v-max">–</b></span></div>
+    <div class="barre"><i id="barre"></i></div>
+  </div>
+
+  <div class="profil"><canvas id="profil"></canvas></div>
+</div>
+
+<div id="message" class="message cache"></div>
+
+<script>
+"use strict";
+/* ══ CONSTANTES ══ */
+const HANDLER   = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
+const PROFIL_FN = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/profil";
+const URL_TUILE = "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0" +
+  "&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM" +
+  "&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}";
+const ZOOM_PREP_MIN = 11, ZOOM_PREP_MAX = 16;   // zooms préchargés (16 = détail des sentiers)
+const MAX_TUILES    = 2500;                     // au-delà, on renonce au zoom 16
+const SEUIL_HORS    = 100;                      // m : au-delà, « hors tracé »
+const PREFIXE_CACHE = "randofdr-tuiles-";       // un cache par rando (conservé par sw.js)
+
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const ID = parseInt(params.get("id"), 10);
+const KM_INITIAL = parseFloat(params.get("km"));
+
+/* ══ CLÉ CLUB : lue dans #k=, gardée pour la session, retirée de l'adresse ══ */
+const CLE_CLUB = (() => {
+  let k = "";
+  try { k = new URLSearchParams(location.hash.slice(1)).get("k") || ""; } catch (e) {}
+  try {
+    if (k) sessionStorage.setItem("cle_club", k); else k = sessionStorage.getItem("cle_club") || "";
+  } catch (e) {}
+  /* Adresse nettoyée (sans clé ni km) : c'est aussi celle mise en cache pour l'usage hors réseau */
+  if (Number.isInteger(parseInt(params.get("id"), 10)))
+    history.replaceState(null, "", location.pathname + "?id=" + parseInt(params.get("id"), 10));
+  return k;
+})();
+
+/* ══ OUTILS ══ */
+const f1 = n => n.toFixed(1).replace(".", ",");
+const aujourdhui = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+function lsGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+const nomCache = () => PREFIXE_CACHE + ID;
+const urlPage  = () => location.origin + location.pathname + "?id=" + ID;   // version mise en cache de la page
+
+/* Mêmes seuils que js/profilAltitude.js — à garder synchronisés */
+function couleurPente(p) {
+  if (p >= 20) return "rgb(200,0,0)";   if (p >= 15) return "rgb(255,80,0)";
+  if (p >= 10) return "rgb(255,150,0)"; if (p >= 5)  return "rgb(255,200,0)";
+  if (p > -5)  return "rgb(255,220,0)"; if (p > -10) return "rgb(150,200,255)";
+  if (p > -15) return "rgb(80,150,255)"; if (p > -20) return "rgb(40,100,255)";
+  return "rgb(0,60,200)";
+}
+const texteSurPente = p => (p >= 15 || p <= -15) ? "#fff" : "#1a1a1a";
+
+function afficherMessage(html) {
+  $("app").classList.add("cache");
+  const m = $("message"); m.innerHTML = html; m.classList.remove("cache");
+}
+
+async function post(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(url + " " + r.status);
+  return r.json();
+}
+
+/* ══ NETTOYAGE : données des randos passées ══ */
+async function purgerAnciennes() {
+  const auj = aujourdhui();
+  let cles = [];
+  try { cles = Object.keys(localStorage).filter(k => k.startsWith("carte-trace-")); } catch (e) {}
+  for (const k of cles) {
+    const t = lsGet(k);
+    const age = t && t.sauve ? (Date.now() - new Date(t.sauve).getTime()) / 86400000 : 999;
+    if (!t || (t.date ? t.date < auj : age > 30)) {
+      const id = k.slice("carte-trace-".length);
+      lsDel(k); lsDel("carte-prep-" + id);
+      try { await caches.delete(PREFIXE_CACHE + id); } catch (e) {}
+    }
+  }
+}
+
+/* ══ DONNÉES : réseau d'abord, copie locale en secours (hors réseau) ══ */
+function traceValide(p) {
+  if (!p || !Array.isArray(p.d)) return false;
+  const n = p.d.length;
+  return n >= 2 && [p.a, p.s, p.la, p.lo].every(t => Array.isArray(t) && t.length === n);
+}
+
+async function chargerDonnees() {
+  const local = lsGet("carte-trace-" + ID);
+  try {
+    const [rp, fiches] = await Promise.all([
+      post(PROFIL_FN, { action: "get", id: ID, cle_club: CLE_CLUB || undefined }),
+      post(HANDLER, { action: "getFiches", select: "id,nom_rando,date_rando,statut", filters: "id=eq." + ID, limit: 1 })
+    ]);
+    const fiche = Array.isArray(fiches) ? fiches[0] : null;
+    const p = rp?.profil_data;
+    if (traceValide(p)) {
+      const donnees = { p, nom: fiche?.nom_rando || "", date: fiche?.date_rando || "", statut: fiche?.statut || "", sauve: new Date().toISOString() };
+      lsSet("carte-trace-" + ID, donnees);
+      return donnees;
+    }
+    if (local && traceValide(local.p)) return local;
+    return { p: null, nom: fiche?.nom_rando || "", date: fiche?.date_rando || "", profilSansTrace: !!p };
+  } catch (e) {
+    if (local && traceValide(local.p)) return { ...local, horsLigne: true };
+    throw e;
+  }
+}
+
+/* ══ GÉOMÉTRIE (projection locale en mètres, suffisante à l'échelle d'une rando) ══ */
+let T = null;            // tracé : { n, d, a, s, la, lo, x, y, total }
+function preparerTrace(p) {
+  const n = p.d.length, lat0 = p.la[0], lon0 = p.lo[0];
+  const kx = 111320 * Math.cos(lat0 * Math.PI / 180), ky = 110540;
+  const x = p.lo.map(v => (v - lon0) * kx), y = p.la.map(v => (v - lat0) * ky);
+  T = { n, d: p.d, a: p.a, s: p.s, la: p.la, lo: p.lo, x, y, kx, ky, lat0, lon0, total: p.d[n - 1] };
+}
+const versXY = (lat, lon) => [(lon - T.lon0) * T.kx, (lat - T.lat0) * T.ky];
+
+/* Point du tracé le plus proche. kmPrec : dernière position connue (évite de sauter
+   sur l'autre passage d'un aller-retour : reculer coûte plus cher qu'avancer).
+   Premier point : égalité à 30 m près → le plus petit km. */
+function accrocher(lat, lon, kmPrec) {
+  const [px, py] = versXY(lat, lon);
+  const cands = [];
+  for (let i = 0; i < T.n - 1; i++) {
+    const ax = T.x[i], ay = T.y[i], bx = T.x[i + 1], by = T.y[i + 1];
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+    let t = l2 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const qx = ax + t * dx, qy = ay + t * dy;
+    const dist = Math.hypot(px - qx, py - qy);
+    cands.push({ i, t, dist, km: T.d[i] + t * (T.d[i + 1] - T.d[i]) });
+  }
+  const dmin = Math.min(...cands.map(c => c.dist));
+  const score = c => kmPrec == null
+    ? c.dist + (c.dist <= dmin + 30 ? c.km * 0.001 : 1e6)          // départ : le plus petit km parmi les proches
+    : c.dist + (c.km >= kmPrec ? (c.km - kmPrec) * 50 : (kmPrec - c.km) * 400);  // avancer de 1 km = 50 m, reculer = 400 m
+  return cands.reduce((a, b) => score(b) < score(a) ? b : a);
+}
+
+/* Position sur le tracé à partir d'un km */
+function depuisKm(km) {
+  km = Math.max(T.d[0], Math.min(T.total, km));
+  let i = 0;
+  while (i < T.n - 2 && T.d[i + 1] < km) i++;
+  const span = T.d[i + 1] - T.d[i];
+  const t = span > 0 ? (km - T.d[i]) / span : 0;
+  return { i, t, km, dist: 0 };
+}
+
+/* Valeurs du cartouche pour une position {i, t, km} */
+function mesures(pos) {
+  const { i, t } = pos;
+  const alt = T.a[i] + t * (T.a[i + 1] - T.a[i]);
+  const lat = T.la[i] + t * (T.la[i + 1] - T.la[i]);
+  const lon = T.lo[i] + t * (T.lo[i + 1] - T.lo[i]);
+  let dplus = Math.max(0, T.a[i + 1] - alt);
+  for (let k = i + 1; k < T.n - 1; k++) dplus += Math.max(0, T.a[k + 1] - T.a[k]);
+  let hMax = alt, hKm = pos.km;
+  for (let k = i + 1; k < T.n; k++) if (T.a[k] > hMax) { hMax = T.a[k]; hKm = T.d[k]; }
+  return { km: pos.km, reste: Math.max(0, T.total - pos.km), alt, pente: T.s[i], dplus, hMax, hKm, lat, lon };
+}
+
+/* ══ ÉTAT ══ */
+let mode = "gps";          // "gps" | "point"
+let posGps = null;         // dernière position accrochée {i,t,km,dist,lat,lon,acc}
+let kmGps = null;          // km retenu pour la continuité
+let posPoint = null;       // point choisi {i,t,km}
+let suivre = true;         // la carte suit la position GPS
+let gpsRefuse = false;
+
+/* ══ CARTE ══ */
+let carte = null, couchePoint = null, coucheFait = null, coucheGps = null, coucheAcc = null, coucheLien = null, coucheAccroche = null;
+
+/* Tuiles : cache d'abord (préparation hors réseau), réseau ensuite, mise en cache au passage */
+async function chargerTuile(url) {
+  try {
+    if (window.caches) {
+      const hit = await caches.match(url);
+      if (hit) return URL.createObjectURL(await hit.blob());
+    }
+    const r = await fetch(url, { mode: "cors" });
+    if (r.ok) {
+      if (window.caches) caches.open(nomCache()).then(c => c.put(url, r.clone())).catch(() => {});
+      return URL.createObjectURL(await r.blob());
+    }
+  } catch (e) { /* hors réseau ou CORS refusé : repli sur chargement direct */ }
+  return url;
+}
+
+function initCarte() {
+  if (typeof L === "undefined") { $("sans-carte").style.display = "grid"; $("btn-centre").classList.add("cache"); return; }
+  const TuilesIGN = L.TileLayer.extend({
+    createTile(coords, done) {
+      const img = document.createElement("img");
+      img.alt = ""; img.setAttribute("role", "presentation");
+      chargerTuile(this.getTileUrl(coords)).then(src => {
+        img.onload = () => { if (src.startsWith("blob:")) URL.revokeObjectURL(src); done(null, img); };
+        img.onerror = e => done(e, img);
+        img.src = src;
+      });
+      return img;
+    }
+  });
+  carte = L.map("carte", { zoomControl: false, attributionControl: true });
+  L.control.zoom({ position: "topright" }).addTo(carte);
+  new TuilesIGN(URL_TUILE, { minZoom: 6, maxZoom: 18, maxNativeZoom: 16, tileSize: 256,
+    attribution: '© <a href="https://www.ign.fr" target="_blank" rel="noopener">IGN</a> Plan IGN' }).addTo(carte);
+
+  /* Tracé coloré selon la pente (segments consécutifs de même couleur regroupés) */
+  const pts = T.la.map((la, k) => [la, T.lo[k]]);
+  L.polyline(pts, { color: "#fff", weight: 8, opacity: .9, interactive: false }).addTo(carte);
+  let debut = 0;
+  for (let k = 1; k < T.n; k++) {
+    const c = couleurPente(T.s[debut]);
+    if (k === T.n - 1 || couleurPente(T.s[k]) !== c) {
+      L.polyline(pts.slice(debut, k + 1), { color: c, weight: 5, opacity: 1, interactive: false }).addTo(carte);
+      debut = k;
+    }
+  }
+  coucheFait = L.polyline([], { color: "#555", weight: 5.5, opacity: .7, interactive: false }).addTo(carte);
+
+  /* Départ / arrivée */
+  L.circleMarker(pts[0], { radius: 7, color: "#fff", weight: 2, fillColor: "#2d6a4f", fillOpacity: 1 })
+    .bindTooltip("Départ", { direction: "right", offset: [8, 0] }).addTo(carte);
+  const [ex, ey] = [T.x[T.n - 1], T.y[T.n - 1]];
+  if (Math.hypot(ex, ey) > 150)
+    L.circleMarker(pts[T.n - 1], { radius: 7, color: "#fff", weight: 2, fillColor: "#b02a37", fillOpacity: 1 })
+      .bindTooltip("Arrivée", { direction: "right", offset: [8, 0] }).addTo(carte);
+
+  coucheAcc = L.circle(pts[0], { radius: 1, color: "#1a73e8", weight: 1, opacity: .5, fillColor: "#1a73e8", fillOpacity: .15, interactive: false });
+  coucheGps = L.circleMarker(pts[0], { radius: 8, color: "#fff", weight: 2.5, fillColor: "#1a73e8", fillOpacity: 1, interactive: false });
+  coucheLien = L.polyline([], { color: "#1a73e8", weight: 2, dashArray: "5 4", interactive: false });
+  coucheAccroche = L.circleMarker(pts[0], { radius: 5, color: "#1a73e8", weight: 2, fillColor: "#fff", fillOpacity: 1, interactive: false });
+  couchePoint = L.circleMarker(pts[0], { radius: 8, color: "#fff", weight: 2.5, fillColor: "#e8590c", fillOpacity: 1, interactive: false });
+
+  carte.fitBounds(L.latLngBounds(pts), { padding: [24, 24] });
+  carte.on("dragstart", () => { suivre = false; });
+  carte.on("click", e => {
+    const p = accrocher(e.latlng.lat, e.latlng.lng, null);
+    if (p.dist <= 300) choisirPoint(p.km);
+  });
+}
+
+/* ══ PROFIL (canvas) ══ */
+const cv = $("profil");
+const PAD = { l: 34, r: 8, t: 10, b: 16 };
+function dessinerProfil(kmCurseur, couleurCurseur) {
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+  const aMin = Math.min(...T.a), aMax = Math.max(...T.a), ecart = Math.max(20, aMax - aMin);
+  const X = km => PAD.l + (km - T.d[0]) / (T.total - T.d[0] || 1) * (W - PAD.l - PAD.r);
+  const Y = a => PAD.t + (1 - (a - aMin) / ecart) * (H - PAD.t - PAD.b);
+  for (let k = 0; k < T.n - 1; k++) {
+    c.fillStyle = couleurPente(T.s[k]); c.globalAlpha = .85;
+    c.beginPath(); c.moveTo(X(T.d[k]), Y(T.a[k])); c.lineTo(X(T.d[k + 1]), Y(T.a[k + 1]));
+    c.lineTo(X(T.d[k + 1]), H - PAD.b); c.lineTo(X(T.d[k]), H - PAD.b); c.closePath(); c.fill();
+  }
+  c.globalAlpha = 1; c.strokeStyle = "#222"; c.lineWidth = 1.3; c.beginPath();
+  T.d.forEach((d, k) => k ? c.lineTo(X(d), Y(T.a[k])) : c.moveTo(X(d), Y(T.a[k]))); c.stroke();
+  /* graduations */
+  c.fillStyle = "#777"; c.font = "10px system-ui, sans-serif"; c.textBaseline = "alphabetic";
+  const pas = T.total > 16 ? 5 : T.total > 6 ? 2 : 1;
+  for (let k = 0; k <= T.total + 1e-9; k += pas) { c.textAlign = "center"; c.fillText(String(k), Math.min(W - 8, Math.max(PAD.l, X(k))), H - 4); }
+  c.textAlign = "right"; c.fillText(Math.round(aMax) + " m", PAD.l - 4, PAD.t + 8); c.fillText(Math.round(aMin) + " m", PAD.l - 4, H - PAD.b);
+  if (kmCurseur == null) return;
+  /* partie parcourue voilée + curseur */
+  c.fillStyle = "rgba(255,255,255,.55)"; c.fillRect(PAD.l, 0, X(kmCurseur) - PAD.l, H - PAD.b);
+  const m = mesures(depuisKm(kmCurseur));
+  c.strokeStyle = couleurCurseur; c.lineWidth = 2; c.beginPath(); c.moveTo(X(kmCurseur), 2); c.lineTo(X(kmCurseur), H - PAD.b); c.stroke();
+  c.fillStyle = couleurCurseur; c.beginPath(); c.arc(X(kmCurseur), Y(m.alt), 4.5, 0, 2 * Math.PI); c.fill();
+  c.strokeStyle = "#fff"; c.lineWidth = 1.5; c.stroke();
+}
+function kmDepuisX(clientX) {
+  const r = cv.getBoundingClientRect();
+  const k = (clientX - r.left - PAD.l) / (r.width - PAD.l - PAD.r);
+  return T.d[0] + Math.max(0, Math.min(1, k)) * (T.total - T.d[0]);
+}
+let glisse = false;
+cv.addEventListener("pointerdown", e => { if (!T) return; glisse = true; cv.setPointerCapture(e.pointerId); choisirPoint(kmDepuisX(e.clientX)); });
+cv.addEventListener("pointermove", e => { if (glisse) choisirPoint(kmDepuisX(e.clientX)); });
+cv.addEventListener("pointerup",   () => { glisse = false; });
+cv.addEventListener("pointercancel", () => { glisse = false; });
+
+/* ══ AFFICHAGE ══ */
+function majCartouche(m) {
+  $("v-fait").textContent  = f1(m.km);
+  $("v-reste").textContent = f1(m.reste);
+  $("v-alt").innerHTML     = Math.round(m.alt) + "<small> m</small>";
+  $("v-pente").innerHTML   = (m.pente > 0 ? "+" : "") + Math.round(m.pente) + "<small> %</small>";
+  const tp = $("t-pente"); tp.style.background = couleurPente(m.pente); tp.style.color = texteSurPente(m.pente);
+  $("v-dplus").textContent = Math.round(m.dplus) + " m";
+  $("v-max").textContent   = Math.round(m.hMax) + " m à " + f1(m.hKm) + " km";
+  $("barre").style.width   = Math.min(100, (m.km - T.d[0]) / (T.total - T.d[0] || 1) * 100) + "%";
+}
+
+function rafraichir() {
+  const pos = mode === "gps" ? posGps : posPoint;
+  $("m-gps").classList.toggle("on", mode === "gps");
+  $("m-point").classList.toggle("on", mode === "point");
+  const hors = mode === "gps" && posGps && posGps.dist > SEUIL_HORS;
+  const al = $("alerte-trace");
+  al.style.display = hors ? "block" : "none";
+  if (hors) al.textContent = "⚠️ Hors tracé — " + Math.round(posGps.dist) + " m du chemin";
+
+  if (!pos) {
+    ["v-fait", "v-reste", "v-alt", "v-pente", "v-dplus", "v-max"].forEach(k => $(k).textContent = "–");
+    $("t-pente").style.background = ""; $("t-pente").style.color = ""; $("barre").style.width = "0";
+    dessinerProfil(null);
+  } else {
+    const m = mesures(pos);
+    majCartouche(m);
+    dessinerProfil(pos.km, mode === "gps" ? "#1a73e8" : "#e8590c");
+    if (carte) {
+      const parcours = [];
+      for (let k = 0; k <= pos.i; k++) parcours.push([T.la[k], T.lo[k]]);
+      parcours.push([m.lat, m.lon]);
+      coucheFait.setLatLngs(parcours);
+      if (mode === "point") couchePoint.setLatLng([m.lat, m.lon]).addTo(carte); else couchePoint.remove();
+      if (mode === "gps" && hors) {
+        coucheAccroche.setLatLng([m.lat, m.lon]).addTo(carte);
+        coucheLien.setLatLngs([[posGps.lat, posGps.lon], [m.lat, m.lon]]).addTo(carte);
+      } else { coucheAccroche.remove(); coucheLien.remove(); }
+    }
+  }
+  if (carte && posGps) {
+    coucheAcc.setLatLng([posGps.lat, posGps.lon]).setRadius(posGps.acc || 1).addTo(carte);
+    coucheGps.setLatLng([posGps.lat, posGps.lon]).addTo(carte);
+    coucheGps.bringToFront();
+  }
+}
+
+function choisirPoint(km) {
+  posPoint = depuisKm(km);
+  mode = "point";
+  rafraichir();
+}
+
+function passerGps() {
+  if (gpsRefuse) { badge("○ GPS non autorisé — mode consultation", "alerte"); return; }
+  mode = "gps"; suivre = true;
+  if (carte && posGps) carte.setView([posGps.lat, posGps.lon], Math.max(carte.getZoom(), 15));
+  rafraichir();
+}
+
+function badge(texte, classe) { const b = $("badge-gps"); b.textContent = texte; b.className = "badge-gps " + (classe || ""); }
+
+/* ══ GPS ══ */
+function demarrerGps() {
+  if (!("geolocation" in navigator)) { gpsRefuse = true; badge("○ GPS indisponible — mode consultation", "alerte"); return; }
+  navigator.geolocation.watchPosition(pos => {
+    const { latitude: lat, longitude: lon, accuracy: acc } = pos.coords;
+    const p = accrocher(lat, lon, kmGps);
+    posGps = { ...p, lat, lon, acc };
+    if (p.dist <= SEUIL_HORS) kmGps = p.km;           // la continuité ne retient que les positions sur le tracé
+    badge("● GPS ±" + Math.round(acc) + " m", acc > 50 ? "alerte" : "");
+    if (carte && mode === "gps" && suivre) carte.panTo([lat, lon], { animate: true });
+    rafraichir();
+  }, err => {
+    if (err.code === 1) { gpsRefuse = true; badge("○ GPS non autorisé — mode consultation", "alerte");
+      if (mode === "gps") choisirPoint(posPoint ? posPoint.km : T.d[0]); }
+    else badge("○ Signal GPS faible…", "attente");
+  }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 30000 });
+}
+
+/* ══ PRÉPARATION HORS RÉSEAU ══ */
+function tuilesZone() {
+  /* marge autour du tracé : 500 m aux zooms détaillés, 3 km aux zooms d'ensemble (peu d'images) */
+  const marge = z => z >= 15 ? 500 : 3000;
+  const tx = (lon, z) => Math.floor((lon + 180) / 360 * 2 ** z);
+  const ty = (lat, z) => { const r = lat * Math.PI / 180; return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z); };
+  const liste = zMax => {
+    const l = [];
+    for (let z = ZOOM_PREP_MIN; z <= zMax; z++) {
+      const dLat = marge(z) / 110540, dLon = marge(z) / T.kx;
+      const s = Math.min(...T.la) - dLat, n = Math.max(...T.la) + dLat;
+      const w = Math.min(...T.lo) - dLon, e = Math.max(...T.lo) + dLon;
+      for (let x = tx(w, z); x <= tx(e, z); x++)
+        for (let y = ty(n, z); y <= ty(s, z); y++) l.push({ z, x, y });
+    }
+    return l;
+  };
+  let l = liste(ZOOM_PREP_MAX);
+  if (l.length > MAX_TUILES) l = liste(ZOOM_PREP_MAX - 1);
+  return l;
+}
+const urlDe = t => URL_TUILE.replace("{z}", t.z).replace("{x}", t.x).replace("{y}", t.y);
+
+function afficherEtatPrep() {
+  const prep = lsGet("carte-prep-" + ID);
+  if (prep) {
+    const d = new Date(prep.le);
+    $("etat-prep").textContent = "✅ Prête hors réseau (" + d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }) +
+      " " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + (prep.erreurs ? ", " + prep.erreurs + " manquantes" : "") + ")";
+    $("btn-prep").textContent = "🔄 Mettre à jour";
+  } else {
+    const nb = tuilesZone().length;
+    $("etat-prep").textContent = "≈ " + nb + " images, " + Math.max(1, Math.round(nb * 25 / 1024)) + " Mo — à faire avant de partir";
+  }
+}
+
+async function preparer() {
+  if (!window.caches) { $("etat-prep").textContent = "⚠️ Ce navigateur ne permet pas la préparation."; return; }
+  if (!navigator.onLine) { $("etat-prep").textContent = "⚠️ Pas de réseau : préparez la carte en wifi ou 4G."; return; }
+  const btn = $("btn-prep"), prog = $("prog"), etat = $("etat-prep");
+  btn.disabled = true; prog.style.display = "block";
+  const cache = await caches.open(nomCache());
+  /* 1. La page et la carte (Leaflet) pour pouvoir rouvrir sans réseau */
+  const base = location.origin + location.pathname.replace(/[^/]*$/, "");
+  for (const u of [urlPage(), base + "js/lib/leaflet/leaflet.js", base + "js/lib/leaflet/leaflet.css"]) {
+    try { const r = await fetch(u, { cache: "reload" }); if (r.ok) await cache.put(u, r); } catch (e) {}
+  }
+  /* 2. Les tuiles, 4 à la fois, sans brusquer le serveur IGN */
+  const liste = tuilesZone();
+  let fait = 0, erreurs = 0, idx = 0;
+  prog.max = liste.length; prog.value = 0;
+  const travailleur = async () => {
+    while (idx < liste.length) {
+      const u = urlDe(liste[idx++]);
+      try {
+        if (!(await caches.match(u))) {
+          const r = await fetch(u, { mode: "cors" });
+          if (r.ok) await cache.put(u, r); else erreurs++;
+          await new Promise(res => setTimeout(res, 120));
+        }
+      } catch (e) { erreurs++; }
+      fait++; prog.value = fait; etat.textContent = "Téléchargement… " + fait + " / " + liste.length;
+    }
+  };
+  await Promise.all([travailleur(), travailleur(), travailleur(), travailleur()]);
+  prog.style.display = "none"; btn.disabled = false;
+  if (erreurs === liste.length) {
+    etat.textContent = "⚠️ Échec du téléchargement de la carte (serveur IGN injoignable ou refusé). Le suivi GPS reste utilisable.";
+    return;
+  }
+  lsSet("carte-prep-" + ID, { le: new Date().toISOString(), tuiles: liste.length - erreurs, erreurs });
+  afficherEtatPrep();
+}
+
+/* ══ FERMETURE ══ */
+$("btn-fermer").addEventListener("click", () => {
+  window.close();
+  setTimeout(() => { location.href = "goanim.html?id=" + ID; }, 300);   // si l'onglet ne peut pas être fermé
+});
+
+/* ══ DÉMARRAGE ══ */
+(async function () {
+  if (!Number.isInteger(ID) || ID <= 0) { afficherMessage("Fiche introuvable."); return; }
+  /* Service worker dédié (portée : carte.html seulement) : rouvrir la page préparée sans réseau */
+  if ("serviceWorker" in navigator && ["lamarmotterando.github.io", "localhost"].includes(location.hostname))
+    navigator.serviceWorker.register("/randoFDR/sw-carte.js", { scope: "/randoFDR/carte.html" }).catch(() => {});
+  purgerAnciennes();
+
+  let D;
+  try { D = await chargerDonnees(); }
+  catch (e) { afficherMessage("Impossible de charger la randonnée.<br>Vérifiez la connexion, ou préparez la carte avant de partir."); return; }
+
+  $("titre").textContent = D.nom || "Carte de suivi";
+  if (!D.p) {
+    afficherMessage(CLE_CLUB
+      ? "Le tracé de cette randonnée n'est pas disponible.<br>Il est enregistré quand l'animateur joint le fichier GPX en créant la feuille de route."
+      : "La carte de suivi est réservée aux membres.<br>Ouvrez-la depuis la fiche, dans l'espace membres du site.");
+    $("sous-titre").textContent = "";
+    return;
+  }
+  preparerTrace(D.p);
+  let dplus = 0; for (let k = 0; k < T.n - 1; k++) dplus += Math.max(0, T.a[k + 1] - T.a[k]);
+  const dt = D.date ? new Date(D.date + "T12:00:00") : null;
+  $("sous-titre").textContent = [dt && !isNaN(dt) ? dt.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long" }) : "",
+    f1(T.total) + " km", "D+ " + Math.round(dplus) + " m", D.horsLigne ? "hors réseau" : "",
+    D.statut === "annulée" ? "❌ ANNULÉE" : ""].filter(Boolean).join(" · ");
+
+  $("app").classList.remove("cache");
+  initCarte();
+  afficherEtatPrep();
+  $("btn-prep").addEventListener("click", preparer);
+  $("m-gps").addEventListener("click", passerGps);
+  $("m-point").addEventListener("click", () => choisirPoint(posPoint ? posPoint.km : (posGps ? posGps.km : T.d[0])));
+  $("btn-centre").addEventListener("click", passerGps);
+  window.addEventListener("resize", () => { if (carte) carte.invalidateSize(); rafraichir(); });
+
+  if (Number.isFinite(KM_INITIAL)) choisirPoint(KM_INITIAL); else rafraichir();
+  demarrerGps();
+})();
+</script>
+</body>
+</html>
