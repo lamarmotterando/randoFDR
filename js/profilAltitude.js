@@ -28,7 +28,7 @@ async function lireGPX(event){
   const xml = parser.parseFromString(text,"text/xml")
   const points = [...xml.getElementsByTagName("trkpt")]
 
-  let distances=[], altitudes=[], slopes=[], totalDist=0, totalDplus=0
+  let distances=[], altitudes=[], slopes=[], lats=[], lons=[], totalDist=0, totalDplus=0
   let tDebut=null, tFin=null  // timestamps GPX pour durée exacte
 
   for(let i=1;i<points.length;i++){
@@ -50,6 +50,8 @@ async function lireGPX(event){
     distances.push(totalDist)
     altitudes.push(ele2)
     slopes.push(pente)
+    lats.push(lat2)
+    lons.push(lon2)
   }
 
   /* Timestamps GPX : lire premier et dernier point */
@@ -62,13 +64,16 @@ async function lireGPX(event){
   }
 
   /* sous-échantillonnage uniforme 300 pts */
-  const { d, a, s } = souséchantillonner(distances, altitudes, slopes, 300)
+  const { d, a, s, la, lo } = souséchantillonner(distances, altitudes, slopes, 300, lats, lons)
 
-  /* Données du profil (arrondies) exposées pour envoi vers la fonction "profil" (affichage interactif goanim) */
+  /* Données du profil (arrondies) exposées pour envoi vers la fonction "profil"
+     (affichage interactif goanim + carte de suivi : la/lo = coordonnées du tracé, ~1 m) */
   window.profilData = {
     d: d.map(v => Math.round(v * 1000) / 1000),
     a: a.map(v => Math.round(v * 10) / 10),
-    s: s.map(v => Math.round(v * 10) / 10)
+    s: s.map(v => Math.round(v * 10) / 10),
+    la: la.map(v => Math.round(v * 1e5) / 1e5),
+    lo: lo.map(v => Math.round(v * 1e5) / 1e5)
   }
 
   /* 1. Affichage interactif Chart.js */
@@ -268,15 +273,16 @@ function buildLabel(){
   return [nom, dateStr, animOk].filter(Boolean).join("  •  ")
 }
 
-function souséchantillonner(dist, alt, slopes, max){
+function souséchantillonner(dist, alt, slopes, max, lats=[], lons=[]){
   const n = dist.length
-  if(n <= max) return { d: dist, a: alt, s: slopes }
-  const d=[], a=[], s=[]
+  if(n <= max) return { d: dist, a: alt, s: slopes, la: lats, lo: lons }
+  const d=[], a=[], s=[], la=[], lo=[]
   for(let i=0; i<max; i++){
     const idx = Math.round(i * (n-1) / (max-1))
     d.push(dist[idx]); a.push(alt[idx]); s.push(slopes[idx])
+    la.push(lats[idx]); lo.push(lons[idx])
   }
-  return { d, a, s }
+  return { d, a, s, la, lo }
 }
 
 function haversine(lat1,lon1,lat2,lon2){
