@@ -703,7 +703,9 @@ function afficher(f, tel, main) {
   if (rv) html += `<div class="ligne" style="margin-top:8px;"><span class="lbl">⏰ RV :</span><span class="val">${rv} → 🏁 Départ ${depart}</span></div>`;
   html += `<hr class="sep">`;
   html += L("🅿️ Covoiturage", f.parking_covoit);
-  const kmCovoit = extraireTotal(f.couts) !== null ? Math.round(extraireTotal(f.couts) / 0.3) : null;
+  /* km A/R écrits dans le coût depuis 10/2026 (« … · 118 km A/R ») ; sinon fiche ancienne, calculée à 0,30 €/km */
+  const kmEcrits = String(f.couts || "").match(/(\d+)\s*km/i);
+  const kmCovoit = kmEcrits ? parseInt(kmEcrits[1], 10) : (extraireTotal(f.couts) !== null ? Math.round(extraireTotal(f.couts) / 0.3) : null);
   if (kmCovoit) html += `<div class="ligne"><span class="lbl">📏 Trajet A/R :</span><span class="val" style="font-weight:700;color:#1a3a5c;">≈ ${kmCovoit} km</span></div>`;
   html += L("🏁 Parking départ", f.parking_depart);
   if (f.gps) {
