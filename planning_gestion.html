@@ -1724,24 +1724,41 @@ async function exportLoad() {
   if (!from || !to) { showToast("Veuillez saisir une date de début et de fin.", true); return; }
   tbody.innerHTML = "<tr><td colspan='7' class='empty-state'>Chargement…</td></tr>"; btn.disabled = true; count.textContent = "—"; exportData = [];
   try {
-    const url = SUPABASE_URL + "/rest/v1/fiches?select=date_rando,nom_rando,ibp,distance,denivele,animateur&date_rando=gte." + from + "&date_rando=lte." + to + "&statut=neq.annulée&order=date_rando.asc";
+    const url = SUPABASE_URL + "/rest/v1/fiches?select=date_rando,nom_rando,ibp,distance,denivele,animateur,nb_participants,noms_participants&date_rando=gte." + from + "&date_rando=lte." + to + "&statut=neq.annulée&order=date_rando.asc";
     const res = await fetch(url, { headers: await authHeaders() }); if (!res.ok) throw new Error("HTTP " + res.status);
     exportData = await res.json(); renderExportTable(exportData);
   } catch(e) { tbody.innerHTML = "<tr><td colspan='7' class='empty-state'>Erreur : " + e.message + "</td></tr>"; showToast("Erreur réseau.", true); }
 }
+/* Participants (nombre et noms) : seulement si la case est cochée — données personnelles, usage interne */
+function exportAvecParticipants() { return !!document.getElementById("export-participants")?.checked; }
+function escHtmlExport(v) { return String(v ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }
 function renderExportTable(data) {
   const tbody = document.getElementById("export-body"); const count = document.getElementById("export-count"); const btn = document.getElementById("btn-dl-csv");
-  if (!data.length) { tbody.innerHTML = "<tr><td colspan='7' class='empty-state'>Aucune randonnée sur cette période.</td></tr>"; count.textContent = "0 randonnée"; btn.disabled = true; return; }
-  tbody.innerHTML = data.map(r => "<tr><td style='text-transform:capitalize;font-weight:600;color:#2d6a4f'>" + (jourSemaine(r.date_rando)||"—") + "</td><td>" + (toDisplay(r.date_rando)||"—") + "</td><td><strong>" + (r.nom_rando||"—") + "</strong></td><td>" + (r.ibp!=null?r.ibp:"—") + "</td><td>" + (r.distance!=null?r.distance+" km":"—") + "</td><td>" + (r.denivele!=null?r.denivele+" m":"—") + "</td><td>" + (r.animateur||"—") + "</td></tr>").join("");
+  const avecP = exportAvecParticipants();
+  document.querySelectorAll(".col-participants").forEach(el => el.style.display = avecP ? "" : "none");
+  const nbCol = avecP ? 9 : 7;
+  if (!data.length) { tbody.innerHTML = "<tr><td colspan='" + nbCol + "' class='empty-state'>Aucune randonnée sur cette période.</td></tr>"; count.textContent = "0 randonnée"; btn.disabled = true; return; }
+  tbody.innerHTML = data.map(r => "<tr><td style='text-transform:capitalize;font-weight:600;color:#2d6a4f'>" + (jourSemaine(r.date_rando)||"—") + "</td><td>" + (toDisplay(r.date_rando)||"—") + "</td><td><strong>" + escHtmlExport(r.nom_rando||"—") + "</strong></td><td>" + (r.ibp!=null?r.ibp:"—") + "</td><td>" + (r.distance!=null?r.distance+" km":"—") + "</td><td>" + (r.denivele!=null?r.denivele+" m":"—") + "</td><td>" + escHtmlExport(r.animateur||"—") + "</td>" +
+    (avecP ? "<td>" + (r.nb_participants!=null?r.nb_participants:"—") + "</td><td style='font-size:.8rem'>" + escHtmlExport(r.noms_participants||"—") + "</td>" : "") + "</tr>").join("");
   count.textContent = data.length + " randonnée" + (data.length > 1 ? "s" : ""); btn.disabled = false;
+}
+/* Case « participants » : réaffiche l'aperçu (script module → écouteur ajouté ici, pas en attribut HTML) */
+document.getElementById("export-participants")?.addEventListener("change", () => { if (exportData.length) renderExportTable(exportData); });
+/* Cellule CSV : guillemets si ; " ou retour à la ligne ; neutralise les formules (= + - @) à l'ouverture dans un tableur */
+function celluleCSV(v) {
+  let t = String(v ?? "").replace(/\r?\n/g, " ");
+  if (/^[=+\-@]/.test(t)) t = "'" + t;
+  return /[;"]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
 }
 function exportCSV() {
   if (!exportData.length) return;
-  const sep = ";"; const header = ["Jour","Date","Destination","IBP","Km","Dénivelé","Animateur"].join(sep);
-  const rows = exportData.map(r => [jourSemaine(r.date_rando)||"",toDisplay(r.date_rando)||"",r.nom_rando||"",r.ibp!=null?r.ibp:"",r.distance!=null?r.distance:"",r.denivele!=null?r.denivele:"",r.animateur||""].join(sep));
+  const sep = ";"; const avecP = exportAvecParticipants();
+  const header = ["Jour","Date","Destination","IBP","Km","Dénivelé","Animateur"].concat(avecP ? ["Participants","Noms des participants"] : []).join(sep);
+  const rows = exportData.map(r => [jourSemaine(r.date_rando)||"",toDisplay(r.date_rando)||"",r.nom_rando||"",r.ibp!=null?r.ibp:"",r.distance!=null?r.distance:"",r.denivele!=null?r.denivele:"",r.animateur||""]
+    .concat(avecP ? [r.nb_participants!=null?r.nb_participants:"", r.noms_participants||""] : []).map(celluleCSV).join(sep));
   const blob = new Blob(["\uFEFF" + [header, ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-  a.download = "randos_" + document.getElementById("export-from").value + "_" + document.getElementById("export-to").value + ".csv";
+  a.download = "randos_" + document.getElementById("export-from").value + "_" + document.getElementById("export-to").value + (avecP ? "_participants" : "") + ".csv";
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
@@ -1749,15 +1766,19 @@ function exportCSV() {
 
 <div id="modal-export">
   <div class="mex-inner">
-    <h3>📤 Export randos prévisionnelles</h3>
+    <h3>📤 Export des randos</h3>
     <div class="mex-filters">
       <div class="form-group"><label for="export-from">Date début</label><input type="date" id="export-from"></div>
       <div class="form-group"><label for="export-to">Date fin</label><input type="date" id="export-to"></div>
       <button class="btn btn-primary" onclick="exportLoad()" style="align-self:end">Charger</button>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;margin:-8px 0 14px;cursor:pointer">
+      <input type="checkbox" id="export-participants">
+      Inclure les participants (nombre et noms) — <em style="color:#b02a37">données personnelles, usage interne au club</em>
+    </label>
     <div class="mex-scroll table-wrap">
       <table>
-        <thead><tr><th>Jour</th><th>Date</th><th>Destination</th><th>IBP</th><th>Km</th><th>Dénivelé</th><th>Animateur</th></tr></thead>
+        <thead><tr><th>Jour</th><th>Date</th><th>Destination</th><th>IBP</th><th>Km</th><th>Dénivelé</th><th>Animateur</th><th class="col-participants" style="display:none">Participants</th><th class="col-participants" style="display:none">Noms</th></tr></thead>
         <tbody id="export-body"><tr><td colspan="7" class="empty-state">Choisir une plage de dates puis cliquer sur Charger</td></tr></tbody>
       </table>
     </div>
