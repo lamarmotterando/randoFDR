@@ -54,6 +54,14 @@ function afficherPopup({ icone, titre, message, couleur = "#c1440e", bouton = "O
 /* ══════════════════════════════════════
    COLLECTE DES DONNÉES
 ══════════════════════════════════════ */
+/* Coût total + km A/R (ex. « 35.40 € · 118 km A/R ») : goanim lit les km sans dépendre du prix du km */
+function coutsAvecKm(cout) {
+  if (!cout) return "";
+  const el = document.getElementById("distanceAR");
+  const km = parseFloat(el ? (el.tagName === "INPUT" ? el.value : el.textContent) : "") || 0;
+  return km > 0 ? `${cout} · ${Math.round(km)} km A/R` : cout;
+}
+
 function collecterFiche(profilPNG) {
   const val = id => document.getElementById(id)?.value?.trim() || "";
   const txt = id => document.getElementById(id)?.textContent?.trim() || "";
@@ -79,7 +87,7 @@ function collecterFiche(profilPNG) {
     effort:         parseInt(txt("effort"))          || parseInt(val("effort_manuel"))          || null,
     technicite:     parseInt(val("technicite"))      || null,
     risque:         parseInt(val("risque"))           || null,
-    couts:          txt("coutTotal")                 || null,
+    couts:          coutsAvecKm(txt("coutTotal"))    || null,
     remarques:      val("remarques")                 || null,
     profil_png:     profilPNG                        || null,
     statut:         "publiée",
