@@ -210,7 +210,12 @@ async function charger() {
   const fiche = parseInt($("f-fiche").value);
   if (fiche > 0) q = q.eq("fiche_id", fiche);
   const { data, error } = await q;
-  if (error) { $("summary").innerHTML = ""; $("rows").innerHTML = ""; $("vide").textContent = "Erreur de lecture : " + error.message; $("vide").classList.remove("hidden"); return; }
+  if (error) {
+    /* Session expirée (ordinateur en veille, onglet resté ouvert) : retour à l'écran de connexion */
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.app_metadata?.role !== "admin") { location.reload(); return; }
+    $("summary").innerHTML = ""; $("rows").innerHTML = ""; $("vide").textContent = "Erreur de lecture : " + error.message; $("vide").classList.remove("hidden"); return;
+  }
   lignes = data || [];
   await chargerRandos();
   $("maj").textContent = "Actualisé à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + " · auto toutes les 4 h";
@@ -296,6 +301,8 @@ setInterval(async () => {
   if (session?.user?.app_metadata?.role === "admin") charger();
   else location.reload();
 }, QUATRE_HEURES);
+/* Déconnexion (jeton non renouvelé après une longue veille) : retour à l'écran de connexion */
+supabase.auth.onAuthStateChange(evt => { if (evt === "SIGNED_OUT" && !$("app").classList.contains("hidden")) location.reload(); });
 $("f-periode").onchange = charger;
 $("f-fiche").onchange = charger;
 $("f-type").onchange = afficher;
