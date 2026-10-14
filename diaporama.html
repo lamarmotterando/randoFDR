@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diaporama</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  #photo2 { opacity: 0; }
+  #photo2.show { opacity: 1; animation: zoomX2 0.2s ease-out forwards; }
+  @keyframes zoomX2 { from { transform: scale(1); } to { transform: scale(2); } }
+  #photo1.hide { opacity: 0; }
+  #start {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.85); color: #fff; font: 2rem sans-serif; cursor: pointer; z-index: 10;
+  }
+</style>
+</head>
+<body>
+
+<img id="photo1" src="https://4daa6d2630.clvaw-cdnwnd.com/741f49be6a100aa3511b42717174f0f1/200003974-1983319835/n-b.webp?ph=4daa6d2630" alt="">
+<img id="photo2" src="https://4daa6d2630.clvaw-cdnwnd.com/741f49be6a100aa3511b42717174f0f1/200003972-daa9edaaa0/rouge.webp?ph=4daa6d2630" alt="">
+<audio id="son" src="https://4daa6d2630.clvaw-cdnwnd.com/741f49be6a100aa3511b42717174f0f1/200003975-a98aea98b0/universfield-male-scream-121085.mp3?ph=4daa6d2630" preload="auto"></audio>
+
+<div id="start">▶ Cliquer pour démarrer</div>
+
+<script>
+  const DUREE = 10000;  // apparition de la photo 2 (ms)
+  const OFFSET = -800;  // décalage du son (ms) : négatif = avant la photo 2
+
+  document.getElementById('start').addEventListener('click', function () {
+    this.remove();
+    const son = document.getElementById('son');
+    // "Débloque" l'audio grâce au clic (exigé par les navigateurs)
+    son.play().then(() => { son.pause(); son.currentTime = 0; }).catch(() => {});
+
+    setTimeout(() => {
+      document.getElementById('photo1').classList.add('hide');
+      document.getElementById('photo2').classList.add('show');
+    }, DUREE);
+
+    setTimeout(() => son.play(), DUREE + OFFSET);
+  }, { once: true });
+</script>
+
+</body>
+</html>
