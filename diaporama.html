@@ -18,11 +18,22 @@
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     background: rgba(0,0,0,.85); color: #fff; font: 2rem sans-serif; cursor: pointer; z-index: 10;
   }
+  #bandeau {
+    position: absolute; bottom: 5%; left: 0; width: 100%;
+    overflow: hidden; background: rgba(0,0,0,.6); padding: .5em 0; z-index: 5;
+  }
+  #bandeau span {
+    display: inline-block; white-space: nowrap; padding-left: 100%;
+    color: #fff; font: bold 2rem sans-serif;
+    animation: defile 30s linear infinite;
+  }
+  @keyframes defile { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 </style>
 </head>
 <body>
 
 <img id="photo1" src="https://4daa6d2630.clvaw-cdnwnd.com/741f49be6a100aa3511b42717174f0f1/200003974-1983319835/n-b.webp?ph=4daa6d2630" alt="">
+<div id="bandeau"><span>Approchez vous lentement de l'image ....</span></div>
 <img id="photo2" src="https://4daa6d2630.clvaw-cdnwnd.com/741f49be6a100aa3511b42717174f0f1/200003972-daa9edaaa0/rouge.webp?ph=4daa6d2630" alt="">
 <audio id="son" src="https://4daa6d2630.clvaw-cdnwnd.com/741f49be6a100aa3511b42717174f0f1/200003977-0f11a0f11d/cri_mp3-0.mp3?ph=4daa6d2630" preload="auto"></audio>
 
@@ -30,7 +41,7 @@
 
 <script>
   const DUREE = 10000;  // apparition de la photo 2 (ms)
-  const OFFSET = -50;  // décalage du son (ms) : négatif = avant la photo 2
+  const OFFSET = 0;  // décalage du son (ms) : négatif = avant la photo 2
 
   document.getElementById('start').addEventListener('click', function () {
     this.remove();
@@ -40,6 +51,7 @@
 
     setTimeout(() => {
       document.getElementById('photo1').classList.add('hide');
+      document.getElementById('bandeau').style.display = 'none';
       document.getElementById('photo2').classList.add('show');
     }, DUREE);
 
