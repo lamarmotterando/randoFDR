@@ -266,7 +266,7 @@ const checks = [
   { id: 'supabase-animateurs', group: 'backend', icon: '👥', name: 'Supabase — Animateurs', detail: 'Table animateurs — lecture',
     run: async () => { const t0 = Date.now(); try { const res = await fetch("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/get-animateurs", { method:"GET", headers:{"Content-Type":"application/json"} }); const ms = Date.now()-t0; const d = await res.json(); const ok = Array.isArray(d) && d.length > 0; return { ok, ms, detail: ok ? `${d.length} animateurs · ${ms}ms` : `Erreur ${res.status}` }; } catch(e) { return {ok:false, ms:Date.now()-t0, detail:e.message}; } } },
   { id: 'supabase-storage', group: 'backend', icon: '📦', name: 'Supabase Storage', detail: 'Bucket Courbe — profils PNG',
-    run: async () => { const r = await ping(`${SUPABASE_URL}/storage/v1/bucket`); return { ok: r.ok || r.status === 400 || r.status === 401, ms: r.ms, detail: `HTTP ${r.status} · ${r.ms}ms` }; } },
+    run: async () => { const r = await ping(`${SUPABASE_URL}/storage/v1/bucket`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }); return { ok: r.ok || r.status === 400 || r.status === 401, ms: r.ms, detail: `HTTP ${r.status} · ${r.ms}ms` }; } },
   { id: 'dynamic-handler', group: 'backend', icon: '⚡', name: 'Edge Function dynamic-handler', detail: 'Supabase Deno — email + Calendar',
     run: async () => { const r = await ping("https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ping' }) }); const ok = r.ok || r.status === 400 || r.status === 422 || r.status === 200; return { ok, ms: r.ms, detail: ok ? `Actif · HTTP ${r.status} · ${r.ms}ms` : `Hors ligne · ${r.status}` }; } },
   { id: 'calendar-list', group: 'backend', icon: '🗓', name: 'Edge Function calendar-list', detail: 'Lecture Google Calendar',
@@ -391,7 +391,7 @@ async function verifierCalendar() {
       fetch(CAL_LIST, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ from, to }) }).then(r=>r.json()),
     ]);
     const events = ((cRaw && cRaw.events) || []).filter(e => e.date >= from && e.date <= to);
-    const fiches = (Array.isArray(fRaw)?fRaw:[]).filter(f => f.date_rando >= from && f.date_rando <= to && (f.statut||"").toLowerCase() !== "annulée" && !CAL_EXCLUS.test(calNorm(f.nom_rando)));
+    const fiches = (Array.isArray(fRaw)?fRaw:[]).filter(f => f.date_rando >= from && f.date_rando <= to && (f.statut||"").toLowerCase() !== "annulée" && f.type !== "sejour" && !CAL_EXCLUS.test(calNorm(f.nom_rando)));
     const evByDate = {}; events.forEach(e => (evByDate[e.date] = evByDate[e.date]||[]).push(e));
     const used = new Set(); let ok=0; const manq=[], dup=[];
     fiches.forEach(f => {
