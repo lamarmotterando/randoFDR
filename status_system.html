@@ -370,6 +370,17 @@ async function chargerProchaineFiche() {
 }
 /* ══ VÉRIFICATION GOOGLE CALENDAR (randos vs événements) ══ */
 function calNorm(s){ return (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim(); }
+/* Mots significatifs (>2 lettres), pluriel en "s" retiré */
+function calTokens(s){ return calNorm(s).split(" ").filter(w => w.length > 2).map(w => w.replace(/s$/,"")); }
+/* Tous les mots du titre le plus court sont présents dans l'autre, quel que soit l'ordre */
+function calMatch(a, b){
+  const A = calTokens(a), B = calTokens(b);
+  if (!A.length || !B.length) return false;
+  const [p, g] = A.length <= B.length ? [A, B] : [B, A];
+  return p.every(w => g.includes(w));
+}
+/* Fiches qui ne sont pas des randos (exclues du contrôle) */
+const CAL_EXCLUS = /^(conseil|reunion|assemblee|ag)\b/;
 async function verifierCalendar() {
   const from = new Date().toISOString().slice(0,10);
   const p6 = new Date(); p6.setMonth(p6.getMonth()+6); const to = p6.toISOString().slice(0,10);
@@ -380,12 +391,12 @@ async function verifierCalendar() {
       fetch(CAL_LIST, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ from, to }) }).then(r=>r.json()),
     ]);
     const events = ((cRaw && cRaw.events) || []).filter(e => e.date >= from && e.date <= to);
-    const fiches = (Array.isArray(fRaw)?fRaw:[]).filter(f => f.date_rando >= from && f.date_rando <= to && (f.statut||"").toLowerCase() !== "annulée");
+    const fiches = (Array.isArray(fRaw)?fRaw:[]).filter(f => f.date_rando >= from && f.date_rando <= to && (f.statut||"").toLowerCase() !== "annulée" && !CAL_EXCLUS.test(calNorm(f.nom_rando)));
     const evByDate = {}; events.forEach(e => (evByDate[e.date] = evByDate[e.date]||[]).push(e));
     const used = new Set(); let ok=0; const manq=[], dup=[];
     fiches.forEach(f => {
-      const same = evByDate[f.date_rando] || []; const cible = calNorm(f.nom_rando);
-      const m = same.filter(e => { const t = calNorm(e.titre); return t && cible && (t.includes(cible) || cible.includes(t)); });
+      const same = evByDate[f.date_rando] || [];
+      const m = same.filter(e => calMatch(e.titre, f.nom_rando));
       if (m.length > 1) { dup.push({d:f.date_rando, n:f.nom_rando}); m.forEach(e=>used.add(e)); }
       else if (m.length === 1) { used.add(m[0]); ok++; }
       /* Aucun événement correspondant à cette fiche → manquante (jamais comparée à l'événement d'une autre rando le même jour) */
