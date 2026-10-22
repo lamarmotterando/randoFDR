@@ -332,6 +332,8 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
     <h1>Prévision des Randonnées — La Marmotte</h1>
     <button class="btn-cal" id="btn-cal" onclick="toggleCal()">📅 Calendrier</button>
     <button class="btn-cal" onclick="openModalExport()">📤 Export CSV</button>
+    <button class="btn-cal" onclick="ouvrirImportCSV()">📥 Import CSV</button>
+    <input type="file" id="import-file" accept=".csv,text/csv" hidden>
     <button class="btn-logout" onclick="deconnecter()">🔒 Déconnexion</button>
   </header>
 
@@ -618,6 +620,25 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
     <div class="cal-legend-dot" style="background:#fed7d7"></div><span>Annulée</span>
     <div class="cal-legend-dot" style="background:#fff;outline:2px solid #2d6a4f;outline-offset:0"></div><span>Aujourd'hui</span>
     <div class="cal-legend-dot" style="background:#ddeef8;border:1.5px solid #185fa5"></div><span>Séjour</span>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-import">
+  <div class="modal" style="width:960px">
+    <h3>📥 Import CSV — aperçu</h3>
+    <p style="font-size:.78rem;color:#718096;margin-bottom:10px">Colonnes : Type ; JJ/MM/AAAA ; Animateur* ; Nom de la randonnée* ; IBP ; Distance* ; Dénivelé + — types acceptés : rando, autre</p>
+    <div class="table-wrap" style="max-height:50vh;overflow-y:auto">
+      <table>
+        <thead><tr><th>Ligne</th><th>État</th><th>Type</th><th>Date</th><th>Animateur</th><th>Randonnée</th><th>IBP</th><th>Km</th><th>D+</th></tr></thead>
+        <tbody id="import-body"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between;align-items:center">
+      <span id="import-count" style="font-size:.85rem;color:#718096"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-cancel" onclick="closeModal('modal-import')">Fermer</button>
+        <button class="btn btn-primary" id="btn-import-go" onclick="executerImportCSV()" disabled>📥 Importer</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1761,7 +1782,153 @@ function exportCSV() {
   a.download = "randos_" + document.getElementById("export-from").value + "_" + document.getElementById("export-to").value + (avecP ? "_participants" : "") + ".csv";
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
+/* ===== IMPORT CSV ===== */
+let importLignes = [];
 
+function ouvrirImportCSV() { const inp = document.getElementById("import-file"); inp.value = ""; inp.click(); }
+
+document.getElementById("import-file").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const buf = await f.arrayBuffer();
+  let txt;
+  try { txt = new TextDecoder("utf-8", { fatal: true }).decode(buf); }
+  catch { txt = new TextDecoder("windows-1252").decode(buf); }   /* CSV Excel FR */
+  analyserImportCSV(txt);
+});
+
+function parseCSV(txt) {
+  txt = txt.replace(/^﻿/, "");
+  const sep = txt.split(/\r?\n/)[0].includes(";") ? ";" : ",";
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < txt.length; i++) {
+    const c = txt[i];
+    if (q) {
+      if (c === '"') { if (txt[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === sep) { row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && txt[i + 1] === "\n") i++;
+      row.push(cell); rows.push(row); row = []; cell = "";
+    } else cell += c;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(v => v.trim() !== ""));
+}
+
+function normTypeImport(t) {
+  const s = String(t || "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  if (!s || s.startsWith("rando")) return "rando";
+  if (s.startsWith("autre")) return "autre";
+  if (s.startsWith("sejour")) return "sejour";
+  return null;
+}
+function dateFRversISO(s) {
+  const m = String(s || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if (!m) return null;
+  const j = +m[1], mo = +m[2], a = +m[3];
+  const d = new Date(Date.UTC(a, mo - 1, j));
+  if (d.getUTCDate() !== j || d.getUTCMonth() !== mo - 1) return null;
+  return `${a}-${String(mo).padStart(2, "0")}-${String(j).padStart(2, "0")}`;
+}
+function numImport(v) {   /* "" → null ; invalide → NaN ; accepte la virgule décimale */
+  const s = String(v || "").replace(/\s/g, "").replace(",", ".");
+  return s === "" ? null : (isNaN(Number(s)) ? NaN : Number(s));
+}
+
+function analyserImportCSV(txt) {
+  const rows = parseCSV(txt);
+  let offset = 1;
+  if (rows.length && !/^\s*\d{1,2}\/\d{1,2}\/\d{4}\s*$/.test(rows[0][1] || "")) { rows.shift(); offset = 2; } /* en-tête */
+  const nomsAnim = new Set(animateurs.map(a => (a.nom || "").trim().toLowerCase()));
+  const vus = new Set();
+
+  importLignes = rows.map((c, i) => {
+    const g = k => (c[k] ?? "").trim();
+    const err = [], warn = [];
+    const type = normTypeImport(g(0));
+    if (!type) err.push("type inconnu");
+    else if (type === "sejour") err.push("séjour non importable (pas de date de fin)");
+    const iso = dateFRversISO(g(1)); if (!iso) err.push("date invalide");
+    const anim = g(2), nom = g(3);
+    const ibp = numImport(g(4)), dist = numImport(g(5)), den = numImport(g(6));
+    if (Number.isNaN(ibp))  err.push("IBP non numérique");
+    if (Number.isNaN(dist)) err.push("distance non numérique");
+    if (Number.isNaN(den))  err.push("dénivelé non numérique");
+    /* Champs * obligatoires pour tous les types */
+    if (!anim) err.push("animateur manquant");
+    if (!nom)  err.push("nom manquant");
+    if (dist === null) err.push("distance manquante");
+    if (anim && !nomsAnim.has(anim.toLowerCase())) warn.push("animateur inconnu de la liste");
+
+    let statut = err.length ? "erreur" : "ok";
+    if (statut === "ok") {
+      const cle = `${type}|${iso}|${nom.toLowerCase()}`;
+      const enBase = allRows.some(r => (r.type || "rando") === type && r.date_rando === iso && (r.nom_rando || "").toLowerCase() === nom.toLowerCase());
+      if (enBase || vus.has(cle)) statut = "doublon"; else vus.add(cle);
+    }
+    const fiche = {
+      type, statut: "publiée", date_rando: iso,
+      nom_rando: nom,
+      animateur: anim,
+      ibp: Number.isNaN(ibp) ? null : ibp,
+      distance: dist,
+      denivele: (den === null || Number.isNaN(den)) ? null : Math.round(den),
+      remarques: type === "autre" ? (nom || null) : null,
+      parking_covoit: null, sejour_id: null
+    };
+    return { ligne: i + offset, statut, err, warn, fiche, brut: { type: g(0), date: g(1), anim, nom, ibp: g(4), dist: g(5), den: g(6) } };
+  });
+  renderImport();
+  document.getElementById("modal-import").classList.add("open");
+}
+
+function renderImport() {
+  const tbody = document.getElementById("import-body");
+  if (!importLignes.length) { tbody.innerHTML = "<tr><td colspan='9' class='empty-state'>Fichier vide.</td></tr>"; }
+  else tbody.innerHTML = importLignes.map(l => {
+    const b = l.brut;
+    const etat = l.statut === "erreur" ? "<span style='color:#c53030'>❌ " + escHtmlExport(l.err.join(", ")) + "</span>"
+               : l.statut === "doublon" ? "<span style='color:#718096'>⏭ doublon</span>"
+               : "✅" + (l.warn.length ? " <span style='color:#c05621'>⚠️ " + escHtmlExport(l.warn.join(", ")) + "</span>" : "");
+    const bg = l.statut === "erreur" ? "#fff5f5" : l.statut === "doublon" ? "#f7fafc" : "";
+    return `<tr style="background:${bg}"><td>${l.ligne}</td><td style="white-space:normal">${etat}</td><td>${escHtmlExport(b.type)}</td><td>${escHtmlExport(b.date)}</td><td>${escHtmlExport(b.anim)}</td><td>${escHtmlExport(b.nom)}</td><td>${escHtmlExport(b.ibp)}</td><td>${escHtmlExport(b.dist)}</td><td>${escHtmlExport(b.den)}</td></tr>`;
+  }).join("");
+  const nOk = importLignes.filter(l => l.statut === "ok").length;
+  const nErr = importLignes.filter(l => l.statut === "erreur").length;
+  const nDup = importLignes.filter(l => l.statut === "doublon").length;
+  document.getElementById("import-count").textContent = `${nOk} à importer · ${nDup} doublon(s) · ${nErr} erreur(s)`;
+  const btn = document.getElementById("btn-import-go");
+  btn.disabled = nOk === 0; btn.innerHTML = `📥 Importer ${nOk} ligne${nOk > 1 ? "s" : ""}`;
+}
+
+async function executerImportCSV() {
+  const lignes = importLignes.filter(l => l.statut === "ok"); if (!lignes.length) return;
+  setBusy("btn-import-go", true);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/fiches`, {
+      method: "POST", headers: await authHeadersJson(),
+      body: JSON.stringify(lignes.map(l => l.fiche))   /* insertion groupée, tout ou rien */
+    });
+    if (!res.ok) { showToast("Erreur import : " + (await res.text()), true); setBusy("btn-import-go", false); return; }
+    let calKo = 0;
+    for (const { fiche: f } of lignes) {
+      if (f.type !== "rando") continue;
+      const ok = await syncCalendar("calendarCreate", {
+        dateRando: f.date_rando, nomRando: f.nom_rando, animateur: f.animateur || "", tel: "", heureRV: "", parking: "",
+        parkingDepart: "", gps: "", distance: f.distance ?? "", denivele: f.denivele ?? "", duree: "",
+        ibp: f.ibp ?? "", effort: "", technicite: "", risque: "", couts: "", covoit4: "", covoit5: "", profilUrl: ""
+      });
+      if (!ok) calKo++;
+    }
+    setBusy("btn-import-go", false);
+    closeModal("modal-import");
+    showToast(`📥 ${lignes.length} événement(s) importé(s)` + (calKo ? ` — ${calKo} non synchronisé(s) Calendar` : ""), calKo > 0);
+    loadEvents();
+  } catch (e) { showToast("Erreur réseau : " + e.message, true); setBusy("btn-import-go", false); }
+}
+
+window.ouvrirImportCSV   = ouvrirImportCSV;
+window.executerImportCSV = executerImportCSV;
 </script>
 
 <div id="modal-export">
