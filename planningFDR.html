@@ -228,7 +228,7 @@
           </div>
           <div class="err-msg" id="codeErr" style="display:none;margin-top:8px;">Code invalide ou expiré — réessayez ou redemandez un code.</div>
         </div>
-        <div id="codeOk" style="display:none;margin-top:10px;font-size:13px;font-weight:600;color:#1a7a3a;">🔓 Code validé — vous pouvez modifier la fiche.</div>
+        <div id="codeOk" style="display:none;margin-top:10px;font-size:13px;font-weight:600;color:#1a7a3a;">🔓 Accès validé — vous pouvez modifier la fiche.</div>
       </div>
       <div class="form-row">
         <div><label>Nom de la randonnée</label><input id="modifNom" type="text"></div>
@@ -427,7 +427,7 @@ async function charger() {
   }
 }
 
-/* ══ LECTURE PARAMÈTRE ?id= — lien email rappel participants ══ */
+/* ══ LECTURE PARAMÈTRES ?id=…&code=… — lien email rappel participants ══ */
 function ouvrirDepuisUrl() {
   const params = new URLSearchParams(window.location.search);
   const idParam = params.get("id");
@@ -439,6 +439,20 @@ function ouvrirDepuisUrl() {
 
   idEnCours = id;
   ouvrirModif(id);
+
+  /* Lien direct du mail : &code=JETON → déverrouillage automatique, rien à saisir */
+  const codeParam = params.get("code");
+  if (codeParam) {
+    document.getElementById("modifCode").value = codeParam;
+    validerMonCode().then(() => {
+      if (codeValide) return;
+      document.getElementById("modifCode").value = "";
+      document.getElementById("codeInfo").style.display = "block";
+      const e = document.getElementById("codeErr");
+      e.textContent = "Lien expiré — cliquez sur « Recevoir mon code par email ».";
+      e.style.display = "block";
+    });
+  }
 
   setTimeout(() => {
     const section = document.getElementById("sectionParticipants");
