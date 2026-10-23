@@ -286,3 +286,4 @@ GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_CALENDAR_ID
 RESEND_API_KEY
 
 *La Marmotte Châteaurenard — [lamarmottechateaurenard.com](https://lamarmottechateaurenard.com)*
+### Ajout envoi code auto à partir du mail pour remplir les participants
