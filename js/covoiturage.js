@@ -1,4 +1,4 @@
-const PRIX_KM = 0.30
+const PRIX_KM = 0.35
 
 /* arrondi à la dizaine de centimes supérieure ex: 3.66 → 3.70 */
 function arrondir(val){
