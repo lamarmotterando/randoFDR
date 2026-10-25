@@ -138,7 +138,7 @@ async function charger(){
   try{
     const [fiches, animateurs] = await Promise.all([
       fetch(HANDLER,{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({action:"getFiches",select:"id,date_rando,nom_rando,animateur,statut,type,distance,denivele,duree,ibp,nb_participants,lieu",order:"date_rando.asc"})}).then(r=>r.json()),
+           body:JSON.stringify({action:"getFiches",select:"id,date_rando,nom_rando,animateur,statut,type,distance,denivele,duree,ibp,nb_participants,lieu",order:"date_rando.asc"})}).then(r=>r.json()),
       fetch(GET_ANIM,{method:"GET",headers:{"Content-Type":"application/json"}}).then(r=>r.json()).catch(()=>[]),
     ]);
     const all = Array.isArray(fiches)?fiches:[];
@@ -168,8 +168,8 @@ async function charger(){
                       .sort((a,b)=>a.date_rando<b.date_rando?-1:1);
     if(aVenir.length){
       const p=aVenir[0], d=new Date(p.date_rando+"T12:00:00");
-      document.getElementById("k-next").textContent = esc(p.nom_rando||"—");
-      document.getElementById("k-next-sub").textContent = d.toLocaleDateString("fr-FR",{weekday:"short",day:"2-digit",month:"short"})+" · "+esc(p.animateur||"");
+      document.getElementById("k-next").textContent = p.nom_rando||"—";
+      document.getElementById("k-next-sub").textContent = d.toLocaleDateString("fr-FR",{weekday:"short",day:"2-digit",month:"short"})+" · "+(p.animateur||"");
     } else { document.getElementById("k-next").textContent="Aucune"; document.getElementById("k-next-sub").textContent=""; }
 
     // ── Prochaines sorties (liste, 6) ──
@@ -233,7 +233,7 @@ async function charger(){
   }
 }
 charger();
-setInterval(charger, 300000); // rafraîchissement toutes les 5 min
+setInterval(() => { if (!document.hidden) charger(); }, 300000); // 5 min, suspendu si onglet caché
 
 /* Auto-resize iframe parent (Webnode) */
 function sendHeight(){ try{ window.parent.postMessage({type:"resize",height:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)},"*"); }catch(e){} }
