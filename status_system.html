@@ -184,7 +184,7 @@
   </div>
   <div class="last-refresh">
     <strong id="refresh-time">—</strong>
-    actualisation auto · 60s
+    actualisation auto · 5 min
   </div>
   <div id="auth-logout-zone" style="display:flex;align-items:center;gap:10px;flex-shrink:0;"></div>
 </header>
@@ -459,8 +459,11 @@ async function lancer() {
   btn.classList.remove('spinning');
   updateGlobal();
 }
-let timer = setInterval(lancer, 60000);
-function appInit() { initDOM(); lancer(); }
+let timer = null;
+function appInit() {
+  initDOM(); lancer();
+  if (!timer) timer = setInterval(() => { if (!document.hidden) lancer(); }, 300000);
+}
 </script>
 <script>
 /* ══ SUPABASE AUTH — PROTECTION ADMIN ══════════════════════════
