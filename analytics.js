@@ -28,7 +28,7 @@ async function start() {
   // Vérification d'affichage seulement ; la base refuse de toute façon les non-admins.
   const { data: { user }, error } = await client.auth.getUser();
   if (error || user?.app_metadata?.role !== "admin") {
-    await client.auth.signOut();
+    await client.auth.signOut({ scope: "local" });
     return showLogin("Accès réservé aux administrateurs.");
   }
   $("login-panel").hidden = true;
