@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Analytics — RandoFDR</title>
+  <link rel="stylesheet" href="./analytics.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" crossorigin="anonymous"></script>
+  <script defer src="./analytics.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div><p class="eyebrow">RANDOFDR · ADMINISTRATION</p><h1>Analytics</h1><p class="muted">Fréquentation anonyme de l'application</p></div>
+      <div class="controls">
+        <select id="range" aria-label="Période">
+          <option value="7">7 derniers jours</option>
+          <option value="30" selected>30 derniers jours</option>
+          <option value="90">90 derniers jours</option>
+        </select>
+        <button id="refresh" class="button secondary" type="button">Actualiser</button>
+        <button id="signout" class="button secondary" type="button">Déconnexion</button>
+      </div>
+    </header>
+
+    <section id="login-panel" class="panel login-panel">
+      <h2>Connexion administrateur</h2>
+      <form id="login-form">
+        <label>Email<input id="email" type="email" autocomplete="username" required></label>
+        <label>Mot de passe<input id="password" type="password" autocomplete="current-password" required></label>
+        <button class="button primary" type="submit">Se connecter</button>
+      </form>
+      <p id="login-message" class="status" role="status"></p>
+    </section>
+
+    <section id="dashboard" hidden>
+      <div id="status" class="status" role="status">Chargement…</div>
+      <section class="kpi-grid">
+        <article class="kpi"><span>Visites 24 h</span><strong id="visits-24h">—</strong><small>Sessions distinctes</small></article>
+        <article class="kpi"><span>Visites 7 jours</span><strong id="visits-7d">—</strong><small>Sessions distinctes</small></article>
+        <article class="kpi"><span>Visites 30 jours</span><strong id="visits-30d">—</strong><small>Sessions distinctes</small></article>
+        <article class="kpi"><span>Pages vues</span><strong id="page-views">—</strong><small>Sur la période</small></article>
+        <article class="kpi"><span>Actions</span><strong id="events">—</strong><small>Fiches, GPX, cartes… sur la période</small></article>
+        <article class="kpi"><span>Erreurs (24 h)</span><strong id="errors-24h">—</strong><small>Erreurs JavaScript</small></article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel wide">
+          <h2>Activité quotidienne</h2><p class="muted">Visites par jour</p>
+          <div class="chart-wrap"><canvas id="activity-chart" style="display:block;width:100%;height:240px"></canvas></div>
+        </article>
+        <article class="panel"><h2>Pages les plus vues</h2><div id="top-pages" class="list"></div></article>
+        <article class="panel"><h2>Actions</h2><div id="top-events" class="list"></div></article>
+        <article class="panel wide"><h2>Performance</h2><p class="muted">Durées en ms</p><div id="performance" class="list"></div></article>
+        <article class="panel wide">
+          <h2>Erreurs récentes</h2>
+          <div class="table-wrap"><table><thead><tr><th>Type</th><th>Message</th><th>Source</th><th>Nb</th><th>Dernière</th></tr></thead><tbody id="errors"></tbody></table></div>
+        </article>
+      </section>
+      <footer class="footer">Actualisation automatique toutes les 5 minutes · <span id="updated-at">—</span></footer>
+    </section>
+  </main>
+</body>
+</html>
