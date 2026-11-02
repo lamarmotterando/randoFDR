@@ -6,12 +6,13 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Carte de suivi — La Marmotte</title>
 <!-- ══════════════════════════════════════════════════════════════════
-     carte.html — carte de suivi d'une randonnée (v1)
+     carte.html — carte de suivi d'une randonnée (v1.1)
      Ouverte depuis goanim.html : carte.html?id=<fiche>[&km=<km>]#k=<clé club>
      • Tracé GPX (coordonnées réservées aux membres : clé club)
      • Position GPS du téléphone « accrochée » au tracé : km faits / restants,
        altitude, pente, D+ restant
      • Mode « point choisi » : toucher le profil ou le tracé
+     • Bouton ⇄ Sens : parcours dans le sens inverse du GPX (mémorisé par rando)
      • Préparation hors réseau : tuiles IGN de la zone + page + tracé
        (effacées automatiquement après la date de la rando) ; sw-carte.js
        permet de rouvrir la page sans réseau
@@ -37,6 +38,8 @@
   .mode button { flex:1; font:inherit; font-size:13px; font-weight:600; padding:6px; border-radius:20px; border:1.5px solid var(--vert);
                  color:var(--vert); background:#fff; cursor:pointer; }
   .mode button.on { background:var(--vert); color:#fff; }
+  .mode button.sens { flex:0 0 auto; padding:6px 12px; }
+  .mode button.sens.on { background:var(--orange); border-color:var(--orange); color:#fff; }
 
   .carte-zone { position:relative; margin:6px 8px 0; flex:1; min-height:200px; border-radius:12px; overflow:hidden; background:#e9ecdf; }
   #carte { position:absolute; inset:0; }
@@ -86,6 +89,7 @@
   <div class="mode">
     <button id="m-gps" type="button" class="on">📍 Ma position</button>
     <button id="m-point" type="button">👆 Point choisi</button>
+    <button id="m-sens" type="button" class="sens" title="Inverser le sens de la randonnée">⇄ Sens</button>
   </div>
 
   <div class="carte-zone">
@@ -188,7 +192,7 @@ async function purgerAnciennes() {
     const age = t && t.sauve ? (Date.now() - new Date(t.sauve).getTime()) / 86400000 : 999;
     if (!t || (t.date ? t.date < auj : age > 30)) {
       const id = k.slice("carte-trace-".length);
-      lsDel(k); lsDel("carte-prep-" + id);
+      lsDel(k); lsDel("carte-prep-" + id); lsDel("carte-sens-" + id);
       try { await caches.delete(PREFIXE_CACHE + id); } catch (e) {}
     }
   }
@@ -232,6 +236,16 @@ function preparerTrace(p) {
   T = { n, d: p.d, a: p.a, s: p.s, la: p.la, lo: p.lo, x, y, kx, ky, lat0, lon0, total: p.d[n - 1] };
 }
 const versXY = (lat, lon) => [(lon - T.lon0) * T.kx, (lat - T.lat0) * T.ky];
+
+/* Profil parcouru dans l'autre sens : s[i] = pente du segment qui arrive au point i (profilAltitude.js) */
+function inverserProfil(p) {
+  const n = p.d.length, d0 = p.d[0], dN = p.d[n - 1];
+  const rev = t => t.slice().reverse();
+  const s = [0];
+  for (let j = 1; j < n; j++) s.push(-p.s[n - j]);
+  s[0] = s[1];
+  return { d: rev(p.d).map(v => d0 + dN - v), a: rev(p.a), s, la: rev(p.la), lo: rev(p.lo) };
+}
 
 /* Point du tracé le plus proche. kmPrec : dernière position connue (évite de sauter
    sur l'autre passage d'un aller-retour : reculer coûte plus cher qu'avancer).
@@ -285,9 +299,11 @@ let kmGps = null;          // km retenu pour la continuité
 let posPoint = null;       // point choisi {i,t,km}
 let suivre = true;         // la carte suit la position GPS
 let gpsRefuse = false;
+let D = null, P_ORIG = null;                         // données fiche, profil dans le sens du GPX
+let inverse = lsGet("carte-sens-" + ID) === true;    // sens inversé mémorisé pour cette rando
 
 /* ══ CARTE ══ */
-let carte = null, couchePoint = null, coucheFait = null, coucheGps = null, coucheAcc = null, coucheLien = null, coucheAccroche = null;
+let carte = null, coucheTrace = null, couchePoint = null, coucheFait = null, coucheGps = null, coucheAcc = null, coucheLien = null, coucheAccroche = null;
 
 /* Tuiles : cache d'abord (préparation hors réseau), réseau ensuite, mise en cache au passage */
 async function chargerTuile(url) {
@@ -324,26 +340,10 @@ function initCarte() {
   new TuilesIGN(URL_TUILE, { minZoom: 6, maxZoom: 18, maxNativeZoom: 16, tileSize: 256,
     attribution: '© <a href="https://www.ign.fr" target="_blank" rel="noopener">IGN</a> Plan IGN' }).addTo(carte);
 
-  /* Tracé coloré selon la pente (segments consécutifs de même couleur regroupés) */
   const pts = T.la.map((la, k) => [la, T.lo[k]]);
-  L.polyline(pts, { color: "#fff", weight: 8, opacity: .9, interactive: false }).addTo(carte);
-  let debut = 0;
-  for (let k = 1; k < T.n; k++) {
-    const c = couleurPente(T.s[debut]);
-    if (k === T.n - 1 || couleurPente(T.s[k]) !== c) {
-      L.polyline(pts.slice(debut, k + 1), { color: c, weight: 5, opacity: 1, interactive: false }).addTo(carte);
-      debut = k;
-    }
-  }
-  coucheFait = L.polyline([], { color: "#555", weight: 5.5, opacity: .7, interactive: false }).addTo(carte);
-
-  /* Départ / arrivée */
-  L.circleMarker(pts[0], { radius: 7, color: "#fff", weight: 2, fillColor: "#2d6a4f", fillOpacity: 1 })
-    .bindTooltip("Départ", { direction: "right", offset: [8, 0] }).addTo(carte);
-  const [ex, ey] = [T.x[T.n - 1], T.y[T.n - 1]];
-  if (Math.hypot(ex, ey) > 150)
-    L.circleMarker(pts[T.n - 1], { radius: 7, color: "#fff", weight: 2, fillColor: "#b02a37", fillOpacity: 1 })
-      .bindTooltip("Arrivée", { direction: "right", offset: [8, 0] }).addTo(carte);
+  coucheFait = L.polyline([], { color: "#555", weight: 5.5, opacity: .7, interactive: false });
+  coucheTrace = L.layerGroup().addTo(carte);
+  dessinerTrace();
 
   coucheAcc = L.circle(pts[0], { radius: 1, color: "#1a73e8", weight: 1, opacity: .5, fillColor: "#1a73e8", fillOpacity: .15, interactive: false });
   coucheGps = L.circleMarker(pts[0], { radius: 8, color: "#fff", weight: 2.5, fillColor: "#1a73e8", fillOpacity: 1, interactive: false });
@@ -357,6 +357,60 @@ function initCarte() {
     const p = accrocher(e.latlng.lat, e.latlng.lng, null);
     if (p.dist <= 300) choisirPoint(p.km);
   });
+}
+
+/* Tracé coloré selon la pente + partie parcourue + départ/arrivée (redessinés à chaque changement de sens) */
+function dessinerTrace() {
+  coucheTrace.clearLayers();
+  const pts = T.la.map((la, k) => [la, T.lo[k]]);
+  coucheTrace.addLayer(L.polyline(pts, { color: "#fff", weight: 8, opacity: .9, interactive: false }));
+  let debut = 0;
+  for (let k = 1; k < T.n; k++) {
+    const c = couleurPente(T.s[debut]);
+    if (k === T.n - 1 || couleurPente(T.s[k]) !== c) {
+      coucheTrace.addLayer(L.polyline(pts.slice(debut, k + 1), { color: c, weight: 5, opacity: 1, interactive: false }));
+      debut = k;
+    }
+  }
+  coucheTrace.addLayer(coucheFait);
+  coucheTrace.addLayer(L.circleMarker(pts[0], { radius: 7, color: "#fff", weight: 2, fillColor: "#2d6a4f", fillOpacity: 1 })
+    .bindTooltip("Départ", { direction: "right", offset: [8, 0] }));
+  if (Math.hypot(T.x[T.n - 1], T.y[T.n - 1]) > 150)
+    coucheTrace.addLayer(L.circleMarker(pts[T.n - 1], { radius: 7, color: "#fff", weight: 2, fillColor: "#b02a37", fillOpacity: 1 })
+      .bindTooltip("Arrivée", { direction: "right", offset: [8, 0] }));
+}
+
+/* ══ SENS DE PARCOURS ══ */
+function majSousTitre() {
+  let dplus = 0; for (let k = 0; k < T.n - 1; k++) dplus += Math.max(0, T.a[k + 1] - T.a[k]);
+  const dt = D.date ? new Date(D.date + "T12:00:00") : null;
+  $("sous-titre").textContent = [dt && !isNaN(dt) ? dt.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long" }) : "",
+    f1(T.total) + " km", "D+ " + Math.round(dplus) + " m", inverse ? "⇄ sens inversé" : "", D.horsLigne ? "hors réseau" : "",
+    D.statut === "annulée" ? "❌ ANNULÉE" : ""].filter(Boolean).join(" · ");
+}
+
+function appliquerSens() {
+  preparerTrace(inverse ? inverserProfil(P_ORIG) : P_ORIG);
+  $("m-sens").classList.toggle("on", inverse);
+  majSousTitre();
+  if (carte) dessinerTrace();
+}
+
+const miroirKm = km => T.d[0] + T.total - km;
+
+function basculerSens() {
+  const kmPt = posPoint ? posPoint.km : null;
+  inverse = !inverse;
+  if (inverse) lsSet("carte-sens-" + ID, true); else lsDel("carte-sens-" + ID);
+  appliquerSens();
+  if (kmPt != null) posPoint = depuisKm(miroirKm(kmPt));   // même endroit physique
+  kmGps = null;                                            // continuité GPS repartie de zéro
+  if (posGps) {
+    const p = accrocher(posGps.lat, posGps.lon, null);
+    posGps = { ...p, lat: posGps.lat, lon: posGps.lon, acc: posGps.acc };
+    if (p.dist <= SEUIL_HORS) kmGps = p.km;
+  }
+  rafraichir();
 }
 
 /* ══ PROFIL (canvas) ══ */
@@ -435,10 +489,10 @@ function rafraichir() {
       for (let k = 0; k <= pos.i; k++) parcours.push([T.la[k], T.lo[k]]);
       parcours.push([m.lat, m.lon]);
       coucheFait.setLatLngs(parcours);
-      if (mode === "point") couchePoint.setLatLng([m.lat, m.lon]).addTo(carte); else couchePoint.remove();
+      if (mode === "point") couchePoint.setLatLng([m.lat, m.lon]).addTo(carte).bringToFront(); else couchePoint.remove();
       if (mode === "gps" && hors) {
-        coucheAccroche.setLatLng([m.lat, m.lon]).addTo(carte);
-        coucheLien.setLatLngs([[posGps.lat, posGps.lon], [m.lat, m.lon]]).addTo(carte);
+        coucheLien.setLatLngs([[posGps.lat, posGps.lon], [m.lat, m.lon]]).addTo(carte).bringToFront();
+        coucheAccroche.setLatLng([m.lat, m.lon]).addTo(carte).bringToFront();
       } else { coucheAccroche.remove(); coucheLien.remove(); }
     }
   }
@@ -570,7 +624,6 @@ $("btn-fermer").addEventListener("click", () => {
     navigator.serviceWorker.register("/randoFDR/sw-carte.js", { scope: "/randoFDR/carte.html" }).catch(() => {});
   purgerAnciennes();
 
-  let D;
   try { D = await chargerDonnees(); }
   catch (e) { afficherMessage("Impossible de charger la randonnée.<br>Vérifiez la connexion, ou préparez la carte avant de partir."); return; }
 
@@ -582,12 +635,8 @@ $("btn-fermer").addEventListener("click", () => {
     $("sous-titre").textContent = "";
     return;
   }
-  preparerTrace(D.p);
-  let dplus = 0; for (let k = 0; k < T.n - 1; k++) dplus += Math.max(0, T.a[k + 1] - T.a[k]);
-  const dt = D.date ? new Date(D.date + "T12:00:00") : null;
-  $("sous-titre").textContent = [dt && !isNaN(dt) ? dt.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long" }) : "",
-    f1(T.total) + " km", "D+ " + Math.round(dplus) + " m", D.horsLigne ? "hors réseau" : "",
-    D.statut === "annulée" ? "❌ ANNULÉE" : ""].filter(Boolean).join(" · ");
+  P_ORIG = D.p;
+  appliquerSens();
 
   $("app").classList.remove("cache");
   initCarte();
@@ -596,9 +645,11 @@ $("btn-fermer").addEventListener("click", () => {
   $("m-gps").addEventListener("click", passerGps);
   $("m-point").addEventListener("click", () => choisirPoint(posPoint ? posPoint.km : (posGps ? posGps.km : T.d[0])));
   $("btn-centre").addEventListener("click", passerGps);
+  $("m-sens").addEventListener("click", basculerSens);
   window.addEventListener("resize", () => { if (carte) carte.invalidateSize(); rafraichir(); });
 
-  if (Number.isFinite(KM_INITIAL)) choisirPoint(KM_INITIAL); else rafraichir();
+  /* km venant de goanim = sens du GPX → converti si le sens inversé est mémorisé */
+  if (Number.isFinite(KM_INITIAL)) choisirPoint(inverse ? miroirKm(KM_INITIAL) : KM_INITIAL); else rafraichir();
   demarrerGps();
 })();
 </script>
