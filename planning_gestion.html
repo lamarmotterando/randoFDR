@@ -128,6 +128,12 @@
 
   .btn-cal { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.4); color: #fff; padding: 7px 14px; border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .2s; }
   .btn-cal:hover { background: rgba(255,255,255,.35); }
+  .menu-outils { position: relative; }
+  .menu-outils-liste { display: none; position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,.2); min-width: 200px; overflow: hidden; z-index: 60; }
+  .menu-outils.open .menu-outils-liste { display: block; }
+  .menu-outils-liste a { display: block; padding: 10px 14px; color: #2d3748; text-decoration: none; font-size: .88rem; border-bottom: 1px solid #edf2f7; }
+  .menu-outils-liste a:last-child { border-bottom: none; }
+  .menu-outils-liste a:hover { background: #f0faf4; color: #2d6a4f; }
   #modal-export { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; align-items:center; justify-content:center; }
   #modal-export.open { display:flex; }
   #modal-export .mex-inner { background:#fff; border-radius:14px; padding:30px; width:740px; max-width:96vw; box-shadow:0 8px 32px rgba(0,0,0,.2); }
@@ -300,6 +306,20 @@
 <body>
 
 <script>
+/* Menu Outils (pages admin) */
+function toggleMenuOutils(e) {
+  e.stopPropagation();
+  const m = document.getElementById("menu-outils");
+  const open = m.classList.toggle("open");
+  m.querySelector("button").setAttribute("aria-expanded", open);
+}
+function fermerMenuOutils() {
+  const m = document.getElementById("menu-outils");
+  m.classList.remove("open"); m.querySelector("button").setAttribute("aria-expanded", "false");
+}
+document.addEventListener("click", e => { if (!e.target.closest("#menu-outils")) fermerMenuOutils(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") fermerMenuOutils(); });
+
 window._attendRecovery = new URLSearchParams(window.location.search).has('code');
 console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.search);
 </script>
@@ -334,6 +354,15 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
     <button class="btn-cal" onclick="openModalExport()">📤 Export CSV</button>
     <button class="btn-cal" onclick="ouvrirImportCSV()">📥 Import CSV</button>
     <input type="file" id="import-file" accept=".csv,text/csv" hidden>
+    <div class="menu-outils" id="menu-outils">
+      <button class="btn-cal" type="button" aria-haspopup="true" aria-expanded="false" onclick="toggleMenuOutils(event)">🧰 Outils ▾</button>
+      <div class="menu-outils-liste" role="menu">
+        <a href="dashboard.html" role="menuitem">📊 Tableau de bord</a>
+        <a href="analytics.html" role="menuitem">📈 Analytics</a>
+        <a href="journal.html" role="menuitem">📜 Journal</a>
+        <a href="status_system.html" role="menuitem">🩺 Status système</a>
+      </div>
+    </div>
     <button class="btn-logout" onclick="deconnecter()">🔒 Déconnexion</button>
   </header>
 
@@ -1959,4 +1988,5 @@ window.executerImportCSV = executerImportCSV;
   </div>
 </div>
 </body>
+ <script defer src="./rando-analytics.js"></script>
 </html>
