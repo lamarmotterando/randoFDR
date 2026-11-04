@@ -18,9 +18,8 @@
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html, body {
+    html, body {
     width: 100%;
-    height: 100%;
     overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -30,8 +29,6 @@
     font-family: 'Source Sans 3', sans-serif;
     background: var(--bg);
     color: var(--txt);
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
     padding-bottom: env(safe-area-inset-bottom, 16px);
   }
 
@@ -829,5 +826,15 @@ async function chargerProfilInteractif(id) {
 }
 
 charger();
+</script>
+<script>
+/* -- Auto-resize iframe parent (Webnode) -- */
+function sendHeight() {
+  const h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+  window.parent.postMessage({ type: 'resize', height: h }, '*');
+}
+new ResizeObserver(sendHeight).observe(document.body);
+window.addEventListener('load', sendHeight);
+sendHeight();
 </script>
 <script defer src="./rando-analytics.js"></script>
