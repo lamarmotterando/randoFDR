@@ -56,6 +56,24 @@ td.description-col {
   word-break: break-word;
 }
 
+/* ── REMARQUE (2e ligne sous le nom, tronquée sur 1 ligne) ──
+   width:0 + min-width:100% : la remarque n'élargit jamais la colonne */
+.remarque {
+  display: block;
+  width: 0;
+  min-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 400;
+  font-style: italic;
+  color: #666;
+  margin-top: 3px;
+}
+.remarque.modif { color: #b86400; }
+.remarque.annul { color: #c53030; font-style: normal; font-weight: 700; }
+
 thead { display: none; }
 
 tr:hover { background: #e0f3ff; }
@@ -180,6 +198,7 @@ tr.rando-enfant:hover td { background: #e8f4fd; }
     font-size: 18px; font-weight: bold; color: #003366; border: none;
     padding: 6px 0; white-space: normal; line-height: 1.3;
   }
+  tr td:nth-child(2) .remarque { font-size: 13px; margin-top: 4px; }
   tr td:nth-child(3) { font-size: 14px; color: #555; border: none; padding: 2px 0; }
   tr td:nth-child(3)::before { content: "👤 "; }
   tr td:nth-child(4) {
@@ -445,6 +464,17 @@ function creerLigneRando(f, today, isEnfant) {
     tdNom.innerHTML = `${f.nom_rando || "—"}&nbsp;<span style="color:#e67e00;font-weight:700;font-size:11px">✏️ MODIFIÉE</span>`;
   } else {
     tdNom.textContent = f.nom_rando || "—";
+  }
+
+  /* Remarque (2e ligne) — affichée seulement si renseignée.
+     Annulée → préfixe « Motif : ». textContent : pas d'injection HTML. */
+  const rem = String(f.remarques || "").replace(/\s+/g, " ").trim();
+  if (rem) {
+    const spRem = document.createElement("span");
+    spRem.className   = "remarque" + (annulee ? " annul" : (modifiee ? " modif" : ""));
+    spRem.textContent = annulee ? "Motif : " + rem : rem;
+    spRem.title       = rem;
+    tdNom.appendChild(spRem);
   }
   tr.appendChild(tdNom);
 
