@@ -16,39 +16,42 @@ export function initEnvoi() {
 function afficherPopup({ icone, titre, message, couleur = "#c1440e", bouton = "OK", onClose }) {
   document.getElementById("envoi-popup")?.remove();
 
+  /* Bandeau fixé en bas, sans fond assombri : le formulaire reste visible */
   const overlay = document.createElement("div");
   overlay.id = "envoi-popup";
-  overlay.style.cssText = "position:fixed;inset:0;background:rgba(44,26,14,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;";
+  overlay.setAttribute("role", "status");
+  overlay.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:9999;display:flex;justify-content:center;padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom));pointer-events:none;";
 
   const box = document.createElement("div");
-  box.style.cssText = "background:white;border-radius:16px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.25);font-family:'Outfit',Arial,sans-serif;text-align:center;";
+  box.style.cssText = "pointer-events:auto;background:white;border-radius:14px;border-left:5px solid "+couleur+";padding:12px 14px;max-width:480px;width:100%;box-shadow:0 -4px 24px rgba(0,0,0,0.25);font-family:'Outfit',Arial,sans-serif;display:flex;align-items:center;gap:12px;";
 
   const ico = document.createElement("div");
-  ico.style.cssText = "font-size:40px;margin-bottom:12px;";
+  ico.style.cssText = "font-size:28px;flex-shrink:0;";
   ico.textContent = icone;
   box.appendChild(ico);
 
+  const txt = document.createElement("div");
+  txt.style.cssText = "flex:1;min-width:0;text-align:left;";
   const tit = document.createElement("div");
-  tit.style.cssText = "font-size:18px;font-weight:700;color:"+couleur+";margin-bottom:10px;";
+  tit.style.cssText = "font-size:16px;font-weight:700;color:"+couleur+";";
   tit.textContent = titre;
-  box.appendChild(tit);
-
+  txt.appendChild(tit);
   if (message) {
     const msg = document.createElement("div");
-    msg.style.cssText = "font-size:14px;color:#2c1a0e;margin-bottom:20px;line-height:1.5;";
+    msg.style.cssText = "font-size:13px;color:#2c1a0e;line-height:1.4;margin-top:2px;";
     msg.textContent = message;
-    box.appendChild(msg);
+    txt.appendChild(msg);
   }
+  box.appendChild(txt);
 
   const btn = document.createElement("button");
   btn.textContent = bouton;
-  btn.style.cssText = "padding:11px 32px;background:linear-gradient(135deg,#c1440e,#f49d37);color:white;border:none;border-radius:8px;font-size:15px;font-weight:600;font-family:'Outfit',Arial,sans-serif;cursor:pointer;transform:none;box-shadow:none;";
+  btn.style.cssText = "flex-shrink:0;padding:9px 16px;background:linear-gradient(135deg,#c1440e,#f49d37);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;font-family:'Outfit',Arial,sans-serif;cursor:pointer;transform:none;box-shadow:none;";
   btn.addEventListener("click", () => { overlay.remove(); onClose && onClose(); });
   box.appendChild(btn);
 
   overlay.appendChild(box);
   document.body.appendChild(overlay);
-  overlay.addEventListener("click", e => { if (e.target === overlay) { overlay.remove(); onClose && onClose(); } });
 }
 
 /* ══════════════════════════════════════
@@ -405,6 +408,6 @@ async function envoyerRando() {
       message: err.message, bouton: "Fermer"
     });
   } finally {
-    if (btnEnvoyer) { btnEnvoyer.disabled = false; btnEnvoyer.textContent = "Envoyer"; }
+    if (btnEnvoyer) { btnEnvoyer.disabled = false; btnEnvoyer.textContent = "✉️ Envoyer"; }
   }
 }
