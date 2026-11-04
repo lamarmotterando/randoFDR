@@ -302,11 +302,10 @@ async function mettreAJourCalendar(fiche) {
 
   try {
     const res = await fetch(
-      "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler",
+      HANDLER,
       {
         method: "POST",
         headers: {
-          "Content-Type":  "application/json",
           "Content-Type":  "application/json"
         },
         body: JSON.stringify({ action: "calendarUpdate", fiche: ficheCalendar, cle_club: CLE_CLUB })
