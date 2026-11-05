@@ -3,6 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: blob:;
+  font-src 'self';
+  connect-src 'self' https://whlxbfnmyqdflmxosfse.supabase.co wss://whlxbfnmyqdflmxosfse.supabase.co;
+  form-action 'self';
+  base-uri 'self';
+  object-src 'none'">
 <meta name="robots" content="noindex, nofollow">
 <title>Planning_gestion — La Marmotte</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
