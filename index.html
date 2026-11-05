@@ -488,7 +488,7 @@ function resetFormulaire() {
 
   /* 13. Date du jour */
   const dateInput = document.getElementById('dateRando');
-  if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+  if (dateInput) dateInput.value = new Date().toLocaleDateString('sv-SE');
 
   /* 14. Indicateurs visuels */
   window._majIndicateurs && window._majIndicateurs();
