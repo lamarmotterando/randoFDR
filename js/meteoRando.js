@@ -18,7 +18,7 @@ export async function afficherMeteo(lat, lon) {
 
   if (!date) {
     const aujourd = new Date();
-    date = aujourd.toISOString().split("T")[0];
+    date = aujourd.toLocaleDateString("sv-SE");
   }
 
   /* ── Calcul du nombre de jours depuis aujourd'hui ── */
