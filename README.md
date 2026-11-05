@@ -134,13 +134,12 @@ randoFDR/
 ├── status_system.html              # Page de statut système (admin)
 ├── verifcalendar.html              # Outil de contrôle Google Calendar
 ├── manifest.json                   # Manifest PWA
-├── sw.js                           # Service Worker (cache PWA)
+├── sw.js                           # Service Worker de DÉSACTIVATION (purge les caches randofdr-v…, puis se désinscrit)
+├── sw-carte.js                     # Service Worker de la carte de suivi (portée : carte.html uniquement)
 ├── css/                            # Feuilles de style
 ├── icons/                          # Icônes PWA
 ├── data/                           # Données statiques (randos, coords, parkings)
-├── js/                             # Modules applicatifs (voir plus bas)
-└── tools/
-    └── import_fdr.py               # Import des anciennes FDR (.docx/.odt/.pdf) → Supabase
+└── js/                             # Modules applicatifs (voir plus bas)
 ```
 
 ## Pages
@@ -192,7 +191,13 @@ randoFDR/
 | `delete-fiche` | Suppression d'une fiche (**réservée admin**) |
 | `update-participants` | Saisie du nombre de participants |
 | `calendar-list` | Lecture seule des événements Google Calendar (pour l'outil de contrôle) |
-| `rappel-participants` | Tâche planifiée : relance email des animateurs (cron quotidien) |
+| `rappel-participants` | Tâche planifiée : relance email des animateurs (cron quotidien) ; relance manuelle depuis `planning_gestion` (session admin) |
+| `code-modif` | Modification d'une fiche par code e-mail : `envoyerCode`, `verifierCode`, `modifierAvecCode` (dont annulation) |
+| `confirmation-participants` | E-mail de confirmation après saisie des participants (si nombre ou noms changés) |
+| `profil` | Lecture / enregistrement du profil altimétrique interactif (`profil_data`) |
+| `get-animateurs-admin` | Annuaire complet des animateurs pour l'administration (**réservée admin**) |
+
+> **Code serveur non versionné dans ce dépôt** : le code des Edge Functions et le schéma SQL résident dans le projet Supabase. Pour en récupérer une copie : `supabase functions download <nom-de-la-fonction>` (Supabase CLI, projet lié). À conserver dans un dépôt **privé** distinct (ex. `supabase/functions/` + migrations SQL), sans aucun secret.
 
 L'accès à Google Calendar se fait via un **Service Account** (JWT RS256) côté serveur.
 
@@ -233,7 +238,8 @@ Les fonctions publiques appelées sans jeton (ex. `get-animateurs`, `calendar-li
 - **Nouvelle table / colonne sensible** : elle est lisible par défaut → prévoir un `REVOKE` ou l'exposer via une vue/fonction filtrée.
 - **Nouvelle Edge Function publique** : lister explicitement les colonnes renvoyées, ne jamais faire de `select *` sur une table contenant des données personnelles.
 - **Nouvelle action d'écriture** dans `dynamic-handler` : vérifier une authentification (JWT admin ou clé service_role) pour toute action destructrice ou d'envoi.
-- **Service Worker** (`sw.js`) : penser à incrémenter le nom de cache (`CACHE_NAME`) à chaque changement d'un fichier mis en cache, sinon les navigateurs servent l'ancienne version.
+- **Service Worker** : depuis le 09/10/2026, `sw.js` ne met plus rien en cache (il purge les anciens caches `randofdr-v…` puis se désinscrit) → **plus de `CACHE_NAME` à incrémenter**. Seul `sw-carte.js` (carte de suivi) utilise un cache : incrémenter sa constante `VERSION` si `carte.html` ou `js/lib/leaflet/` change.
+- **Fichiers non référencés dans le dépôt** : `css/old_style.css`, `js/Randoscoordsglobal.js`. Vérifier qu'aucune page Webnode ne les charge avant de les supprimer.
 
 ---
 ## Sécurité oct2026
@@ -275,7 +281,7 @@ Les fonctions publiques appelées sans jeton (ex. `get-animateurs`, `calendar-li
 
 ### Opérations courantes
 - **Rotation de la clé club** : au départ d'un animateur ou une fois par saison. Générer une nouvelle clé (`openssl rand -hex 24`), puis la mettre à jour aux **trois** endroits : le secret Supabase `CLE_CLUB`, l'iframe du formulaire et l'iframe de `randonnees-club`.
-- **Mise à jour du front** : à chaque modification d'un fichier, incrémenter `CACHE_NAME` dans `sw.js`.
+- **Mise à jour du front** : `git push` suffit (aucun cache Service Worker à invalider). Si `carte.html` ou Leaflet change, incrémenter `VERSION` dans `sw-carte.js`.
 - **Sauvegarde** : dump quotidien de la base (rôles, schéma, données) par GitHub Actions, dans un dépôt **privé** distinct.
 
 ### Secrets Supabase (non versionnés)
@@ -287,3 +293,10 @@ RESEND_API_KEY
 
 *La Marmotte Châteaurenard — [lamarmottechateaurenard.com](https://lamarmottechateaurenard.com)*
 ### Ajout envoi code auto à partir du mail pour remplir les participants
+
+**********************
+05 Novembre 2026 — mise à jour documentation
+- Règle `CACHE_NAME` retirée (sw.js désactivé depuis le 09/10/2026) ; règle `VERSION` de sw-carte.js ajoutée
+- `tools/import_fdr.py` retiré de l'arborescence (absent du dépôt)
+- Tableau Edge Functions complété : code-modif, confirmation-participants, profil, get-animateurs-admin
+- Note sur le code serveur non versionné et fichiers non référencés
