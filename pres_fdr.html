@@ -230,5 +230,11 @@
   </footer>
 </main>
 
+<script>
+/* Auto-resize iframe parent (Webnode) */
+function sendHeight(){ try{ window.parent.postMessage({type:"resize",height:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)},"*"); }catch(e){} }
+new ResizeObserver(sendHeight).observe(document.body);
+window.addEventListener("load",sendHeight);
+</script>
 </body>
 </html>
