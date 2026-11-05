@@ -235,6 +235,24 @@
 function sendHeight(){ try{ window.parent.postMessage({type:"resize",height:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)},"*"); }catch(e){} }
 new ResizeObserver(sendHeight).observe(document.body);
 window.addEventListener("load",sendHeight);
+
+/* Liens dans l'iframe : sommaire → défilement de la page Webnode ; liens externes → hors iframe */
+if (window.self !== window.top) {
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("a[href]");
+    if (!a) return;
+    var href = a.getAttribute("href");
+    if (href.charAt(0) === "#") {
+      var cible = document.getElementById(decodeURIComponent(href.slice(1)));
+      if (!cible) return;
+      e.preventDefault();
+      var top = cible.getBoundingClientRect().top + window.scrollY;
+      try { window.parent.postMessage({ type: "scrollTo", top: top }, "*"); } catch (_) {}
+    } else {
+      a.setAttribute("target", "_top");
+    }
+  });
+}
 </script>
 </body>
 </html>
