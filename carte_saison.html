@@ -445,7 +445,7 @@
   /* ---------- Fonds ---------- */
   const TILES = {
     a: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', opt: { maxZoom: 18, attribution: 'Tuiles © Esri — Esri, USGS, NOAA' } },
-    b: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', opt: { maxZoom: 19, subdomains: 'abcd', attribution: '© CARTO · © OpenStreetMap' } },
+    b: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', opt: { maxZoom: 18, attribution: 'Tuiles © Esri — Esri, HERE, OpenStreetMap' } },
     c: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', opt: { maxZoom: 19, subdomains: 'abcd', attribution: '© CARTO · © OpenStreetMap' } }
   };
   function setTiles(dir) { if (tileLayer) tileLayer.remove(); const t = TILES[dir]; tileLayer = L.tileLayer(t.url, t.opt).addTo(map); }
