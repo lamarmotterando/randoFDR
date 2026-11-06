@@ -189,7 +189,7 @@
       <div id="map"></div>
       <div class="float">
         <h2><span>📍</span> Saison <span class="js-saison">—</span></h2>
-        <div class="f-sub"><b class="js-total">—</b> sorties · <span class="js-period"></span> · par niveau IBP</div>
+        <div class="f-sub"><b class="js-total">—</b> sorties sur carte<span class="js-sur"></span> · <span class="js-period"></span> · par niveau IBP</div>
         <div class="legend js-legend"></div>
       </div>
       <div class="gps-note show" id="gps-note">Chargement des sorties…</div>
@@ -219,6 +219,7 @@
   const DEBUT = `${Y}-09-01`, FIN = `${Y + 1}-08-31`;
 
   let RANDOS = [];
+  let NB_SORTIES = 0, PERIODE = '';   /* toutes les sorties de la saison, avec ou sans GPS */
   let map, tileLayer, cluster;
   let currentDir = 'a';
   let selectedId = null;
@@ -294,7 +295,8 @@
       });
     });
     avec.sort((a, b) => a.date.localeCompare(b.date));
-    return { avec, sans };
+    const dates = sorties.map(r => String(r.date_rando).slice(0, 10)).sort();
+    return { avec, sans, total: sorties.length, debut: dates[0], fin: dates[dates.length - 1] };
   }
 
   function afficherNote(texte, erreur) {
@@ -475,10 +477,8 @@
     const html = order.filter(b => counts.get(b.label)).map(b =>
       `<div class="lg"><span class="lg-dot" style="background:${b.color}"></span>${b.label}<i>${counts.get(b.label)}</i></div>`).join('');
     document.querySelectorAll('.js-legend').forEach(el => { el.innerHTML = html; });
-    const first = RANDOS[0], last = RANDOS[RANDOS.length - 1];
-    document.querySelectorAll('.js-period').forEach(el => {
-      el.textContent = first && last ? `${fmtShort(first.date)} ${first.date.slice(0, 4)} → ${fmtShort(last.date)} ${last.date.slice(0, 4)}` : '—';
-    });
+    document.querySelectorAll('.js-sur').forEach(el => { el.textContent = NB_SORTIES > RANDOS.length ? ` (sur ${NB_SORTIES})` : ''; });
+    document.querySelectorAll('.js-period').forEach(el => { el.textContent = PERIODE || '—'; });
   }
 
   async function init() {
@@ -495,8 +495,10 @@
     setTiles('a');
 
     try {
-      const { avec, sans } = await charger();
+      const { avec, sans, total, debut, fin } = await charger();
       RANDOS = avec;
+      NB_SORTIES = total;
+      PERIODE = debut && fin ? `${fmtShort(debut)} ${debut.slice(0, 4)} → ${fmtShort(fin)} ${fin.slice(0, 4)}` : '';
       fillStats();
       setDirection('a');
       if (RANDOS.length) map.fitBounds(L.latLngBounds(RANDOS.map(h => [h.lat, h.lon])), { padding: [50, 50] });
