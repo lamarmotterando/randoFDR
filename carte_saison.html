@@ -31,8 +31,8 @@
   .seg-btn small{font-weight:500;font-size:10px;opacity:.7;letter-spacing:.3px;}
   .seg-btn.on{background:#f1ede1;color:var(--forest);box-shadow:0 1px 4px rgba(0,0,0,.2);}
   .seg-btn:not(.on):hover{color:#fff;}
-  .retour{color:#b9cdbb;text-decoration:none;font-size:13px;font-weight:500;white-space:nowrap;}
-  .retour:hover{color:#fff;}
+  .saison-sel{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#f1ede1;border-radius:999px;padding:7px 12px;font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;}
+  .saison-sel option{color:#23291f;}
 
   .stage{flex:1 1 auto;display:flex;min-height:0;position:relative;}
   .map-wrap{position:relative;flex:1 1 auto;min-width:0;}
@@ -142,7 +142,7 @@
   @media (max-width:820px){
     .brand-t span{display:none;}
     .seg-btn{padding:6px 10px;} .seg-btn small{display:none;}
-    .topbar{gap:10px;padding:10px 12px;} .retour{display:none;}
+    .topbar{gap:10px;padding:10px 12px;}
     body[data-dir="b"] .stage{flex-direction:column;}
     body[data-dir="b"] .panel{flex:0 0 48%;order:2;border-right:0;border-top:1px solid var(--line);}
     body[data-dir="b"] .map-wrap{order:1;flex:1 1 52%;}
@@ -168,7 +168,7 @@
       <button class="seg-btn on" data-dir="a">Sentier<small>TOPO</small></button>
       <button class="seg-btn" data-dir="b">Crête<small>LISTE</small></button>
     </nav>
-    <a class="retour" href="index.html">← Retour app</a>
+    <select class="saison-sel" id="saison-sel" aria-label="Choisir la saison"></select>
   </header>
 
   <div class="stage">
@@ -205,6 +205,7 @@
 
 (function () {
   const API = 'https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler';
+  const PREMIERE_SAISON = 2025;   /* plus ancienne saison proposée (2025 = 2025/2026) */
 
   /* ---------- Saison ---------- */
   function anneeSaison() {
@@ -487,6 +488,10 @@
     const search = document.getElementById('search');
     if (search) search.addEventListener('input', e => { query = e.target.value; renderList(); });
     document.querySelectorAll('.js-saison').forEach(el => { el.textContent = SAISON; });
+    const sel = document.getElementById('saison-sel');
+    const dj = new Date(); const courante = dj.getMonth() >= 8 ? dj.getFullYear() : dj.getFullYear() - 1;
+    for (let y = courante; y >= PREMIERE_SAISON; y--) sel.add(new Option(`${y}/${y + 1}`, y, false, y === Y));
+    sel.addEventListener('change', () => { location.search = '?saison=' + sel.value; });
     setTiles('a');
 
     try {
