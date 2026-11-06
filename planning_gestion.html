@@ -1509,7 +1509,7 @@ function openEdit(ev) {
   btnAnnuler.style.display   = (!isAnnulee && !isSejour) ? "inline-flex" : "none";
   btnRattacher.style.display = (!isAnnulee && !isSejour) ? "inline-flex" : "none";
   btnRattacher.textContent   = ev.sejour_id ? "🏕 Changer séjour" : "🏕 Rattacher";
-
+  document.getElementById("btn-modal-synccal").style.display = isSejour ? "none" : "inline-flex";
   /* Relance participants : rando passée, non annulée, participants non saisis */
   const btnRelancer = document.getElementById("btn-modal-relancer");
   btnRelancer.style.display = (estPassee && !estAnnulee && (ev.type || "rando") === "rando" && !ev.nb_participants) ? "inline-flex" : "none";
