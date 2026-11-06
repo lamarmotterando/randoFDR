@@ -84,6 +84,19 @@
   .gps-note{position:absolute;z-index:1000;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(251,248,241,.95);border:1px solid var(--line);border-radius:999px;padding:5px 13px;font-size:11.5px;color:var(--mut);box-shadow:var(--shadow);white-space:nowrap;display:none;}
   .gps-note.show{display:block;}
   .gps-note.err{color:#9E3B2E;border-color:#e9c4b8;}
+  .gps-note.clic{cursor:pointer;text-decoration:underline dotted;}
+  .gps-note.clic:hover{color:var(--ink);}
+  .sg-overlay{position:fixed;inset:0;z-index:3000;background:rgba(20,30,22,.45);display:none;align-items:center;justify-content:center;padding:16px;}
+  .sg-overlay.open{display:flex;}
+  .sg-box{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);width:420px;max-width:100%;max-height:80vh;display:flex;flex-direction:column;}
+  .sg-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);}
+  .sg-head h3{font-family:var(--serif);font-weight:600;font-size:16px;margin:0;}
+  .sg-close{border:0;background:none;font-size:16px;cursor:pointer;color:var(--mut);padding:2px 6px;border-radius:6px;}
+  .sg-close:hover{background:var(--line);color:var(--ink);}
+  .sg-list{list-style:none;margin:0;padding:8px 16px 14px;overflow:auto;}
+  .sg-list li{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .sg-list li:last-child{border-bottom:0;}
+  .sg-date{flex:0 0 auto;width:104px;color:var(--bark);font-weight:600;font-size:12px;}
 
   .mk{background:none;border:0;}
   .pin{display:flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--lv);border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 4px 9px -3px rgba(0,0,0,.5);border:2px solid #fff;}
@@ -197,6 +210,13 @@
     </div>
   </div>
 
+  <div class="sg-overlay" id="sg-overlay">
+    <div class="sg-box" role="dialog" aria-modal="true" aria-labelledby="sg-titre">
+      <div class="sg-head"><h3 id="sg-titre">Sorties sans coordonnées GPS</h3><button class="sg-close" id="sg-close" aria-label="Fermer">✕</button></div>
+      <ul class="sg-list" id="sg-list"></ul>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script>
@@ -220,7 +240,8 @@
   const DEBUT = `${Y}-09-01`, FIN = `${Y + 1}-08-31`;
 
   let RANDOS = [];
-  let NB_SORTIES = 0, PERIODE = '';   /* toutes les sorties de la saison, avec ou sans GPS */
+  let NB_SORTIES = 0, PERIODE = '';
+  let SANS_GPS = [];   /* { date, nom } des sorties non placées */   /* toutes les sorties de la saison, avec ou sans GPS */
   let map, tileLayer, cluster;
   let currentDir = 'a';
   let selectedId = null;
@@ -283,10 +304,10 @@
     if (!Array.isArray(rows)) throw new Error('Réponse invalide');
 
     const sorties = rows.filter(r => r.date_rando && r.type !== 'sejour' && r.type !== 'autre' && (r.statut || '') !== 'annulée');
-    const avec = []; let sans = 0;
+    const avec = [], listeSans = []; let sans = 0;
     sorties.forEach(r => {
       const p = parseGPS(r.gps);
-      if (!p) { sans++; return; }
+      if (!p) { sans++; listeSans.push({ date: String(r.date_rando).slice(0, 10), nom: r.nom_rando || '—' }); return; }
       const ibp = num(r.ibp);
       avec.push({
         id: r.id, date: String(r.date_rando).slice(0, 10), nom: r.nom_rando || '—',
@@ -298,7 +319,8 @@
     });
     avec.sort((a, b) => a.date.localeCompare(b.date));
     const dates = sorties.map(r => String(r.date_rando).slice(0, 10)).sort();
-    return { avec, sans, total: sorties.length, debut: dates[0], fin: dates[dates.length - 1] };
+    listeSans.sort((a, b) => a.date.localeCompare(b.date));
+    return { avec, sans, listeSans, total: sorties.length, debut: dates[0], fin: dates[dates.length - 1] };
   }
 
   function afficherNote(texte, erreur) {
@@ -306,8 +328,18 @@
     if (!texte) { el.classList.remove('show'); return; }
     el.textContent = texte;
     el.classList.toggle('err', !!erreur);
+    el.classList.toggle('clic', !erreur && SANS_GPS.length > 0);
+    el.title = (!erreur && SANS_GPS.length) ? 'Voir la liste' : '';
     el.classList.add('show');
   }
+
+  function ouvrirSansGps() {
+    if (!SANS_GPS.length) return;
+    document.getElementById('sg-list').innerHTML = SANS_GPS
+      .map(r => `<li><span class="sg-date">${fmtDate(r.date)}</span><span>${esc(r.nom)}</span></li>`).join('');
+    document.getElementById('sg-overlay').classList.add('open');
+  }
+  function fermerSansGps() { document.getElementById('sg-overlay').classList.remove('open'); }
 
   /* échelle 1-5 (effort / technicité / risque) */
   function scale(label, n) {
@@ -494,11 +526,16 @@
     const dj = new Date(); const courante = dj.getMonth() >= 8 ? dj.getFullYear() : dj.getFullYear() - 1;
     for (let y = courante; y >= PREMIERE_SAISON; y--) sel.add(new Option(`${y}/${y + 1}`, y, false, y === Y));
     sel.addEventListener('change', () => { location.search = '?saison=' + sel.value; });
+    document.getElementById('gps-note').addEventListener('click', ouvrirSansGps);
+    document.getElementById('sg-close').addEventListener('click', fermerSansGps);
+    document.getElementById('sg-overlay').addEventListener('click', e => { if (e.target.id === 'sg-overlay') fermerSansGps(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerSansGps(); });
     setTiles('a');
 
     try {
-      const { avec, sans, total, debut, fin } = await charger();
+      const { avec, sans, listeSans, total, debut, fin } = await charger();
       RANDOS = avec;
+      SANS_GPS = listeSans;
       NB_SORTIES = total;
       PERIODE = debut && fin ? `${fmtShort(debut)} ${debut.slice(0, 4)} → ${fmtShort(fin)} ${fin.slice(0, 4)}` : '';
       fillStats();
