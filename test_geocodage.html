@@ -38,7 +38,7 @@
 <div class="wrap">
   <div class="tbl">
     <table>
-      <thead><tr><th>Date</th><th>Rando</th><th>Lieu (fiche)</th><th>Commune trouvée</th><th>Score</th><th>Dist. Châteaurenard</th></tr></thead>
+      <thead><tr><th>Date</th><th>Rando</th><th>Recherché [source]</th><th>Commune trouvée</th><th>Score</th><th>Dist. Châteaurenard</th></tr></thead>
       <tbody id="body"><tr><td colspan="6" class="mut">Choisir une saison puis « Lancer le test ».</td></tr></tbody>
     </table>
   </div>
@@ -49,7 +49,7 @@
 <script>
 /* Page de TEST — n'écrit rien en base.
    Lit les fiches de la saison (dynamic-handler → getFiches), garde celles sans GPS,
-   géocode le champ « lieu » via l'IGN en ne cherchant QUE des communes (type=municipality).
+   géocode le « lieu » (à défaut parking_depart, puis nom de la rando) via l'IGN en ne cherchant QUE des communes (type=municipality).
    Vert : score ≥ 0,7 · Orange : 0,4–0,7 ou > 120 km de Châteaurenard · Rouge : non trouvé. */
 (function () {
   const API = 'https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler';
@@ -99,7 +99,7 @@
     let rows;
     try {
       const res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'getFiches', select: 'id,date_rando,nom_rando,lieu,gps,statut,type',
+        body: JSON.stringify({ action: 'getFiches', select: 'id,date_rando,nom_rando,lieu,parking_depart,gps,statut,type',
           filters: `date_rando=gte.${Y}-09-01&date_rando=lte.${Y + 1}-08-31`, order: 'date_rando.asc' }) });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       rows = await res.json();
@@ -110,22 +110,25 @@
     if (!sansGps.length) { body.innerHTML = '<tr><td colspan="6" class="mut">Aucune fiche sans GPS sur cette saison.</td></tr>'; resume.textContent = '0 fiche'; return; }
 
     body.innerHTML = `<tr><td colspan="6" class="mut">Géocodage de ${sansGps.length} fiches…</td></tr>`;
-    const lieux = [...new Set(sansGps.map(r => r.lieu || ''))];
+    const source = r => r.lieu ? ['lieu', r.lieu] : r.parking_depart ? ['parking', r.parking_depart] : ['nom', r.nom_rando || ''];
+    sansGps.forEach(r => { [r._src, r._q] = source(r); });
+    const lieux = [...new Set(sansGps.map(r => r._q))];
     const res = new Map(await Promise.all(lieux.map(async l => [l, await geocoderCommune(l)])));
 
     let nOk = 0, nDoute = 0, nKo = 0; const pts = [];
     body.innerHTML = sansGps.map(r => {
-      const g = res.get(r.lieu || '');
-      if (g.erreur) { nKo++; return `<tr class="ko"><td>${esc(r.date_rando)}</td><td>${esc(r.nom_rando)}</td><td>${esc(r.lieu) || '<i class="mut">vide</i>'}</td><td colspan="3">❌ ${esc(g.erreur)}</td></tr>`; }
+      const g = res.get(r._q);
+      const lieuAff = `<span class="mut">[${r._src}]</span> ${esc(r._q) || '<i class="mut">vide</i>'}`;
+      if (g.erreur) { nKo++; return `<tr class="ko"><td>${esc(r.date_rando)}</td><td>${esc(r.nom_rando)}</td><td>${lieuAff}</td><td colspan="3">❌ ${esc(g.erreur)}</td></tr>`; }
       const km = Math.round(distKm(BASE, [g.lat, g.lon]));
       const doute = g.score < 0.7 || km > 120;
       doute ? nDoute++ : nOk++;
       const coul = doute ? '#D9883D' : '#4C9A5E';
       const mk = L.circleMarker([g.lat, g.lon], { radius: 7, color: '#fff', weight: 2, fillColor: coul, fillOpacity: .95 })
-        .bindPopup(`<b>${esc(r.nom_rando)}</b><br>${esc(r.date_rando)}<br>Lieu fiche : ${esc(r.lieu)}<br>Trouvé : ${esc(g.label)} ${esc(g.cp)}<br>Score ${g.score.toFixed(2)} · ${km} km`)
+        .bindPopup(`<b>${esc(r.nom_rando)}</b><br>${esc(r.date_rando)}<br>Recherche [${r._src}] : ${esc(r._q)}<br>Trouvé : ${esc(g.label)} ${esc(g.cp)}<br>Score ${g.score.toFixed(2)} · ${km} km`)
         .addTo(couche);
       pts.push([g.lat, g.lon]);
-      return `<tr class="${doute ? 'doute' : 'ok'}" data-lat="${g.lat}" data-lon="${g.lon}"><td>${esc(r.date_rando)}</td><td>${esc(r.nom_rando)}</td><td>${esc(r.lieu)}</td><td>${esc(g.label)} <span class="mut">${esc(g.cp)}</span></td><td>${g.score.toFixed(2)}</td><td>${km} km</td></tr>`;
+      return `<tr class="${doute ? 'doute' : 'ok'}" data-lat="${g.lat}" data-lon="${g.lon}"><td>${esc(r.date_rando)}</td><td>${esc(r.nom_rando)}</td><td>${lieuAff}</td><td>${esc(g.label)} <span class="mut">${esc(g.cp)}</span></td><td>${g.score.toFixed(2)}</td><td>${km} km</td></tr>`;
     }).join('');
 
     body.querySelectorAll('tr[data-lat]').forEach(tr => tr.addEventListener('click', () => map.setView([+tr.dataset.lat, +tr.dataset.lon], 12)));
