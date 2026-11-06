@@ -124,6 +124,7 @@
   .meta div{display:flex;flex-direction:column;}
   .meta dt{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);font-weight:600;}
   .meta dd{margin:1px 0 0;font-size:13px;}
+  .approx{display:inline-block;font-size:9.5px;font-weight:600;color:var(--bark);background:#efe7d2;border:1px solid var(--line);border-radius:6px;padding:1px 5px;vertical-align:middle;}
   .remark{margin:0 0 12px;font-size:12.5px;line-height:1.45;color:#4a5142;border-left:3px solid var(--moss);padding:4px 0 4px 11px;background:linear-gradient(90deg,rgba(76,154,94,.07),transparent);}
   .links{display:flex;gap:9px;}
   .lnk{flex:1 1 0;text-align:center;text-decoration:none;font-weight:600;font-size:12.5px;padding:10px 8px;border-radius:11px;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;gap:5px;transition:.15s;}
@@ -202,10 +203,13 @@
   <script>
 /* Carte de la saison — données chargées depuis Supabase (dynamic-handler → getFiches, lecture publique).
    Saison = 1er septembre → 31 août. Saison courante par défaut ; ?saison=2025 affiche 2025/2026.
-   Seules les randos avec coordonnées GPS valides sont placées ; les autres sont comptées dans la mention en bas de carte. */
+   Position : champ gps de la fiche ; à défaut, géocodage du lieu de départ (lieu, sinon parking_depart)
+   via l'API Géoplateforme IGN (position approchée, badge « ≈ lieu »).
+   Les sorties non localisables sont comptées dans la mention en bas de carte. */
 
 (function () {
   const API = 'https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler';
+  const GEOCODE = 'https://data.geopf.fr/geocodage/search';
   const PREMIERE_SAISON = 2025;   /* plus ancienne saison proposée (2025 = 2025/2026) */
 
   /* ---------- Saison ---------- */
@@ -236,6 +240,25 @@
     const lat = Number(m[1]), lon = Number(m[2]);
     if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
     return { lat, lon };
+  }
+
+  /* Géocodage du lieu de départ (IGN Géoplateforme, sans clé) — cache navigateur */
+  async function geocoder(texte) {
+    const q = String(texte || '').replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (q.length < 3) return null;
+    const cle = 'geo:' + q.toLowerCase();
+    try { const c = localStorage.getItem(cle); if (c) return JSON.parse(c); } catch (e) {}
+    try {
+      const url = `${GEOCODE}?q=${encodeURIComponent(q)}&limit=1&lat=43.95&lon=5.1`;
+      const r = await fetch(url);
+      if (!r.ok) return null;
+      const f = (await r.json()).features?.[0];
+      if (!f || (f.properties?.score ?? 0) < 0.4) return null;
+      const [lon, lat] = f.geometry.coordinates;
+      const pos = { lat, lon };
+      try { localStorage.setItem(cle, JSON.stringify(pos)); } catch (e) {}
+      return pos;
+    } catch (e) { return null; }
   }
 
   /* ---------- Niveaux IBP (palette nature, chaude) ---------- */
@@ -272,7 +295,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'getFiches',
-        select: 'id,date_rando,nom_rando,animateur,lieu,gps,distance,denivele,duree,ibp,effort,technicite,risque,couts,remarques,statut,type',
+        select: 'id,date_rando,nom_rando,animateur,lieu,parking_depart,gps,distance,denivele,duree,ibp,effort,technicite,risque,couts,remarques,statut,type',
         filters: `date_rando=gte.${DEBUT}&date_rando=lte.${FIN}`,
         order: 'date_rando.asc'
       })
@@ -282,14 +305,20 @@
     if (!Array.isArray(rows)) throw new Error('Réponse invalide');
 
     const sorties = rows.filter(r => r.date_rando && r.type !== 'sejour' && r.type !== 'autre' && (r.statut || '') !== 'annulée');
+    /* Lieux à géocoder (fiches sans GPS), une requête par lieu distinct */
+    const lieuDe = r => r.lieu || r.parking_depart || '';
+    const aGeocoder = [...new Set(sorties.filter(r => !parseGPS(r.gps)).map(lieuDe).filter(Boolean))];
+    const geo = new Map(await Promise.all(aGeocoder.map(async l => [l, await geocoder(l)])));
+
     const avec = []; let sans = 0;
     sorties.forEach(r => {
-      const p = parseGPS(r.gps);
+      let p = parseGPS(r.gps), approx = false;
+      if (!p) { p = geo.get(lieuDe(r)) || null; approx = !!p; }
       if (!p) { sans++; return; }
       const ibp = num(r.ibp);
       avec.push({
         id: r.id, date: String(r.date_rando).slice(0, 10), nom: r.nom_rando || '—',
-        animateur: r.animateur || '', lieu: r.lieu || '', lat: p.lat, lon: p.lon,
+        animateur: r.animateur || '', lieu: lieuDe(r), lat: p.lat, lon: p.lon, approx,
         distance: num(r.distance), denivele: num(r.denivele), duree: r.duree || null, ibp,
         effort: note15(r.effort), technicite: note15(r.technicite), risque: note15(r.risque),
         couts: r.couts || '', remarques: r.remarques || '', level: levelOf(ibp)
@@ -331,7 +360,7 @@
       </div>`;
     const meta = `<dl class="meta">
         <div><dt>Animateur·trice</dt><dd>${esc(h.animateur) || '—'}</dd></div>
-        <div><dt>Lieu de départ</dt><dd>${esc(h.lieu) || '—'}</dd></div>
+        <div><dt>Lieu de départ</dt><dd>${esc(h.lieu) || '—'}${h.approx ? ' <span class="approx" title="Position approchée déduite du lieu de départ">≈ lieu</span>' : ''}</dd></div>
         ${h.couts ? `<div><dt>Covoiturage</dt><dd>${esc(h.couts)}</dd></div>` : ''}
       </dl>`;
     const rem = h.remarques ? `<p class="remark">${esc(h.remarques)}</p>` : '';
@@ -504,8 +533,8 @@
       setDirection('a');
       if (RANDOS.length) map.fitBounds(L.latLngBounds(RANDOS.map(h => [h.lat, h.lon])), { padding: [50, 50] });
       if (!RANDOS.length && !sans) afficherNote(`Aucune sortie pour la saison ${SAISON}.`);
-      else if (!RANDOS.length) afficherNote(`Aucune sortie géolocalisée — ${sans} sortie${sans > 1 ? 's' : ''} sans coordonnées GPS.`);
-      else if (sans) afficherNote(`${sans} sortie${sans > 1 ? 's' : ''} sans coordonnées GPS non affichée${sans > 1 ? 's' : ''} sur la carte.`);
+      else if (!RANDOS.length) afficherNote(`Aucune sortie localisable — ${sans} sortie${sans > 1 ? 's' : ''} sans GPS ni lieu de départ reconnu.`);
+      else if (sans) afficherNote(`${sans} sortie${sans > 1 ? 's' : ''} sans GPS ni lieu de départ reconnu, non affichée${sans > 1 ? 's' : ''} sur la carte.`);
       else afficherNote('');
     } catch (e) {
       console.error('[Carte saison] chargement :', e);
