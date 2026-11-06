@@ -137,6 +137,7 @@
   .meta div{display:flex;flex-direction:column;}
   .meta dt{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);font-weight:600;}
   .meta dd{margin:1px 0 0;font-size:13px;}
+  .approx{display:inline-block;font-size:9.5px;font-weight:600;color:var(--bark);background:#efe7d2;border:1px solid var(--line);border-radius:6px;padding:1px 5px;vertical-align:middle;}
   .remark{margin:0 0 12px;font-size:12.5px;line-height:1.45;color:#4a5142;border-left:3px solid var(--moss);padding:4px 0 4px 11px;background:linear-gradient(90deg,rgba(76,154,94,.07),transparent);}
   .links{display:flex;gap:9px;}
   .lnk{flex:1 1 0;text-align:center;text-decoration:none;font-weight:600;font-size:12.5px;padding:10px 8px;border-radius:11px;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;gap:5px;transition:.15s;}
@@ -212,7 +213,7 @@
 
   <div class="sg-overlay" id="sg-overlay">
     <div class="sg-box" role="dialog" aria-modal="true" aria-labelledby="sg-titre">
-      <div class="sg-head"><h3 id="sg-titre">Sorties sans coordonnées GPS</h3><button class="sg-close" id="sg-close" aria-label="Fermer">✕</button></div>
+      <div class="sg-head"><h3 id="sg-titre">Sorties non localisées</h3><button class="sg-close" id="sg-close" aria-label="Fermer">✕</button></div>
       <ul class="sg-list" id="sg-list"></ul>
     </div>
   </div>
@@ -222,11 +223,15 @@
   <script>
 /* Carte de la saison — données chargées depuis Supabase (dynamic-handler → getFiches, lecture publique).
    Saison = 1er septembre → 31 août. Saison courante par défaut ; ?saison=2025 affiche 2025/2026.
-   Seules les randos avec coordonnées GPS valides sont placées ; les autres sont comptées dans la mention en bas de carte. */
+   Position : champ gps de la fiche ; à défaut, centre de la commune du « lieu » (géocodage IGN,
+   communes uniquement, score ≥ 0,7 et ≤ 120 km de Châteaurenard), badge « ≈ commune ».
+   Les autres sorties sont listées via la mention en bas de carte. */
 
 (function () {
   const API = 'https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler';
-  const PREMIERE_SAISON = 2025;   /* plus ancienne saison proposée (2025 = 2025/2026) */
+  const PREMIERE_SAISON = 2025;
+  const GEOCODE = 'https://data.geopf.fr/geocodage/search';
+  const BASE = [43.8828, 4.8547];   /* Châteaurenard — référence de distance */   /* plus ancienne saison proposée (2025 = 2025/2026) */
 
   /* ---------- Saison ---------- */
   function anneeSaison() {
@@ -257,6 +262,31 @@
     const lat = Number(m[1]), lon = Number(m[2]);
     if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
     return { lat, lon };
+  }
+  function distKm(a, b) {
+    const R = 6371, r = Math.PI / 180;
+    const dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  /* Centre de la commune du lieu (IGN, communes uniquement). null si incertain. Cache navigateur. */
+  async function communeDe(lieu) {
+    const q = String(lieu || '').replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (q.length < 3) return null;
+    const cle = 'commune:' + q.toLowerCase();
+    try { const c = localStorage.getItem(cle); if (c) return JSON.parse(c); } catch (e) {}
+    try {
+      const r = await fetch(`${GEOCODE}?q=${encodeURIComponent(q)}&type=municipality&limit=1&lat=${BASE[0]}&lon=${BASE[1]}`);
+      if (!r.ok) return null;
+      const f = (await r.json()).features?.[0];
+      if (!f) return null;
+      const [lon, lat] = f.geometry.coordinates;
+      const pos = ((f.properties?.score ?? 0) >= 0.7 && distKm(BASE, [lat, lon]) <= 120)
+        ? { lat, lon, commune: f.properties.city || f.properties.label || q } : null;
+      try { localStorage.setItem(cle, JSON.stringify(pos)); } catch (e) {}
+      return pos;
+    } catch (e) { return null; }
   }
 
 
@@ -304,14 +334,19 @@
     if (!Array.isArray(rows)) throw new Error('Réponse invalide');
 
     const sorties = rows.filter(r => r.date_rando && r.type !== 'sejour' && r.type !== 'autre' && (r.statut || '') !== 'annulée');
+    /* Fiches sans GPS : une recherche de commune par lieu distinct */
+    const lieux = [...new Set(sorties.filter(r => !parseGPS(r.gps) && r.lieu).map(r => r.lieu))];
+    const communes = new Map(await Promise.all(lieux.map(async l => [l, await communeDe(l)])));
+
     const avec = [], listeSans = []; let sans = 0;
     sorties.forEach(r => {
-      const p = parseGPS(r.gps);
+      let p = parseGPS(r.gps), approx = null;
+      if (!p && r.lieu && communes.get(r.lieu)) { p = communes.get(r.lieu); approx = p.commune; }
       if (!p) { sans++; listeSans.push({ date: String(r.date_rando).slice(0, 10), nom: r.nom_rando || '—' }); return; }
       const ibp = num(r.ibp);
       avec.push({
         id: r.id, date: String(r.date_rando).slice(0, 10), nom: r.nom_rando || '—',
-        animateur: r.animateur || '', lieu: r.lieu || '', lat: p.lat, lon: p.lon,
+        animateur: r.animateur || '', lieu: r.lieu || '', lat: p.lat, lon: p.lon, approx,
         distance: num(r.distance), denivele: num(r.denivele), duree: r.duree || null, ibp,
         effort: note15(r.effort), technicite: note15(r.technicite), risque: note15(r.risque),
         couts: r.couts || '', remarques: r.remarques || '', level: levelOf(ibp)
@@ -364,7 +399,7 @@
       </div>`;
     const meta = `<dl class="meta">
         <div><dt>Animateur·trice</dt><dd>${esc(h.animateur) || '—'}</dd></div>
-        <div><dt>Lieu de départ</dt><dd>${esc(h.lieu) || '—'}</dd></div>
+        <div><dt>Lieu de départ</dt><dd>${esc(h.lieu) || '—'}${h.approx ? ` <span class="approx" title="Pas de GPS : position au centre de la commune ${esc(h.approx)}">≈ commune</span>` : ''}</dd></div>
         ${h.couts ? `<div><dt>Covoiturage</dt><dd>${esc(h.couts)}</dd></div>` : ''}
       </dl>`;
     const rem = h.remarques ? `<p class="remark">${esc(h.remarques)}</p>` : '';
@@ -542,8 +577,8 @@
       setDirection('a');
       if (RANDOS.length) map.fitBounds(L.latLngBounds(RANDOS.map(h => [h.lat, h.lon])), { padding: [50, 50] });
       if (!RANDOS.length && !sans) afficherNote(`Aucune sortie pour la saison ${SAISON}.`);
-      else if (!RANDOS.length) afficherNote(`Aucune sortie géolocalisée — ${sans} sortie${sans > 1 ? 's' : ''} sans coordonnées GPS.`);
-      else if (sans) afficherNote(`${sans} sortie${sans > 1 ? 's' : ''} sans coordonnées GPS non affichée${sans > 1 ? 's' : ''} sur la carte.`);
+      else if (!RANDOS.length) afficherNote(`Aucune sortie localisée — ${sans} sortie${sans > 1 ? 's' : ''} sans GPS ni commune reconnue.`);
+      else if (sans) afficherNote(`${sans} sortie${sans > 1 ? 's' : ''} sans GPS ni commune reconnue, non affichée${sans > 1 ? 's' : ''} sur la carte.`);
       else afficherNote('');
     } catch (e) {
       console.error('[Carte saison] chargement :', e);
