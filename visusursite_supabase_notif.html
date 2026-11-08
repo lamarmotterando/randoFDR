@@ -735,12 +735,28 @@ charger();
 <script defer src="./rando-analytics.js"></script>
 <script>
 (function () {
+  let derniere = 0;
   function envoyerHauteur() {
-    const h = Math.ceil(document.body.getBoundingClientRect().height);
-    parent.postMessage({ type: 'randofdr-height', height: h }, '*');
+    let bas = 0;
+    for (const el of document.body.children) {
+      if (el.tagName === 'SCRIPT') continue;
+      const r = el.getBoundingClientRect();
+      const mb = parseFloat(getComputedStyle(el).marginBottom) || 0;
+      bas = Math.max(bas, r.bottom + window.scrollY + mb);
+    }
+    const h = Math.ceil(bas);
+    if (h !== derniere) {
+      derniere = h;
+      parent.postMessage({ type: 'randofdr-height', height: h }, '*');
+    }
   }
-  // Réagit à tout changement de contenu : bouton 3 lignes / toutes, chargement Supabase, etc.
-  new ResizeObserver(envoyerHauteur).observe(document.body);
+  // Changements de contenu (bouton 3 lignes / toutes, données Supabase…)
+  new MutationObserver(envoyerHauteur).observe(document.body, {
+    childList: true, subtree: true, attributes: true, characterData: true
+  });
   window.addEventListener('load', envoyerHauteur);
+  window.addEventListener('resize', envoyerHauteur);
+  document.addEventListener('click', () => setTimeout(envoyerHauteur, 50));
+  envoyerHauteur();
 })();
 </script>
