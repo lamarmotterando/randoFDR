@@ -1,1 +1,746 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Visusursite_supabase_notifannulation</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  margin: 0;
+  padding: 0;
+}
 
+h3 {
+  text-align: center;
+  font-size: 18px;
+  margin: 12px 0;
+}
+
+#toggleBtn {
+  display: block;
+  margin: 12px auto;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.table-container {
+  width: 100%;
+  max-width: 98vw;
+  margin: 0 auto;
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #f0f0f0;
+  z-index: 10;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: black;
+  white-space: normal;
+  word-break: break-word;
+}
+
+td.description-col {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── REMARQUE (2e ligne sous le nom, tronquée sur 1 ligne) ──
+   width:0 + min-width:100% : la remarque n'élargit jamais la colonne */
+.remarque {
+  display: block;
+  width: 0;
+  min-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 400;
+  font-style: italic;
+  color: #666;
+  margin-top: 3px;
+}
+.remarque.modif { color: #b86400; }
+.remarque.annul { color: #c53030; font-style: normal; font-weight: 700; }
+
+thead { display: none; }
+
+tr:hover { background: #e0f3ff; }
+
+.jour-semaine {
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+@keyframes blink { 50% { background-color: yellow; } }
+.blink-alert { animation: blink 1s step-start infinite; }
+
+/* ── LIGNE ANNULÉE ── */
+tr.annulee {
+  opacity: 0.55;
+  background: #fff0f0 !important;
+}
+tr.annulee:hover { background: #ffe0e0 !important; }
+
+/* ── LIGNE MODIFIÉE ── */
+tr.modifiee {
+  background: #fffbe6 !important;
+}
+tr.modifiee:hover { background: #fff3cc !important; }
+
+/* ── LIGNE TITRE SÉJOUR (repliable) ── */
+tr.sejour-titre { cursor: pointer; }
+.sejour-titre-cell {
+  background: #ddeef8;
+  color: #0c4472;
+  font-weight: 700;
+}
+tr.sejour-titre:hover .sejour-titre-cell { background: #cce4f3; }
+.sejour-arrow {
+  display: inline-block;
+  transition: transform .2s;
+  margin-right: 6px;
+  color: #185fa5;
+  font-size: 13px;
+}
+.sejour-arrow.open { transform: rotate(90deg); }
+.sejour-nom  { font-weight: 700; }
+.sejour-meta { font-weight: 400; font-size: 11px; color: #2a6496; margin-left: 8px; }
+
+/* ── RANDO RATTACHÉE À UN SÉJOUR ── */
+tr.rando-enfant td:first-child { border-left: 3px solid #85b7eb; }
+tr.rando-enfant td { background: #f5faff; }
+tr.rando-enfant:hover td { background: #e8f4fd; }
+
+/* ── LIEN ANIMATEUR ── */
+.anim-link {
+  color: #0077cc;
+  text-decoration: underline dotted;
+  cursor: pointer;
+  font-size: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+.anim-link:hover { color: #003366; }
+
+/* ── BOUTON PARTAGE ── */
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 6px;
+  opacity: 0.55;
+  vertical-align: middle;
+  transition: opacity .15s;
+}
+.share-btn:hover { opacity: 1; background: #e8f4fd; }
+
+/* ── TOAST ── */
+#toast {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a3a5c;
+  color: white;
+  padding: 10px 22px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 99999;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  pointer-events: none;
+}
+
+@media screen and (max-width: 600px) {
+  body { font-size: 15px; background: #f4f4f4; }
+  h3 { font-size: 20px; margin: 16px 0 8px; }
+  #toggleBtn {
+    width: 90%; padding: 12px; font-size: 15px; border-radius: 8px;
+    border: none; background: #0077cc; color: white; font-weight: bold; margin-bottom: 12px;
+  }
+  .table-container { padding: 0 10px; }
+  table, thead, tbody, th, td, tr { display: block; }
+  thead { display: none; }
+  tr {
+    background: white; border-radius: 14px; padding: 14px 16px;
+    margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    border-left: 5px solid #0077cc; position: relative;
+  }
+  tr.annulee { border-left-color: #c53030 !important; background: #fff0f0 !important; }
+  tr.modifiee { border-left-color: #e67e00 !important; background: #fffbe6 !important; }
+  tr.sejour-titre { border-left-color: #185fa5 !important; }
+  tr.rando-enfant { border-left-color: #85b7eb !important; }
+  tr td:nth-child(1) {
+    font-size: 17px; font-weight: bold; color: #1a1a1a; border: none;
+    padding: 0 0 6px 0; border-bottom: 1px solid #eee; margin-bottom: 8px;
+  }
+  tr td:nth-child(2) {
+    font-size: 18px; font-weight: bold; color: #003366; border: none;
+    padding: 6px 0; white-space: normal; line-height: 1.3;
+  }
+  tr td:nth-child(2) .remarque { font-size: 13px; margin-top: 4px; }
+  tr td:nth-child(3) { font-size: 14px; color: #555; border: none; padding: 2px 0; }
+  tr td:nth-child(3)::before { content: "👤 "; }
+  tr td:nth-child(4) {
+    position: absolute; top: 14px; right: 14px; font-size: 13px; font-weight: bold;
+    padding: 4px 10px; border-radius: 20px; border: none; min-width: 36px; text-align: center;
+  }
+  tr td:nth-child(5), tr td:nth-child(6) {
+    display: inline-block; font-size: 13px; color: #444; border: none; padding: 4px 8px 0 0;
+  }
+  tr td:nth-child(5)::before { content: "📏 "; }
+  tr td:nth-child(6)::before { content: "⛰ "; }
+  tr td.share-cell {
+    display: inline-block; border: none; padding: 4px 0 0 0;
+  }
+  /* La ligne-titre séjour n'a qu'une cellule pleine largeur */
+  tr.sejour-titre td.sejour-titre-cell {
+    font-size: 16px; border: none; padding: 4px 0;
+  }
+  tr.sejour-titre td.sejour-titre-cell::before { content: none; }
+}
+</style>
+
+<h3>DE BELLES RANDOS ...</h3>
+<button id="toggleBtn">Afficher tout le programme</button>
+<div class="table-container">
+  <table id="table">
+    <thead>
+      <tr>
+        <th>Date</th><th>Randonnée</th><th>Animateur</th>
+        <th>IBP</th><th>Distance</th><th>Dénivelé</th>
+        <th>🔗</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div id="toast">🔗 Lien copié !</div>
+
+<script>
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+/* ✅ Clé anon legacy supprimée — remplacer sb_publishable_XXXX par la vraie clé du dashboard Supabase */
+const SUPABASE_KEY = "sb_publishable_M7RxCuGoLU8zdzFSPuZl8A_CvvNMZ-O";
+
+const CHEMIN_PAGE_CONTACTS = "https://www.lamarmottechateaurenard.com/goanim/";
+
+const params  = new URLSearchParams(window.location.search);
+const maxDate = params.get("maxDate") || "2099-12-31";
+  
+let filterEnabled = true;
+let minDisplay    = null;
+let maxDisplay    = null;
+let allRows       = [];
+let toastTimer    = null;
+let todayMs       = null;
+
+/* État de pliage des séjours : id_sejour -> booléen (déplié ?) */
+const sejourOuvert = {};
+
+/* ══ DATES ══════════════════════════════════════════════════════════════ */
+function parseDate(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [yyyy, mm, jj] = s.split("-");
+    const d = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(jj));
+    d.setHours(0, 0, 0, 0); return d;
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    const [jj, mm, yyyy] = s.split("/");
+    const d = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(jj));
+    d.setHours(0, 0, 0, 0); return d;
+  }
+  return null;
+}
+
+function jourSemaine(dateStr) {
+  const d = parseDate(dateStr);
+  return d ? d.toLocaleDateString("fr-FR", { weekday: "long" }) : "";
+}
+
+function afficherDate(dateStr) {
+  if (!dateStr) return "";
+  const s = String(dateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [yyyy, mm, jj] = s.split("-");
+    return jj + "/" + mm + "/" + yyyy;
+  }
+  return s;
+}
+
+/* ══ DIVERS ═════════════════════════════════════════════════════════════ */
+function couleurIBP(val) {
+  if (!val) return null;
+  const n = parseFloat(String(val).trim().replace(",", "."));
+  if (isNaN(n)) return null;
+  if (n <= 25)  return { bg: "#00dd00", color: "#ffffff" };
+  if (n <= 50)  return { bg: "#0077ff", color: "#ffffff" };
+  if (n <= 75)  return { bg: "#ff8800", color: "#ffffff" };
+  if (n <= 100) return { bg: "#ff1a1a", color: "#ffffff" };
+  return              { bg: "#343a40", color: "#ffffff" };
+}
+
+function urlContacts(f) {
+  const p = new URLSearchParams();
+  if (f.animateur) p.set("animateur", f.animateur.trim());
+  if (f.nom_rando) p.set("rando", f.nom_rando.trim());
+  return CHEMIN_PAGE_CONTACTS + "?" + p.toString();
+}
+
+/* ══ PARTAGE ════════════════════════════════════════════════════════════ */
+function afficherToast() {
+  const toast = document.getElementById("toast");
+  toast.style.display = "block";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.style.display = "none"; }, 2200);
+}
+
+function copierLien(event, url) {
+  event.stopPropagation();
+  navigator.clipboard.writeText(url).then(() => {
+    afficherToast();
+  }).catch(() => {
+    prompt("Copiez ce lien :", url);
+  });
+}
+
+/* ══ ANTI-DOUBLONS ══════════════════════════════════════════════════════
+   Une mise à jour peut créer une nouvelle fiche (id différent) pour une
+   rando déjà existante (même date + même nom + même animateur), sans
+   supprimer l'ancienne. On garde la fiche la + RÉCEMMENT MODIFIÉE de
+   chaque groupe (champ Supabase updated_at, maintenu par un trigger SQL) —
+   c'est plus fiable que created_at, qui ne bouge jamais après un UPDATE
+   et peut donc désigner à tort une vieille fiche jamais mise à jour.
+   ═══════════════════════════════════════════════════════════════════ */
+function cleAntiDoublon(f) {
+  return [
+    (f.date_rando || "").trim(),
+    (f.nom_rando  || "").trim().toLowerCase(),
+    (f.animateur  || "").trim().toLowerCase()
+  ].join("||");
+}
+
+function tsModification(f) {
+  const t = f.updated_at ? Date.parse(f.updated_at) : (f.created_at ? Date.parse(f.created_at) : NaN);
+  return isNaN(t) ? 0 : t;
+}
+
+function dedupliquerFiches(fiches) {
+  const groupes = new Map();
+  fiches.forEach(f => {
+    const cle = cleAntiDoublon(f);
+    if (!groupes.has(cle)) groupes.set(cle, []);
+    groupes.get(cle).push(f);
+  });
+
+  const resultat = [];
+  groupes.forEach(liste => {
+    if (liste.length === 1) { resultat.push(liste[0]); return; }
+    liste.sort((a, b) => {
+      const ta = tsModification(a), tb = tsModification(b);
+      if (tb !== ta) return tb - ta; /* la + récemment modifiée en premier */
+      return String(b.id).localeCompare(String(a.id), undefined, { numeric: true }); /* filet de sécurité */
+    });
+    resultat.push(liste[0]); /* on garde la fiche la + à jour, on jette les autres */
+  });
+  return resultat;
+}
+
+/* ══ CHARGEMENT ════════════════════════════════════════════════════════ */
+async function charger() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split("T")[0];
+
+  let fiches = [];
+  try {
+    const resFiches = await fetch(
+  SUPABASE_URL + "/functions/v1/dynamic-handler",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "getFiches",
+      select: "id,created_at,updated_at,date_rando,nom_rando,animateur,ibp,distance,denivele,statut,heure_rv,parking_covoit,parking_depart,gps,duree,effort,technicite,risque,couts,remarques,profil_png,type,sejour_id,date_fin_sejour",
+      filters: "date_rando=gte." + todayStr + "&date_rando=lte." + maxDate,
+      order: "date_rando.asc"
+    })
+  }
+);
+    if (!resFiches.ok) {
+      const txt = await resFiches.text();
+      throw new Error("fiches HTTP " + resFiches.status + " — " + txt);
+    }
+    fiches = await resFiches.json();
+  } catch(e) {
+    console.error("Erreur chargement fiches:", e);
+    document.getElementById("tbody").innerHTML =
+      "<tr><td colspan='7'>⚠️ Erreur de chargement : " + e.message + "</td></tr>";
+    return;
+  }
+
+  /* Séjours en cours : leur date de début est peut-être déjà passée, mais ils ne
+     sont pas terminés (date_fin_sejour >= aujourd'hui) → on les récupère en plus.
+     Leurs randos à venir sont déjà présentes dans le chargement principal. */
+  try {
+    const resSej = await fetch(
+      SUPABASE_URL + "/functions/v1/dynamic-handler",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "getFiches",
+          select: "id,created_at,updated_at,date_rando,nom_rando,animateur,ibp,distance,denivele,statut,type,sejour_id,date_fin_sejour",
+          filters: "type=eq.sejour&date_fin_sejour=gte." + todayStr + "&date_rando=lte." + maxDate,
+          order: "date_rando.asc"
+        })
+      }
+    );
+    if (resSej.ok) {
+      const sejEnCours = await resSej.json();
+      const ids = new Set(fiches.map(f => f.id));
+      sejEnCours.forEach(s => { if (!ids.has(s.id)) fiches.push(s); });
+    }
+  } catch(e) { console.warn("Séjours en cours :", e); }
+
+  fiches = dedupliquerFiches(fiches);
+
+  construireTableau(fiches, today);
+}
+
+/* ══ LIGNE RANDO (autonome ou rattachée à un séjour) ════════════════════ */
+function creerLigneRando(f, today, isEnfant) {
+  const tr       = document.createElement("tr");
+  const annulee  = f.statut === "annulée";
+  const modifiee = f.statut === "modifiée";
+  const d        = parseDate(f.date_rando);
+  const diff     = d ? Math.floor((d - today) / 86400000) : null;
+
+  tr.style.cursor = "pointer";
+  const dest = urlContacts(f);
+  tr.addEventListener("click", () => { window.top.location.href = dest; });
+
+  if (d !== null) { tr.dataset.dateValue = d.getTime(); tr.dataset.diff = diff; }
+  if (annulee)    { tr.classList.add("annulee");  tr.dataset.annulee  = "1"; }
+  if (modifiee)   { tr.classList.add("modifiee"); tr.dataset.modifiee = "1"; }
+  if (isEnfant)   { tr.classList.add("rando-enfant"); }
+
+  /* Date */
+  const tdDate = document.createElement("td");
+  const jour   = jourSemaine(f.date_rando);
+  tdDate.innerHTML = jour
+    ? `<span class="jour-semaine">${jour}</span> ${afficherDate(f.date_rando)}`
+    : afficherDate(f.date_rando);
+  tr.appendChild(tdDate);
+
+  /* Nom */
+  const tdNom = document.createElement("td");
+  tdNom.classList.add("description-col");
+  if (annulee) {
+    tdNom.innerHTML = `<span style="text-decoration:line-through;color:#aaa">${f.nom_rando || "—"}</span>&nbsp;<span style="color:#c53030;font-weight:700;font-size:11px">❌ ANNULÉE</span>`;
+  } else if (modifiee) {
+    tdNom.innerHTML = `${f.nom_rando || "—"}&nbsp;<span style="color:#e67e00;font-weight:700;font-size:11px">✏️ MODIFIÉE</span>`;
+  } else {
+    tdNom.textContent = f.nom_rando || "—";
+  }
+
+  /* Remarque (2e ligne) — affichée seulement si renseignée.
+     Annulée → préfixe « Motif : ». textContent : pas d'injection HTML. */
+  const rem = String(f.remarques || "").replace(/\s+/g, " ").trim();
+  if (rem) {
+    const spRem = document.createElement("span");
+    spRem.className   = "remarque" + (annulee ? " annul" : (modifiee ? " modif" : ""));
+    spRem.textContent = annulee ? "Motif : " + rem : rem;
+    spRem.title       = rem;
+    tdNom.appendChild(spRem);
+  }
+  tr.appendChild(tdNom);
+
+  /* Animateur */
+  const tdAnim = document.createElement("td");
+  tdAnim.textContent = f.animateur || "—";
+  tr.appendChild(tdAnim);
+
+  /* IBP */
+  const tdIBP = document.createElement("td");
+  tdIBP.textContent = annulee ? "" : (f.ibp || "");
+  tdIBP.style.textAlign  = "center";
+  tdIBP.style.fontWeight = "700";
+  if (!annulee) {
+    const ibpStyle = couleurIBP(f.ibp);
+    if (ibpStyle) {
+      tdIBP.style.backgroundColor = ibpStyle.bg;
+      tdIBP.style.color           = ibpStyle.color;
+      tdIBP.style.borderRadius    = "4px";
+    }
+  }
+  tr.appendChild(tdIBP);
+
+  /* Distance */
+  const tdDist = document.createElement("td");
+  tdDist.textContent = f.distance ? f.distance + " km" : "";
+  tr.appendChild(tdDist);
+
+  /* Dénivelé */
+  const tdDen = document.createElement("td");
+  tdDen.textContent = f.denivele ? f.denivele + " m" : "";
+  tr.appendChild(tdDen);
+
+  /* Partage 🔗 */
+  const tdShare = document.createElement("td");
+  tdShare.classList.add("share-cell");
+  tdShare.style.textAlign = "center";
+  if (!annulee) {
+    const lien = urlContacts(f);
+    const btn  = document.createElement("button");
+    btn.className   = "share-btn";
+    btn.textContent = "🔗";
+    btn.title       = "Copier le lien de cette fiche";
+    btn.onclick     = (e) => copierLien(e, lien);
+    tdShare.appendChild(btn);
+  }
+  tr.appendChild(tdShare);
+
+  return tr;
+}
+
+/* ══ LIGNE TITRE SÉJOUR (repliable) ═════════════════════════════════════ */
+function creerLigneSejour(sej, today, nbRandos) {
+  const tr = document.createElement("tr");
+  tr.classList.add("sejour-titre");
+  tr.dataset.sejourId = sej.id;
+  tr.dataset.sejour   = "1";
+
+  const d    = parseDate(sej.date_rando);
+  const diff = d ? Math.floor((d - today) / 86400000) : null;
+  if (d !== null) { tr.dataset.dateValue = d.getTime(); tr.dataset.diff = diff; }
+
+  const debutAff = afficherDate(sej.date_rando);
+  const finAff   = afficherDate(sej.date_fin_sejour);
+  const dFin     = parseDate(sej.date_fin_sejour);
+  const nbJours  = (dFin && d) ? Math.round((dFin - d) / 86400000) + 1 : null;
+
+  /* Date de fin (ou début si pas de fin) → sert à garder le séjour affiché
+     tant qu'il n'est pas terminé */
+  const dFiltre = dFin || d;
+  if (dFiltre) tr.dataset.endValue = dFiltre.getTime();
+
+  const td = document.createElement("td");
+  td.colSpan   = 7;
+  td.className = "sejour-titre-cell";
+  td.innerHTML =
+    `<span class="sejour-arrow" id="arrow-sej-${sej.id}">▶</span>` +
+    `<span class="sejour-nom">🏕 ${sej.nom_rando || "Séjour"}</span>` +
+    `<span class="sejour-meta">${debutAff}${finAff ? " → " + finAff : ""}` +
+    `${nbJours ? " · " + nbJours + " j" : ""}` +
+    ` · ${sej.animateur || "—"}` +
+    ` · ${nbRandos} rando${nbRandos > 1 ? "s" : ""}</span>`;
+  tr.appendChild(td);
+
+  tr.addEventListener("click", () => toggleSejour(sej.id));
+  return tr;
+}
+
+function toggleSejour(id) {
+  sejourOuvert[id] = !sejourOuvert[id];
+  const arrow = document.getElementById("arrow-sej-" + id);
+  if (arrow) arrow.classList.toggle("open", sejourOuvert[id]);
+  appliquerVisibiliteEnfants();
+}
+
+/* Affiche/masque les randos d'un séjour selon le pliage ET la visibilité du titre */
+function appliquerVisibiliteEnfants() {
+  allRows.forEach(tr => {
+    if (tr.dataset.enfant !== "1") return;
+    const pid    = tr.dataset.parentSejour;
+    const parent = document.querySelector(`.sejour-titre[data-sejour-id="${pid}"]`);
+    const parentVisible = parent && parent.style.display !== "none";
+    tr.style.display = (sejourOuvert[pid] && parentVisible) ? "" : "none";
+  });
+}
+
+/* ══ TABLEAU ════════════════════════════════════════════════════════════ */
+function construireTableau(fiches, today) {
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = "";
+  allRows = [];
+  todayMs = today.getTime();
+
+  /* Séparation : séjours / randos rattachées / randos autonomes */
+  const sejoursById     = {};
+  const enfantsBySejour = {};
+  const autonomes       = [];
+  const sejours         = [];
+
+  fiches.forEach(f => {
+    if (f.type === "sejour") { sejoursById[f.id] = f; sejours.push(f); }
+  });
+  fiches.forEach(f => {
+    if (f.type === "sejour") return;
+    if (f.sejour_id != null && sejoursById[f.sejour_id]) {
+      (enfantsBySejour[f.sejour_id] = enfantsBySejour[f.sejour_id] || []).push(f);
+    } else {
+      autonomes.push(f); /* rando autonome (ou séjour parent absent du jeu de données) */
+    }
+  });
+
+  /* Items de 1er niveau (randos autonomes + séjours), triés par date */
+  const topLevel = [
+    ...autonomes.map(f => ({ kind: "rando",  f })),
+    ...sejours.map(f   => ({ kind: "sejour", f }))
+  ];
+  topLevel.sort((a, b) => {
+    const da = parseDate(a.f.date_rando), db = parseDate(b.f.date_rando);
+    return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+  });
+
+  topLevel.forEach(item => {
+    if (item.kind === "rando") {
+      const tr = creerLigneRando(item.f, today, false);
+      tbody.appendChild(tr);
+      allRows.push(tr);
+    } else {
+      const sej     = item.f;
+      const enfants = (enfantsBySejour[sej.id] || []).slice().sort((a, b) => {
+        const da = parseDate(a.date_rando), db = parseDate(b.date_rando);
+        return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+      });
+
+      const trSej = creerLigneSejour(sej, today, enfants.length);
+      tbody.appendChild(trSej);
+      allRows.push(trSej);
+
+      enfants.forEach(ef => {
+        const trEf = creerLigneRando(ef, today, true);
+        trEf.dataset.parentSejour = sej.id;
+        trEf.dataset.enfant       = "1";
+        trEf.style.display        = "none"; /* replié par défaut */
+        tbody.appendChild(trEf);
+        allRows.push(trEf);
+      });
+    }
+  });
+
+  /* Prochaine rando → clignoter (séjours et randos rattachées exclus) */
+  setTimeout(() => {
+    let prochaineRow = null, minDiff = Infinity;
+    allRows.forEach(tr => {
+      const diff = parseInt(tr.dataset.diff, 10);
+      if (!isNaN(diff) && diff >= 0 && diff < minDiff
+          && !tr.dataset.annulee && !tr.dataset.sejour && tr.dataset.enfant !== "1") {
+        minDiff = diff; prochaineRow = tr;
+      }
+    });
+
+    if (prochaineRow) {
+      prochaineRow.style.border = "2px solid red";
+      const tds = Array.from(prochaineRow.querySelectorAll("td"));
+      const couleursOrigin     = tds.map(td => td.style.backgroundColor);
+      const textCouleursOrigin = tds.map(td => td.style.color);
+      let blinkOn = false;
+      setInterval(() => {
+        blinkOn = !blinkOn;
+        tds.forEach((td, idx) => {
+          if (blinkOn) { td.style.backgroundColor = "#ffff00"; td.style.color = "#000000"; }
+          else         { td.style.backgroundColor = couleursOrigin[idx]; td.style.color = textCouleursOrigin[idx]; }
+        });
+      }, 600);
+
+      /* minDisplay = date de la prochaine rando non-annulée (la première qui clignote) */
+      minDisplay = parseInt(prochaineRow.dataset.dateValue, 10);
+
+      /* maxDisplay = date de la 3ème rando autonome à venir (fenêtre de 3 randos,
+         hors séjours et hors randos rattachées) */
+      const aVenir = allRows.filter(tr => {
+        const diff = parseInt(tr.dataset.diff, 10);
+        return !isNaN(diff) && diff >= 0
+            && !tr.dataset.annulee && !tr.dataset.sejour && tr.dataset.enfant !== "1";
+      });
+      if (aVenir.length >= 3)      maxDisplay = parseInt(aVenir[2].dataset.dateValue, 10);
+      else if (aVenir.length > 0)  maxDisplay = parseInt(aVenir[aVenir.length-1].dataset.dateValue, 10);
+
+      /* Étendre minDisplay aux annulées qui précèdent la première non-annulée :
+         une rando annulée dont la date n'est pas encore passée doit apparaître
+         même si elle arrive avant la première rando non-annulée dans le planning. */
+      allRows.forEach(tr => {
+        if (!tr.dataset.annulee) return;
+        if (tr.dataset.enfant === "1") return;
+        const t    = parseInt(tr.dataset.dateValue, 10);
+        const diff = parseInt(tr.dataset.diff, 10);
+        if (!isNaN(diff) && diff >= 0 && t < minDisplay) {
+          minDisplay = t;  /* reculer la borne basse pour inclure cette annulée */
+        }
+      });
+
+      applyFilter();
+    }
+  }, 200);
+}
+
+function applyFilter() {
+  allRows.forEach(tr => {
+    if (tr.dataset.enfant === "1") return; /* géré par le pliage du séjour */
+
+    /* Titre de séjour : reste affiché tant que sa date de fin n'est pas passée */
+    if (tr.dataset.sejour === "1") {
+      if (!filterEnabled) { tr.style.display = ""; return; }
+      const end = parseInt(tr.dataset.endValue, 10);
+      tr.style.display = (isNaN(end) || end >= todayMs) ? "" : "none";
+      return;
+    }
+
+    const t = parseInt(tr.dataset.dateValue, 10);
+    if (filterEnabled && minDisplay !== null && maxDisplay !== null) {
+      /* Les annulées sont affichées si leur date tombe dans la fenêtre des 3 prochaines randos */
+      tr.style.display = (t >= minDisplay && t <= maxDisplay) ? "" : "none";
+    } else {
+      tr.style.display = "";
+    }
+  });
+  appliquerVisibiliteEnfants();
+}
+
+document.getElementById("toggleBtn").onclick = () => {
+  filterEnabled = !filterEnabled;
+  applyFilter();
+  document.getElementById("toggleBtn").textContent =
+    filterEnabled ? "Afficher tout le programme" : "Afficher 3 randos";
+};
+
+charger();
+</script>
+<script defer src="./rando-analytics.js"></script>
+<script>
+(function () {
+  function envoyerHauteur() {
+    const h = Math.ceil(document.body.getBoundingClientRect().height);
+    parent.postMessage({ type: 'randofdr-height', height: h }, '*');
+  }
+  // Réagit à tout changement de contenu : bouton 3 lignes / toutes, chargement Supabase, etc.
+  new ResizeObserver(envoyerHauteur).observe(document.body);
+  window.addEventListener('load', envoyerHauteur);
+})();
+</script>
