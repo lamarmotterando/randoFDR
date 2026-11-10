@@ -128,6 +128,7 @@ randoFDR/
 ├── planningFDR.html                # Planning + synchro Google Calendar
 ├── planning_gestion.html           # Interface admin (auth Supabase)
 ├── goanim.html                     # Feuille de route affichée (prochaine sortie)
+├── meteo.html                      # Météo au départ (jour J, veille, lendemain) pour iframe Webnode
 ├── randonnees-club.html            # Archive des randonnées (vue publique)
 ├── carteRandos.html                # Carte des randonnées (Leaflet)
 ├── visusursite_supabase_notif.html # Visualisation / notifications
@@ -150,6 +151,7 @@ randoFDR/
 | `planningFDR.html` | Planning des sorties + boutons « Créer / Resync Calendar » | Membres (Webnode) |
 | `planning_gestion.html` | Administration des fiches (création, modification, suppression, séjours) | **Auth Supabase (admin)** |
 | `goanim.html` | Feuille de route de la prochaine sortie, avec boutons Appel/SMS de l'animateur | Membres (Webnode) |
+| `meteo.html` | Météo au lieu de départ de la prochaine sortie (ou `?rando=<nom>`) : jour J, veille et lendemain. Affichée à partir de J-4 (constante `HORIZON_J`), jamais sans GPS. Même requête Open-Meteo que `goanim.html` | Public (Webnode) |
 | `randonnees-club.html` | Archive des randonnées passées | Membres (Webnode) |
 | `carteRandos.html` | Carte interactive des randonnées | Public |
 | `status_system.html` | Supervision : santé des services, métriques, cohérence Google Calendar | **Auth Supabase (admin)** |
@@ -206,7 +208,7 @@ L'accès à Google Calendar se fait via un **Service Account** (JWT RS256) côt�
 - **Supabase** — base de données, authentification (admin), Edge Functions.
 - **Google Calendar** — agenda du club (création/màj automatiques des sorties).
 - **Resend** — envoi des emails (confirmations, relances participants).
-- **Open-Meteo** — prévisions météo (sans clé).
+- **Open-Meteo** — prévisions météo (sans clé), utilisées par `goanim.html`, `meteo.html` et `planningFDR.html`.
 - **IBP** (proxy Vercel) — calcul de l'indice de difficulté.
 - **Thunderforest** — fond de carte topographique (clé requise, à réinjecter dans `js/carteRandos.js`).
 - **cron-job.org** — déclencheur quotidien de la relance participants.
@@ -300,3 +302,9 @@ RESEND_API_KEY
 - `tools/import_fdr.py` retiré de l'arborescence (absent du dépôt)
 - Tableau Edge Functions complété : code-modif, confirmation-participants, profil, get-animateurs-admin
 - Note sur le code serveur non versionné et fichiers non référencés
+
+10 Novembre 2026 — page météo Webnode
+- Nouvelle page publique `meteo.html` : météo au lieu de départ (GPS de la fiche) pour le jour de la sortie, la veille et le lendemain
+- Affichage limité à J-4 (horizon fiable ARPEGE/AROME) ; veille et lendemain affichés seulement dans cet horizon ; rien si GPS absent, sortie annulée ou passée
+- Intégration Webnode : `<iframe src="https://lamarmotterando.github.io/randoFDR/meteo.html" style="width:100%;height:400px;border:0;" loading="lazy"></iframe>`
+- Manuel d'exploitation et de maintenance passé en v1.3
