@@ -32,6 +32,9 @@
   .lbl  { font-size: 9px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
   .val  { font-size: 14px; font-weight: 700; color: #1a3a5c; margin-top: 2px; }
   .raf  { font-size: 12px; font-weight: 600; color: #4a6fa5; margin-top: 2px; }
+  .voisins { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 6px; margin-top: 6px; }
+  .voisins .box { opacity: .85; }
+  .voisins .val { font-size: 13px; }
   .fiab { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;
           margin-top: 8px; padding: 5px 8px; border-radius: 6px; font-size: 11px; }
   .src  { color: #9ca3af; font-size: 10px; }
@@ -115,14 +118,29 @@ async function getMeteo(lat, lon, iso) {
   }
   if (!r.ok) throw new Error("HTTP " + r.status);
   const { daily: d } = await r.json();
-  const i = d?.time ? d.time.indexOf(iso) : -1;
-  if (i === -1) throw new Error("date absente");
+  if (!d?.time) throw new Error("vide");
+  return d;
+}
+function jour(d, iso) {
+  const i = d.time.indexOf(iso);
+  if (i === -1) return null;
   return {
     code: d.weather_code[i],
     tmax: d.temperature_2m_max[i], tmin: d.temperature_2m_min[i],
     prob: d.precipitation_probability_max?.[i] ?? null,
     vent: d.wind_speed_10m_max[i], raf: d.wind_gusts_10m_max?.[i] ?? null,
   };
+}
+function decaler(iso, n) {
+  const [y,m,j] = iso.split("-").map(Number);
+  return new Date(y, m-1, j+n).toLocaleDateString("sv-SE");
+}
+function voisin(titre, iso, v) {
+  const [ic, lb] = wmoInfo(v.code) || ["🌡️","Variable"];
+  const jr = new Date(iso + "T00:00:00").toLocaleDateString("fr-FR", { weekday:"short", day:"numeric" });
+  return `<div class="box"><div class="lbl">${titre} · ${jr}</div>
+    <div class="val">${ic} ${lb}</div>
+    <div class="raf">${v.tmax}° / ${v.tmin}° · 🌧 ${v.prob !== null ? v.prob + " %" : "—"} · 💨 ${v.vent} km/h</div></div>`;
 }
 
 async function main() {
@@ -151,9 +169,17 @@ async function main() {
   const c = parseGPS(f.gps);
   if (!c) return msg("Coordonnées GPS du départ absentes : météo non affichée.");
 
-  let m;
-  try { m = await getMeteo(c.lat, c.lon, iso); }
+  let d, m;
+  try { d = await getMeteo(c.lat, c.lon, iso); m = jour(d, iso); if (!m) throw new Error("date absente"); }
   catch (e) { carte.innerHTML = entete + `<span class="err">⚠️ Météo indisponible</span>`; return; }
+
+  /* Veille et lendemain : seulement dans l'horizon fiable (J0 → J+HORIZON_J) */
+  const veille    = diffJ - 1 >= 0         ? jour(d, decaler(iso, -1)) : null;
+  const lendemain = diffJ + 1 <= HORIZON_J ? jour(d, decaler(iso, +1)) : null;
+  const voisins = (veille || lendemain) ? `<div class="voisins">
+      ${veille    ? voisin("Veille",    decaler(iso, -1), veille)    : ""}
+      ${lendemain ? voisin("Lendemain", decaler(iso, +1), lendemain) : ""}
+    </div>` : "";
 
   const info = wmoInfo(m.code) || ["🌡️","Conditions variables"];
   if (BAD_CODES.has(m.code)) carte.classList.add("meteo-bad");
@@ -170,6 +196,7 @@ async function main() {
       <div class="box"><div class="lbl">🌧 Pluie</div><div class="val">${m.prob !== null ? m.prob + " %" : "—"}</div></div>
       <div class="box"><div class="lbl">💨 Vent</div><div class="val">${m.vent} km/h</div>${m.raf !== null ? `<div class="raf">raf. ${m.raf} km/h</div>` : ""}</div>
     </div>
+    ${voisins}
     <div class="fiab" style="background:${fiab.bg};color:${fiab.color};border:1px solid ${fiab.border};">
       <strong>${fiab.txt}</strong>
       <span class="src">Météo-France via Open-Meteo · mis à jour ${new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</span>
