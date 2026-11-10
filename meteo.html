@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Météo de la rando</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<!--
+  meteo.html — Météo de la rando, à intégrer en iframe sur Webnode.
+  Même source et mêmes données que la feuille de route (goanim.html).
+  Paramètres :
+    ?rando=<nom exact>  → cette rando
+    (aucun)             → prochaine rando non annulée
+  Affichage limité à HORIZON_J jours (prévisions fiables Météo-France).
+-->
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Source Sans 3', sans-serif; background: transparent; color: #1a1a1a; padding: 8px; }
+  .carte { max-width: 520px; margin: 0 auto; border-radius: 12px; padding: 13px 14px;
+           border: 1px solid #bfdbfe; background: linear-gradient(135deg,#e8f4fd,#dbeafe); }
+  .carte.meteo-good { background: linear-gradient(135deg,#f0fdf4,#dcfce7); border-color: #86efac; }
+  .carte.meteo-bad  { background: linear-gradient(135deg,#fef2f2,#fee2e2); border-color: #fca5a5; }
+  .titre { font-size: 11px; font-weight: 700; color: #1e40af; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+  .rando { font-size: 15px; font-weight: 700; color: #2d6a4f; }
+  .lieu  { font-size: 13px; color: #5a5a5a; margin: 2px 0 10px; }
+  .icon-label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .m-icon  { font-size: 26px; line-height: 1; }
+  .m-label { font-size: 15px; font-weight: 700; color: #1a3a5c; }
+  .grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+  .box  { border-radius: 7px; padding: 7px 5px; text-align: center;
+          background: rgba(255,255,255,.75); border: 1px solid rgba(191,219,254,.5); }
+  .lbl  { font-size: 9px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+  .val  { font-size: 14px; font-weight: 700; color: #1a3a5c; margin-top: 2px; }
+  .raf  { font-size: 12px; font-weight: 600; color: #4a6fa5; margin-top: 2px; }
+  .fiab { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;
+          margin-top: 8px; padding: 5px 8px; border-radius: 6px; font-size: 11px; }
+  .src  { color: #9ca3af; font-size: 10px; }
+  .info { color: #6b7280; font-style: italic; font-size: 13px; }
+  .err  { color: #b91c1c; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="carte" id="carte"><span class="info">Chargement…</span></div>
+
+<script>
+/* Nombre de jours maximum avant la rando pour afficher la météo.
+   4 = horizon fiable ARPEGE/AROME (Météo-France). */
+const HORIZON_J = 4;
+
+const HANDLER = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
+const randoNom = new URLSearchParams(location.search).get("rando");
+const carte = document.getElementById("carte");
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[c]);
+}
+function toISODate(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [d,m,y] = s.split("/"); return `${y}-${m}-${d}`; }
+  return null;
+}
+function parseGPS(g) {
+  if (!g) return null;
+  const m = String(g).trim().match(/(-?\d+\.?\d*)\s*[,;]\s*(-?\d+\.?\d*)/);
+  return m ? { lat: +m[1], lon: +m[2] } : null;
+}
+function dateLongue(iso) {
+  const [y,m,d] = iso.split("-").map(Number);
+  return new Date(y, m-1, d).toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+}
+function wmoInfo(c) {
+  return ({
+    0:["☀️","Dégagé"],1:["🌤️","Peu nuageux"],2:["⛅","Part. nuageux"],
+    3:["☁️","Couvert"],45:["🌫️","Brouillard"],48:["🌫️","Givre"],
+    51:["🌦️","Bruine"],53:["🌦️","Bruine mod."],55:["🌧️","Bruine forte"],
+    61:["🌧️","Pluie légère"],63:["🌧️","Pluie modérée"],65:["🌧️","Pluie forte"],
+    71:["❄️","Neige légère"],73:["❄️","Neige modérée"],75:["❄️","Neige forte"],
+    77:["🌨️","Grésil"],80:["🌦️","Averses"],81:["🌧️","Averses mod."],
+    82:["⛈️","Av. violentes"],85:["🌨️","Av. neige"],86:["🌨️","Av. neige++"],
+    95:["⛈️","Orage"],96:["⛈️","Orage+grêle"],99:["⛈️","Orage+grêle++"],
+  })[c] ?? null;
+}
+const BAD_CODES  = new Set([55,61,63,65,71,73,75,77,80,81,82,85,86,95,96,99]);
+const GOOD_CODES = new Set([0,1,2]);
+
+async function getFiche() {
+  const select = "date_rando,nom_rando,statut,parking_depart,gps";
+  const today = new Date(); today.setHours(0,0,0,0);
+  const iso = today.toLocaleDateString("sv-SE");
+  const body = randoNom
+    ? { action:"getFiches", select, filters:"nom_rando=ilike." + randoNom.trim().normalize("NFC"),
+        order:"date_rando.desc,created_at.desc", limit:1 }
+    : { action:"getFiches", select, filters:"date_rando=gte." + iso + "&statut=neq.annulée",
+        order:"date_rando.asc,created_at.desc", limit:1 };
+  const r = await fetch(HANDLER, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(body) });
+  if (!r.ok) throw new Error("Handler " + r.status);
+  const d = await r.json();
+  return d?.[0] || null;
+}
+
+async function getMeteo(lat, lon, iso) {
+  /* Même requête que goanim.html → mêmes valeurs */
+  const url = `https://api.open-meteo.com/v1/forecast`
+    + `?latitude=${lat}&longitude=${lon}`
+    + `&daily=weather_code,temperature_2m_max,temperature_2m_min,`
+    + `precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max`
+    + `&timezone=Europe%2FParis&forecast_days=7`;
+  let r;
+  for (let t = 1; t <= 3; t++) {          /* Open-Meteo : 502 intermittents */
+    r = await fetch(url);
+    if (r.ok) break;
+    if (t < 3) await new Promise(res => setTimeout(res, 1500 * t));
+  }
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const { daily: d } = await r.json();
+  const i = d?.time ? d.time.indexOf(iso) : -1;
+  if (i === -1) throw new Error("date absente");
+  return {
+    code: d.weather_code[i],
+    tmax: d.temperature_2m_max[i], tmin: d.temperature_2m_min[i],
+    prob: d.precipitation_probability_max?.[i] ?? null,
+    vent: d.wind_speed_10m_max[i], raf: d.wind_gusts_10m_max?.[i] ?? null,
+  };
+}
+
+async function main() {
+  let f;
+  try { f = await getFiche(); }
+  catch (e) { carte.innerHTML = `<span class="err">⚠️ Rando introuvable</span>`; return; }
+  if (!f) { carte.innerHTML = `<span class="info">Aucune rando à venir.</span>`; return; }
+
+  const iso = toISODate(f.date_rando);
+  const lieu = f.parking_depart ? esc(f.parking_depart) : "Lieu de départ non renseigné";
+  const entete = `
+    <div class="titre">🌤 Météo au départ</div>
+    <div class="rando">${esc(f.nom_rando)}</div>
+    <div class="lieu">📍 ${lieu}${iso ? " — " + dateLongue(iso) : ""}</div>`;
+  const msg = t => { carte.innerHTML = entete + `<span class="info">${t}</span>`; };
+
+  if (!iso) return msg("Date de la rando non renseignée.");
+  if (String(f.statut || "").toLowerCase() === "annulée") return msg("Randonnée annulée.");
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diffJ = Math.round((new Date(iso + "T00:00:00") - today) / 86400000);
+  if (diffJ < 0) return msg("Randonnée passée.");
+  if (diffJ > HORIZON_J)
+    return msg(`Prévision publiée à partir de J-${HORIZON_J} (dans ${diffJ - HORIZON_J} j.), pour rester fiable.`);
+
+  const c = parseGPS(f.gps);
+  if (!c) return msg("Coordonnées GPS du départ absentes : météo non affichée.");
+
+  let m;
+  try { m = await getMeteo(c.lat, c.lon, iso); }
+  catch (e) { carte.innerHTML = entete + `<span class="err">⚠️ Météo indisponible</span>`; return; }
+
+  const info = wmoInfo(m.code) || ["🌡️","Conditions variables"];
+  if (BAD_CODES.has(m.code)) carte.classList.add("meteo-bad");
+  else if (GOOD_CODES.has(m.code)) carte.classList.add("meteo-good");
+
+  const fiab = diffJ <= 2
+    ? { txt:"✅ AROME 1,3 km — prévision fiable", bg:"#e8f5e9", color:"#2e7d32", border:"#a5d6a7" }
+    : { txt:`🟡 ARPEGE 5 km — bonne (J+${diffJ})`, bg:"#fff8e1", color:"#f57f17", border:"#ffe082" };
+
+  carte.innerHTML = entete + `
+    <div class="icon-label"><span class="m-icon">${info[0]}</span><span class="m-label">${info[1]}</span></div>
+    <div class="grid">
+      <div class="box"><div class="lbl">🌡 Temp.</div><div class="val">${m.tmax}° / ${m.tmin}°</div><div class="raf">Max / Min</div></div>
+      <div class="box"><div class="lbl">🌧 Pluie</div><div class="val">${m.prob !== null ? m.prob + " %" : "—"}</div></div>
+      <div class="box"><div class="lbl">💨 Vent</div><div class="val">${m.vent} km/h</div>${m.raf !== null ? `<div class="raf">raf. ${m.raf} km/h</div>` : ""}</div>
+    </div>
+    <div class="fiab" style="background:${fiab.bg};color:${fiab.color};border:1px solid ${fiab.border};">
+      <strong>${fiab.txt}</strong>
+      <span class="src">Météo-France via Open-Meteo · mis à jour ${new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</span>
+    </div>`;
+}
+main();
+</script>
+</body>
+</html>
