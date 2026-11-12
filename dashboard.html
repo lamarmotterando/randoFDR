@@ -46,12 +46,18 @@
   .sortie .nom{flex:1;font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .sortie .anim{font-size:12px;color:var(--txt2);white-space:nowrap;}
   .sortie .stat{font-family:'DM Mono',monospace;font-size:11px;color:var(--txt3);white-space:nowrap;}
-  /* Colonnes mois */
-  .months{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:8px;}
-  .month{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%;}
-  .month .col{width:70%;max-width:26px;background:var(--vert-cl);border-radius:4px 4px 0 0;min-height:2px;transition:height .5s;}
+  /* Colonnes mois (empilées : sorties vert + participants jaune) */
+  .months{display:flex;align-items:flex-end;gap:6px;height:170px;padding-top:8px;}
+  .month{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;}
+  .month .stack{width:70%;max-width:26px;display:flex;flex-direction:column;border-radius:4px 4px 0 0;overflow:hidden;min-height:0;transition:height .5s;}
+  .month .seg-p{background:var(--amber);min-height:0;}
+  .month .seg-s{background:var(--vert-cl);min-height:3px;}
   .month .mn{font-family:'DM Mono',monospace;font-size:9px;color:var(--txt3);}
-  .month .mv{font-family:'DM Mono',monospace;font-size:10px;color:var(--txt2);}
+  .month .mv{font-family:'DM Mono',monospace;font-size:10px;color:var(--txt2);line-height:1.2;text-align:center;}
+  .month .mv .p{color:var(--amber);display:block;}
+  .month .mv .s{color:var(--vert-cl);display:block;}
+  .legend{display:flex;gap:16px;font-family:'DM Mono',monospace;font-size:11px;color:var(--txt2);margin-bottom:6px;}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;}
   /* IBP tiers */
   .tier{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px;}
   .tier .swatch{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
@@ -62,6 +68,21 @@
   .statuts{display:flex;gap:18px;flex-wrap:wrap;}
   .statut{font-size:13px;font-weight:700;}
   .empty{color:var(--txt3);font-size:13px;font-family:'DM Mono',monospace;padding:8px 0;}
+  /* Cartes services (repris de status) */
+  .cards{display:flex;flex-direction:column;gap:8px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:14px;}
+  .card-icon{font-size:18px;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--bg);}
+  .card-info{flex:1;min-width:0;}
+  .card-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .card-detail{font-family:'DM Mono',monospace;font-size:11px;color:var(--txt3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .card-status{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .status-dot{width:8px;height:8px;border-radius:50%;}
+  .status-dot.ok{background:var(--vert-cl);} .status-dot.error{background:var(--red);}
+  .status-dot.loading{background:var(--blue);animation:blink .8s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
+  .status-label{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;}
+  .status-label.ok{color:var(--vert-cl);} .status-label.error{color:var(--red);} .status-label.loading{color:var(--blue);}
+  .status-ms{font-family:'DM Mono',monospace;font-size:10px;color:var(--txt3);min-width:44px;text-align:right;}
   footer{max-width:960px;margin:36px auto 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--txt3);text-align:center;line-height:1.8;}
 </style>
 </head>
@@ -102,17 +123,27 @@
     </div>
   </div>
 
-  <div class="section-label">Sorties par mois (saison)</div>
+  <div class="section-label">Sorties et participants par mois (saison)</div>
   <div class="panel">
+    <div class="legend"><span><i style="background:var(--vert-cl)"></i>Sorties</span><span><i style="background:var(--amber)"></i>Participants</span></div>
     <div class="months" id="months"></div>
     <div class="statuts" id="statuts" style="margin-top:16px;"></div>
   </div>
+
+  <div class="section-label">Backend &amp; Services</div>
+  <div class="cards" id="cards-backend"></div>
+
+  <div class="section-label">Pages GitHub</div>
+  <div class="cards" id="cards-pages"></div>
 </div>
-<footer>RandoFDR · Tableau de bord activité · La Marmotte Châteaurenard<br>Données en direct depuis Supabase — statuts annulés exclus des totaux</footer>
+<footer>RandoFDR · Tableau de bord activité · La Marmotte Châteaurenard<br>Données en direct depuis Supabase — statuts annulés exclus des totaux — temps de réponse mesurés depuis votre navigateur</footer>
 
 <script>
-const HANDLER = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
-const GET_ANIM = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/get-animateurs";
+const SUPABASE_URL = "https://whlxbfnmyqdflmxosfse.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_M7RxCuGoLU8zdzFSPuZl8A_CvvNMZ-O";
+const HANDLER = SUPABASE_URL + "/functions/v1/dynamic-handler";
+const GET_ANIM = SUPABASE_URL + "/functions/v1/get-animateurs";
+const CAL_LIST = SUPABASE_URL + "/functions/v1/calendar-list";
 const MOIS = ["jan","fév","mar","avr","mai","juin","juil","aoû","sep","oct","nov","déc"];
 const nf = n => (n||0).toLocaleString("fr-FR");
 const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -132,8 +163,64 @@ function ibpTier(v){
   return {i:4,lbl:"Très difficile (>100)",       c:"#8b949e"};
 }
 
-async function charger(){
-  const btn=document.getElementById("btn"); btn.disabled=true; btn.textContent="⟳ …";
+/* ══ CONTRÔLES SERVICES (repris de status) ══ */
+async function ping(url, options = {}, timeout = 8000) {
+  const t0 = Date.now(), ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeout);
+  try { const res = await fetch(url, { ...options, signal: ctrl.signal }); clearTimeout(timer); return { ok: res.ok, status: res.status, ms: Date.now() - t0 }; }
+  catch(e) { clearTimeout(timer); return { ok: false, status: 0, ms: Date.now() - t0, err: e.message }; }
+}
+const checks = [
+  { id:'supabase-rest', group:'backend', icon:'🗄', name:'Supabase REST API', detail:'Table fiches — lecture',
+    run: async () => { const t0=Date.now(); try { const res=await fetch(HANDLER,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"pingDB"})}); const ms=Date.now()-t0; const d=await res.json(); return { ok:d.ok, ms, detail: d.ok?`HTTP ${res.status} · ${ms}ms`:`Erreur ${res.status}` }; } catch(e){ return {ok:false,ms:Date.now()-t0,detail:e.message}; } } },
+  { id:'supabase-animateurs', group:'backend', icon:'👥', name:'Supabase — Animateurs', detail:'Table animateurs — lecture',
+    run: async () => { const t0=Date.now(); try { const res=await fetch(GET_ANIM,{method:"GET",headers:{"Content-Type":"application/json"}}); const ms=Date.now()-t0; const d=await res.json(); const ok=Array.isArray(d)&&d.length>0; return { ok, ms, detail: ok?`${d.length} animateurs · ${ms}ms`:`Erreur ${res.status}` }; } catch(e){ return {ok:false,ms:Date.now()-t0,detail:e.message}; } } },
+  { id:'supabase-storage', group:'backend', icon:'📦', name:'Supabase Storage', detail:'Bucket Courbe — profils PNG',
+    run: async () => { const r=await ping(`${SUPABASE_URL}/storage/v1/bucket`,{headers:{apikey:SUPABASE_ANON_KEY,Authorization:`Bearer ${SUPABASE_ANON_KEY}`}}); return { ok: r.ok||r.status===400||r.status===401, ms:r.ms, detail:`HTTP ${r.status} · ${r.ms}ms` }; } },
+  { id:'dynamic-handler', group:'backend', icon:'⚡', name:'Edge Function dynamic-handler', detail:'Supabase Deno — email + Calendar',
+    run: async () => { const r=await ping(HANDLER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'ping'})}); const ok=r.ok||r.status===400||r.status===422; return { ok, ms:r.ms, detail: ok?`Actif · HTTP ${r.status} · ${r.ms}ms`:`Hors ligne · ${r.status}` }; } },
+  { id:'calendar-list', group:'backend', icon:'🗓', name:'Edge Function calendar-list', detail:'Lecture Google Calendar',
+    run: async () => { const t0=Date.now(); try { const today=new Date().toISOString().slice(0,10); const res=await fetch(CAL_LIST,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({from:today,to:today})}); const ms=Date.now()-t0; const d=await res.json(); return { ok:d.success===true, ms, detail: d.success?`Actif · ${ms}ms`:`Erreur ${res.status}` }; } catch(e){ return {ok:false,ms:Date.now()-t0,detail:e.message}; } } },
+  { id:'openmeteo', group:'backend', icon:'🌤', name:'Open-Meteo', detail:'Météo API — sans clé',
+    run: async () => { const r=await ping('https://api.open-meteo.com/v1/forecast?latitude=43.9&longitude=5.4&daily=weather_code&timezone=Europe%2FParis&forecast_days=1'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`Erreur ${r.status}` }; } },
+  { id:'ibp-proxy', group:'backend', icon:'📊', name:'IBP Proxy (Vercel)', detail:'Calcul indice difficulté',
+    run: async () => { const r=await ping('https://ibp-proxy.vercel.app/',{},8000); return { ok:r.ok, ms:r.ms, detail: r.ok?`Actif · ${r.ms}ms`:`Hors ligne · HTTP ${r.status}` }; } },
+  { id:'page-index', group:'pages', icon:'📝', name:'index.html', detail:'Formulaire FDR — GitHub Pages',
+    run: async () => { const r=await ping('https://lamarmotterando.github.io/randoFDR/index.html'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`HTTP ${r.status}` }; } },
+  { id:'page-planning', group:'pages', icon:'📅', name:'planningFDR.html', detail:'Planning public',
+    run: async () => { const r=await ping('https://lamarmotterando.github.io/randoFDR/planningFDR.html'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`HTTP ${r.status}` }; } },
+  { id:'page-gestion', group:'pages', icon:'🔐', name:'planning_gestion.html', detail:'Interface admin — Auth Supabase',
+    run: async () => { const r=await ping('https://lamarmotterando.github.io/randoFDR/planning_gestion.html'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`HTTP ${r.status}` }; } },
+  { id:'page-goanim', group:'pages', icon:'🗺', name:'goanim.html', detail:'Fiche prochaine sortie',
+    run: async () => { const r=await ping('https://lamarmotterando.github.io/randoFDR/goanim.html'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`HTTP ${r.status}` }; } },
+  { id:'page-randos', group:'pages', icon:'📂', name:'data/randos.json', detail:'Données statiques randonnées',
+    run: async () => { const r=await ping('https://lamarmotterando.github.io/randoFDR/data/randos.json'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`HTTP ${r.status}` }; } },
+];
+const STATE_LBL = { ok:'OK', error:'Hors ligne', loading:'…' };
+function renderCard(c){
+  return `<div class="card"><div class="card-icon">${c.icon}</div><div class="card-info"><div class="card-name">${c.name}</div><div class="card-detail" id="detail-${c.id}">${c.detail}</div></div><div class="card-status"><div class="status-dot loading" id="dot-${c.id}"></div><span class="status-label loading" id="lbl-${c.id}">…</span><span class="status-ms" id="ms-${c.id}"></span></div></div>`;
+}
+function updateCard(id, state, detail, ms){
+  const dot=document.getElementById(`dot-${id}`), lbl=document.getElementById(`lbl-${id}`);
+  const det=document.getElementById(`detail-${id}`), msEl=document.getElementById(`ms-${id}`);
+  if(dot) dot.className=`status-dot ${state}`;
+  if(lbl){ lbl.className=`status-label ${state}`; lbl.textContent=STATE_LBL[state]; }
+  if(det && detail) det.textContent=detail;
+  if(msEl) msEl.textContent = ms!=null ? `${ms}ms` : '';
+}
+function initCards(){
+  document.getElementById('cards-backend').innerHTML = checks.filter(c=>c.group==='backend').map(renderCard).join('');
+  document.getElementById('cards-pages').innerHTML   = checks.filter(c=>c.group==='pages').map(renderCard).join('');
+}
+async function lancerChecks(){
+  checks.forEach(c => updateCard(c.id,'loading',c.detail,null));
+  await Promise.all(checks.map(async c => {
+    try { const r=await c.run(); updateCard(c.id, r.ok?'ok':'error', r.detail, r.ms); }
+    catch(e){ updateCard(c.id,'error',e.message,null); }
+  }));
+}
+
+async function chargerDonnees(){
   const S=saison();
   document.getElementById("saison-label").textContent="Saison "+S.label+" (1ᵉʳ sept. → 31 août)";
   try{
@@ -196,8 +283,8 @@ async function charger(){
       : '<div class="empty">Pas encore de sortie cette saison.</div>';
 
     // ── Difficulté IBP ──
-    const tiers=[0,0,0,0,0]; const tinfo=[null,null,null,null,null];
-    saisonFiches.forEach(f=>{const t=ibpTier(f.ibp);if(t){tiers[t.i]++;tinfo[t.i]=t;}});
+    const tiers=[0,0,0,0,0];
+    saisonFiches.forEach(f=>{const t=ibpTier(f.ibp);if(t)tiers[t.i]++;});
     const maxT=Math.max(...tiers,1);
     const labels=[{lbl:"Facile (≤25)",c:"#39d353"},{lbl:"Modéré (26-50)",c:"#58a6ff"},{lbl:"Soutenu (51-75)",c:"#e3b341"},{lbl:"Difficile (76-100)",c:"#f85149"},{lbl:"Très difficile (>100)",c:"#8b949e"}];
     const contI=document.getElementById("ibp");
@@ -206,14 +293,21 @@ async function charger(){
       ? labels.map((L,i)=>`<div class="tier"><span class="swatch" style="background:${L.c}"></span><span class="tlbl">${L.lbl}</span><div class="tbar"><div class="tfill" style="width:${Math.round(tiers[i]/maxT*100)}%;background:${L.c}"></div></div><span class="tnum">${tiers[i]}</span></div>`).join("")
       : '<div class="empty">Aucun IBP renseigné cette saison.</div>';
 
-    // ── Sorties par mois (sept→août) ──
+    // ── Sorties + participants par mois (sept→août), colonnes empilées ──
     const ordreMois=[8,9,10,11,0,1,2,3,4,5,6,7]; // sept..août
-    const parMois={}; ordreMois.forEach(m=>parMois[m]=0);
-    saisonFiches.forEach(f=>{const m=new Date(f.date_rando+"T12:00:00").getMonth(); if(m in parMois)parMois[m]++;});
-    const maxM=Math.max(...Object.values(parMois),1);
+    const parMois={}, partMois={};
+    ordreMois.forEach(m=>{parMois[m]=0;partMois[m]=0;});
+    saisonFiches.forEach(f=>{
+      const m=new Date(f.date_rando+"T12:00:00").getMonth();
+      if(m in parMois){ parMois[m]++; partMois[m]+=parseInt(f.nb_participants)||0; }
+    });
+    const maxM=Math.max(...ordreMois.map(m=>parMois[m]+partMois[m]),1);
     document.getElementById("months").innerHTML = ordreMois.map(m=>{
-      const n=parMois[m]; const h=Math.round(n/maxM*100);
-      return `<div class="month"><span class="mv">${n||""}</span><div class="col" style="height:${n?Math.max(h,4):0}%;"></div><span class="mn">${MOIS[m]}</span></div>`;
+      const n=parMois[m], p=partMois[m], tot=n+p;
+      const h = tot ? Math.max(Math.round(tot/maxM*100),4) : 0;
+      return `<div class="month"><span class="mv">${p?`<span class="p">${p}</span>`:""}${n?`<span class="s">${n}</span>`:""}</span>`+
+             `<div class="stack" style="height:${h}%;"><div class="seg-p" style="flex:${p} 1 0;"></div>${n?`<div class="seg-s" style="flex:${n} 1 0;"></div>`:""}</div>`+
+             `<span class="mn">${MOIS[m]}</span></div>`;
     }).join("");
 
     // ── Statuts (toute la saison, annulées incluses ici pour info) ──
@@ -225,14 +319,21 @@ async function charger(){
       `<span class="statut" style="color:var(--vert-cl)">✅ ${pub} publiées</span>`+
       `<span class="statut" style="color:var(--amber)">✏️ ${mod} modifiées</span>`+
       `<span class="statut" style="color:var(--red)">❌ ${ann} annulées</span>`;
-
-    document.getElementById("maj").textContent = "Maj "+new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
   }catch(e){
     document.getElementById("prochaines").innerHTML='<div class="empty" style="color:var(--red)">⚠️ Erreur de chargement : '+esc(e.message)+'</div>';
+  }
+}
+
+async function charger(){
+  const btn=document.getElementById("btn"); btn.disabled=true; btn.textContent="⟳ …";
+  try{
+    await Promise.all([chargerDonnees(), lancerChecks()]);
+    document.getElementById("maj").textContent = "Maj "+new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
   }finally{
     btn.disabled=false; btn.textContent="⟳ Actualiser";
   }
 }
+initCards();
 charger();
 setInterval(() => { if (!document.hidden) charger(); }, 300000); // 5 min, suspendu si onglet caché
 
