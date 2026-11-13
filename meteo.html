@@ -40,6 +40,16 @@
   .src  { color: #9ca3af; font-size: 10px; }
   .info { color: #6b7280; font-style: italic; font-size: 13px; }
   .err  { color: #b91c1c; font-size: 13px; }
+  .h-titre { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin: 10px 0 4px; }
+  .heures  { display: grid; gap: 4px; overflow-x: auto; }
+  .h    { text-align: center; border-radius: 7px; padding: 5px 2px; font-size: 11px;
+          background: rgba(255,255,255,.75); border: 1px solid rgba(191,219,254,.5); }
+  .h.bad { background: #fee2e2; border-color: #fca5a5; }
+  .hh   { font-weight: 700; color: #6b7280; }
+  .hi   { font-size: 18px; line-height: 1.3; }
+  .ht   { font-size: 13px; font-weight: 700; color: #1a3a5c; }
+  .hp, .hv { color: #4a6fa5; white-space: nowrap; }
+  .hv span { color: #9ca3af; }
 </style>
 </head>
 <body>
@@ -49,6 +59,8 @@
 /* Nombre de jours maximum avant la rando pour afficher la météo.
    4 = horizon fiable ARPEGE/AROME (Météo-France). */
 const HORIZON_J = 4;
+/* Heures affichées dans le détail de la journée (heure locale). */
+const HEURES = [8, 10, 12, 14, 16, 18];
 
 const HANDLER = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
 const randoNom = new URLSearchParams(location.search).get("rando");
@@ -109,6 +121,7 @@ async function getMeteo(lat, lon, iso) {
     + `?latitude=${lat}&longitude=${lon}`
     + `&daily=weather_code,temperature_2m_max,temperature_2m_min,`
     + `precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max`
+    + `&hourly=weather_code,temperature_2m,precipitation_probability,wind_speed_10m,wind_gusts_10m`
     + `&timezone=Europe%2FParis&forecast_days=7`;
   let r;
   for (let t = 1; t <= 3; t++) {          /* Open-Meteo : 502 intermittents */
@@ -117,9 +130,30 @@ async function getMeteo(lat, lon, iso) {
     if (t < 3) await new Promise(res => setTimeout(res, 1500 * t));
   }
   if (!r.ok) throw new Error("HTTP " + r.status);
-  const { daily: d } = await r.json();
-  if (!d?.time) throw new Error("vide");
-  return d;
+  const j = await r.json();
+  if (!j?.daily?.time) throw new Error("vide");
+  return j;
+}
+function heures(h, iso) {
+  if (!h?.time) return "";
+  const cells = HEURES.map(H => {
+    const i = h.time.indexOf(`${iso}T${String(H).padStart(2, "0")}:00`);
+    if (i === -1) return "";
+    const code = h.weather_code[i];
+    const [ic] = wmoInfo(code) || ["🌡️"];
+    const p = h.precipitation_probability?.[i];
+    const raf = h.wind_gusts_10m?.[i];
+    return `<div class="h${BAD_CODES.has(code) ? " bad" : ""}">
+      <div class="hh">${H}h</div>
+      <div class="hi">${ic}</div>
+      <div class="ht">${Math.round(h.temperature_2m[i])}°</div>
+      <div class="hp">💧 ${p != null ? p + " %" : "—"}</div>
+      <div class="hv">💨 ${Math.round(h.wind_speed_10m[i])}${raf != null ? `<span>/${Math.round(raf)}</span>` : ""}</div>
+    </div>`;
+  }).join("");
+  if (!cells) return "";
+  return `<div class="h-titre">Détail de la journée · vent / rafales km/h</div>
+    <div class="heures" style="grid-template-columns:repeat(${HEURES.length},minmax(58px,1fr))">${cells}</div>`;
 }
 function jour(d, iso) {
   const i = d.time.indexOf(iso);
@@ -169,8 +203,8 @@ async function main() {
   const c = parseGPS(f.gps);
   if (!c) return msg("Coordonnées GPS du départ absentes : météo non affichée.");
 
-  let d, m;
-  try { d = await getMeteo(c.lat, c.lon, iso); m = jour(d, iso); if (!m) throw new Error("date absente"); }
+  let d, h, m;
+  try { ({ daily: d, hourly: h } = await getMeteo(c.lat, c.lon, iso)); m = jour(d, iso); if (!m) throw new Error("date absente"); }
   catch (e) { carte.innerHTML = entete + `<span class="err">⚠️ Météo indisponible</span>`; return; }
 
   /* Veille et lendemain : seulement dans l'horizon fiable (J0 → J+HORIZON_J) */
@@ -196,6 +230,7 @@ async function main() {
       <div class="box"><div class="lbl">🌧 Pluie</div><div class="val">${m.prob !== null ? m.prob + " %" : "—"}</div></div>
       <div class="box"><div class="lbl">💨 Vent</div><div class="val">${m.vent} km/h</div>${m.raf !== null ? `<div class="raf">raf. ${m.raf} km/h</div>` : ""}</div>
     </div>
+    ${heures(h, iso)}
     ${voisins}
     <div class="fiab" style="background:${fiab.bg};color:${fiab.color};border:1px solid ${fiab.border};">
       <strong>${fiab.txt}</strong>
