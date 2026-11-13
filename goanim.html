@@ -677,7 +677,7 @@ function afficher(f, tel, main) {
     animHtml = `<div class="lbl" style="margin-bottom:3px;">👤 Animateur</div>
       <div class="anim-nom">${esc(f.animateur)}</div>`;
     if (tel) animHtml += `<div class="tel-row">
-      <a href="sms:${tel.replace(/\s/g,'')}" target="_top" onclick="event.preventDefault(); window.top.location.href=this.href;" class="tel-btn sms">
+      <a href="sms:${tel.replace(/\s/g,'')}" target="_blank" rel="noopener" class="tel-btn sms">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>SMS
       </a>
       <a href="tel:${tel.replace(/\s/g,'')}" class="tel-btn call">
