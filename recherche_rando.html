@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Kw1ZG4lnx+krlNT32MyrC5thihar2WOJdHtB5mEEBgU='; style-src 'sha256-M3FAUJjY2mQ6FkZGTyj1iuSMT7vAhJJIkody63pdiWE='; connect-src https://whlxbfnmyqdflmxosfse.supabase.co; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>Rechercher une randonnée</title>
+<!--
+  recherche-rando.html — Recherche d'une rando par nom et/ou animateur.
+  À intégrer en iframe sur Webnode (comme meteo.html).
+
+  Sécurité :
+   • Aucune clé dans la page : lecture via l'Edge Function dynamic-handler (action getFiches)
+   • Saisie filtrée par liste blanche de caractères (pas d'injection dans les filtres PostgREST)
+   • Affichage 100 % textContent (aucune donnée insérée en HTML) → pas de XSS
+   • CSP stricte par empreintes (hash) : aucun script ni style externe
+   • Requête précédente annulée, anti-rafale, nombre de résultats plafonné
+  RGPD :
+   • Aucun cookie, aucun stockage local, aucun traceur, aucune police externe (pas de Google Fonts)
+   • Minimisation : uniquement les champs publics de la feuille de route
+     (jamais de participants, téléphones, emails)
+   • Historique limité à HISTORIQUE_MOIS mois
+-->
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: transparent; color: #1a1a1a; padding: 8px; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: #2d6a4f; margin-bottom: 3px; }
+  input { width: 100%; padding: 9px 10px; font-size: 15px; border: 1px solid #b7c9bd; border-radius: 8px; background: #fff; }
+  input:focus { outline: 2px solid #2d6a4f; outline-offset: 1px; }
+  .actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+  button { padding: 9px 14px; font-size: 15px; border-radius: 8px; border: 1px solid #2d6a4f; cursor: pointer; }
+  .btn-ok { background: #2d6a4f; color: #fff; flex: 1; }
+  .btn-raz { background: #fff; color: #2d6a4f; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .etat { font-size: 13px; color: #5a5a5a; margin: 6px 0 10px; min-height: 1.2em; }
+  .etat.err { color: #b91c1c; }
+  .carte { border: 1px solid #d6e4da; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
+  .carte.annulee { background: #fafafa; opacity: .8; }
+  .tete { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .nom { font-size: 15px; font-weight: 700; color: #2d6a4f; }
+  .date { font-size: 13px; color: #5a5a5a; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: #e8f5e9; color: #2e7d32; }
+  .badge.annulee { background: #fee2e2; color: #b91c1c; }
+  .badge.autre { background: #eef2ff; color: #3730a3; }
+  .ligne { font-size: 13px; color: #333; margin-top: 4px; }
+  .ligne b { color: #1a3a5c; }
+  .rem { font-size: 12px; color: #5a5a5a; margin-top: 4px; font-style: italic; }
+  .lien { display: inline-block; margin-top: 6px; font-size: 13px; color: #1e40af; }
+  .rgpd { font-size: 11px; color: #6b7280; margin-top: 12px; line-height: 1.4; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  @media (max-width: 480px) { form { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="sr">Rechercher une randonnée</h1>
+  <form id="f" autocomplete="off" novalidate>
+    <div>
+      <label for="q-nom">Nom de la rando</label>
+      <input id="q-nom" type="search" maxlength="60" placeholder="ex. croix de fer" spellcheck="false">
+    </div>
+    <div>
+      <label for="q-anim">Animateur·trice</label>
+      <input id="q-anim" type="search" maxlength="60" placeholder="ex. Brioude" spellcheck="false">
+    </div>
+    <div class="actions">
+      <button type="submit" class="btn-ok" id="go">Rechercher</button>
+      <button type="button" class="btn-raz" id="raz">Effacer</button>
+    </div>
+  </form>
+
+  <div class="etat" id="etat" role="status" aria-live="polite"></div>
+  <div id="res"></div>
+
+  <p class="rgpd">
+    Données issues du planning public du club La Marmotte Châteaurenard, limitées aux informations
+    utiles à l'organisation des sorties (aucune liste de participants ni coordonnée personnelle).
+    Cette page ne dépose aucun cookie, n'utilise aucun traceur et ne conserve pas vos recherches.
+    Pour exercer vos droits d'accès, de rectification ou d'effacement :
+    contact@lamarmottechateaurenard.com
+  </p>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ── Réglages ── */
+  const HANDLER         = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
+  const HISTORIQUE_MOIS = 24;   /* recherche limitée aux 24 derniers mois (RGPD : limitation) */
+  const MAX_RESULTATS   = 50;
+  const MIN_CAR         = 2;
+  const MAX_CAR         = 60;
+  const DELAI_MIN_MS    = 1500; /* anti-rafale entre deux recherches */
+  const FICHE_URL       = "https://www.lamarmottechateaurenard.com/goanim/";
+
+  /* Champs publics uniquement (minimisation) — jamais noms_participants, téléphone, email */
+  const SELECT = "id,date_rando,nom_rando,animateur,statut,type,heure_rv,parking_covoit," +
+                 "parking_depart,distance,denivele,duree,ibp,effort,technicite,risque,couts,remarques";
+
+  /* Liste blanche : lettres (accents inclus), chiffres, espace, apostrophes, tiret */
+  const AUTORISE = /^[\p{L}\p{N} '’\-]+$/u;
+
+  const $ = id => document.getElementById(id);
+  const form = $("f"), inNom = $("q-nom"), inAnim = $("q-anim");
+  const btn = $("go"), etat = $("etat"), res = $("res");
+
+  let ctrl = null;
+  let dernier = 0;
+
+  /* ── Saisie : nettoyage + validation ── */
+  function nettoyer(v) {
+    return String(v || "").normalize("NFC").replace(/\s+/g, " ").trim().slice(0, MAX_CAR);
+  }
+  function valide(v) { return v === "" || (v.length >= MIN_CAR && AUTORISE.test(v)); }
+  /* Filtre PostgREST "contient" : chaque mot devient un joker (ordre conservé) */
+  function motif(v) { return "*" + v.replace(/['’]/g, "*").split(" ").join("*") + "*"; }
+
+  function dateMin() {
+    const d = new Date();
+    d.setMonth(d.getMonth() - HISTORIQUE_MOIS);
+    return d.toLocaleDateString("sv-SE");
+  }
+  function dateFR(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+    if (!m) return "";
+    return new Date(+m[1], +m[2] - 1, +m[3])
+      .toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
+  }
+
+  function afficherEtat(txt, erreur) {
+    etat.textContent = txt;
+    etat.className = "etat" + (erreur ? " err" : "");
+  }
+
+  /* ── Construction sûre du DOM (textContent uniquement) ── */
+  function el(tag, cls, txt) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (txt != null && txt !== "") n.textContent = String(txt);
+    return n;
+  }
+  function ligne(label, valeur) {
+    if (valeur == null || valeur === "") return null;
+    const p = el("p", "ligne");
+    p.appendChild(el("b", null, label + " : "));
+    p.appendChild(document.createTextNode(String(valeur)));
+    return p;
+  }
+
+  function carte(f) {
+    const statut = String(f.statut || "").toLowerCase();
+    const estAnnulee = statut === "annulée";
+    const estAutre = /^autre/i.test(String(f.type || ""));
+    const c = el("article", "carte" + (estAnnulee ? " annulee" : ""));
+
+    const tete = el("div", "tete");
+    tete.appendChild(el("span", "nom", f.nom_rando || "Sans nom"));
+    const badge = estAnnulee ? el("span", "badge annulee", "Annulée")
+                : estAutre  ? el("span", "badge autre", "Autre événement")
+                : statut    ? el("span", "badge", f.statut) : null;
+    if (badge) tete.appendChild(badge);
+    c.appendChild(tete);
+    c.appendChild(el("p", "date", dateFR(f.date_rando)));
+
+    const stats = [
+      f.distance != null && f.distance !== "" ? "≃ " + f.distance + " km" : "",
+      f.denivele != null && f.denivele !== "" ? "D+ ≃ " + f.denivele + " m" : "",
+      f.duree    != null && f.duree    !== "" ? "durée ≃ " + f.duree : "",
+    ].filter(Boolean).join(" · ");
+    const etr = [
+      f.effort     != null ? "E " + f.effort     : "",
+      f.technicite != null ? "T " + f.technicite : "",
+      f.risque     != null ? "R " + f.risque     : "",
+    ].filter(Boolean).join(" · ");
+
+    [
+      ligne("Animateur·trice", f.animateur),
+      ligne("Parcours", stats),
+      ligne("Cotation", etr),
+      ligne("IBP", f.ibp),
+      ligne("Rendez-vous", [f.heure_rv, f.parking_covoit].filter(Boolean).join(" — ")),
+      ligne("Départ", f.parking_depart),
+      ligne("Covoiturage", f.couts),
+    ].forEach(n => n && c.appendChild(n));
+
+    if (f.remarques) c.appendChild(el("p", "rem", f.remarques));
+
+    if (f.nom_rando && f.animateur && !estAutre) {
+      const u = new URL(FICHE_URL);
+      u.searchParams.set("animateur", f.animateur);
+      u.searchParams.set("rando", f.nom_rando);
+      const a = el("a", "lien", "Voir la feuille de route →");
+      a.href = u.toString();
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      c.appendChild(a);
+    }
+    return c;
+  }
+
+  /* ── Recherche ── */
+  async function rechercher(ev) {
+    ev.preventDefault();
+    const nom = nettoyer(inNom.value), anim = nettoyer(inAnim.value);
+    inNom.value = nom; inAnim.value = anim;
+
+    if (!nom && !anim) return afficherEtat("Saisissez un nom de rando et/ou un animateur.", true);
+    if (!valide(nom) || !valide(anim))
+      return afficherEtat(`Au moins ${MIN_CAR} caractères ; lettres, chiffres, espaces, apostrophes et tirets uniquement.`, true);
+
+    const maintenant = Date.now();
+    if (maintenant - dernier < DELAI_MIN_MS) return afficherEtat("Patientez un instant avant une nouvelle recherche.", true);
+    dernier = maintenant;
+
+    if (ctrl) ctrl.abort();
+    ctrl = new AbortController();
+
+    const filtres = ["date_rando=gte." + dateMin()];
+    if (nom)  filtres.push("nom_rando=ilike." + motif(nom));
+    if (anim) filtres.push("animateur=ilike." + motif(anim));
+
+    btn.disabled = true;
+    afficherEtat("Recherche…");
+    res.replaceChildren();
+
+    try {
+      const r = await fetch(HANDLER, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "getFiches", select: SELECT, filters: filtres.join("&"),
+          order: "date_rando.desc,created_at.desc", limit: MAX_RESULTATS,
+        }),
+        signal: ctrl.signal,
+        credentials: "omit",
+        referrerPolicy: "no-referrer",
+        cache: "no-store",
+      });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const data = await r.json();
+      if (!Array.isArray(data)) throw new Error("Réponse inattendue");
+
+      if (!data.length) {
+        afficherEtat(`Aucune randonnée trouvée sur les ${HISTORIQUE_MOIS} derniers mois.`);
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      data.forEach(f => frag.appendChild(carte(f)));
+      res.appendChild(frag);
+      afficherEtat(data.length >= MAX_RESULTATS
+        ? `${MAX_RESULTATS} premiers résultats — affinez la recherche.`
+        : `${data.length} résultat${data.length > 1 ? "s" : ""}.`);
+    } catch (e) {
+      if (e.name === "AbortError") return;
+      afficherEtat("Recherche momentanément indisponible. Réessayez plus tard.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  form.addEventListener("submit", rechercher);
+  $("raz").addEventListener("click", () => {
+    if (ctrl) ctrl.abort();
+    inNom.value = ""; inAnim.value = "";
+    res.replaceChildren(); afficherEtat("");
+    inNom.focus();
+  });
+})();
+</script>
+</body>
+</html>
