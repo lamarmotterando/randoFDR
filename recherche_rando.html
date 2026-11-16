@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Kw1ZG4lnx+krlNT32MyrC5thihar2WOJdHtB5mEEBgU='; style-src 'sha256-M3FAUJjY2mQ6FkZGTyj1iuSMT7vAhJJIkody63pdiWE='; connect-src https://whlxbfnmyqdflmxosfse.supabase.co; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-OzUDMkqY012r6uAifSKPF+p5uwUPXBLf+myS36t6DJ0='; style-src 'sha256-M3FAUJjY2mQ6FkZGTyj1iuSMT7vAhJJIkody63pdiWE='; connect-src https://whlxbfnmyqdflmxosfse.supabase.co; img-src 'self' data:; base-uri 'none'; form-action 'none'">
 <title>Rechercher une randonnée</title>
 <!--
   recherche-rando.html — Recherche d'une rando par nom et/ou animateur.
@@ -21,7 +21,6 @@
    • Aucun cookie, aucun stockage local, aucun traceur, aucune police externe (pas de Google Fonts)
    • Minimisation : uniquement les champs publics de la feuille de route
      (jamais de participants, téléphones, emails)
-   • Historique limité à HISTORIQUE_MOIS mois
 -->
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -91,7 +90,6 @@
 
   /* ── Réglages ── */
   const HANDLER         = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
-  const HISTORIQUE_MOIS = 24;   /* recherche limitée aux 24 derniers mois (RGPD : limitation) */
   const MAX_RESULTATS   = 50;
   const MIN_CAR         = 2;
   const MAX_CAR         = 60;
@@ -120,11 +118,6 @@
   /* Filtre PostgREST "contient" : chaque mot devient un joker (ordre conservé) */
   function motif(v) { return "*" + v.replace(/['’]/g, "*").split(" ").join("*") + "*"; }
 
-  function dateMin() {
-    const d = new Date();
-    d.setMonth(d.getMonth() - HISTORIQUE_MOIS);
-    return d.toLocaleDateString("sv-SE");
-  }
   function dateFR(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
     if (!m) return "";
@@ -220,7 +213,7 @@
     if (ctrl) ctrl.abort();
     ctrl = new AbortController();
 
-    const filtres = ["date_rando=gte." + dateMin()];
+    const filtres = [];
     if (nom)  filtres.push("nom_rando=ilike." + motif(nom));
     if (anim) filtres.push("animateur=ilike." + motif(anim));
 
@@ -246,7 +239,7 @@
       if (!Array.isArray(data)) throw new Error("Réponse inattendue");
 
       if (!data.length) {
-        afficherEtat(`Aucune randonnée trouvée sur les ${HISTORIQUE_MOIS} derniers mois.`);
+        afficherEtat("Aucune randonnée trouvée.");
         return;
       }
       const frag = document.createDocumentFragment();
