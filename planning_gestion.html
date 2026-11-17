@@ -1230,7 +1230,7 @@ async function supprimerSelection(ids) {
   for (const id of ids) {
     try {
       const fiche = allRows.find(r => String(r.id) === String(id));
-      if (fiche && fiche.date_rando && fiche.type !== "autre") await syncCalendar("calendarDelete", { dateRando: fiche.date_rando, animateur: fiche.animateur || "" });
+      if (fiche && fiche.date_rando && fiche.type !== "autre" && fiche.type !== "sejour") await syncCalendar("calendarDelete", { dateRando: fiche.date_rando, animateur: fiche.animateur || "" });
       const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-fiche`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -1508,7 +1508,7 @@ function openEdit(ev) {
   btnAnnuler.style.display   = (!isAnnulee && !isSejour) ? "inline-flex" : "none";
   btnRattacher.style.display = (!isAnnulee && !isSejour) ? "inline-flex" : "none";
   btnRattacher.textContent   = ev.sejour_id ? "🏕 Changer séjour" : "🏕 Rattacher";
-  document.getElementById("btn-modal-synccal").style.display = isSejour ? "none" : "inline-flex";
+  document.getElementById("btn-modal-synccal").style.display = (isSejour || ev.type === "autre") ? "none" : "inline-flex";  /* « Autres » : gérés par reconcile-calendar */
   /* Relance participants : rando passée, non annulée, participants non saisis */
   const btnRelancer = document.getElementById("btn-modal-relancer");
   btnRelancer.style.display = (estPassee && !estAnnulee && (ev.type || "rando") === "rando" && !ev.nb_participants) ? "inline-flex" : "none";
@@ -1641,15 +1641,33 @@ async function deleteEvent(id, nom, animateur, dateRando) {
 }
 
 async function syncCalendar(action, ficheData) {
+  let detail = "";
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/dynamic-handler`, {
       method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
       body: JSON.stringify({ action, fiche: ficheData })
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.success === false) { console.warn("[Calendar sync] Echec:", res.status, JSON.stringify(data)); return false; }
-    console.log("[Calendar sync] OK:", action); return true;
-  } catch(e) { console.warn("[Calendar sync] Erreur reseau:", e.message); return false; }
+    if (res.ok && data.success !== false) { console.log("[Calendar sync] OK:", action); return true; }
+    console.warn("[Calendar sync] Echec:", res.status, JSON.stringify(data));
+    detail = `HTTP ${res.status} ${data.error || data.message || ""}`.trim();
+  } catch(e) { console.warn("[Calendar sync] Erreur reseau:", e.message); detail = "réseau : " + e.message; }
+  alerterCalendar(action, ficheData, detail);
+  return false;
+}
+
+/* Alerte mail admin via Edge Function alerte-calendar (fire-and-forget, n'interrompt jamais la page) */
+async function alerterCalendar(action, f, erreur) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    fetch(`${SUPABASE_URL}/functions/v1/alerte-calendar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action, dateRando: f?.dateRando || "", nomRando: f?.nomRando || "",
+        animateur: f?.animateur || "", erreur: String(erreur || "").slice(0, 300), page: "planning_gestion" })
+    }).catch(() => {});
+  } catch {}
 }
 
 async function syncCalDepuisModal() {
