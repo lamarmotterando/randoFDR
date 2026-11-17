@@ -6,7 +6,9 @@
 <meta name="robots" content="noindex, nofollow">  
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Tableau de bord — RandoFDR</title>
+<meta name="referrer" content="no-referrer">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <style>
   :root {
     --bg:#2b2f36; --surface:#3a3f47; --border:#4a515b;
@@ -84,6 +86,19 @@
   .status-label.ok{color:var(--vert-cl);} .status-label.error{color:var(--red);} .status-label.loading{color:var(--blue);}
   .status-ms{font-family:'DM Mono',monospace;font-size:10px;color:var(--txt3);min-width:44px;text-align:right;}
   footer{max-width:960px;margin:36px auto 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--txt3);text-align:center;line-height:1.8;}
+  /* Onglets */
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+  .tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--txt3);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;padding:10px 16px;cursor:pointer;margin-bottom:-1px;}
+  .tab:hover{color:var(--txt);}
+  .tab[aria-selected="true"]{color:var(--txt);border-bottom-color:var(--vert-cl);}
+  [hidden]{display:none!important;}
+  /* Analytics */
+  .an-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-top:18px;}
+  .an-toolbar select{background:var(--surface);border:1px solid var(--border);color:var(--txt);font-family:'DM Mono',monospace;font-size:12px;padding:8px 10px;border-radius:8px;}
+  .an-status{font-family:'DM Mono',monospace;font-size:11px;color:var(--txt3);margin-top:10px;min-height:1.2em;}
+  .an-status.error{color:var(--red);} .an-status.success{color:var(--vert-cl);}
+  .chart-wrap{height:240px;}
+  #activity-chart{display:block;width:100%;height:240px;}
 </style>
 </head>
 <body>
@@ -99,6 +114,13 @@
     </div>
   </header>
 
+  <nav class="tabs" role="tablist" aria-label="Sections du tableau de bord">
+    <button class="tab" role="tab" id="tab-activite" aria-controls="vue-activite" aria-selected="true">Activité</button>
+    <button class="tab" role="tab" id="tab-analytics" aria-controls="vue-analytics" aria-selected="false">Analytics</button>
+  </nav>
+
+  <!-- ══ ONGLET ACTIVITÉ ══ -->
+  <section id="vue-activite" role="tabpanel" aria-labelledby="tab-activite">
   <div class="section-label">Saison en cours</div>
   <div class="kpis" id="kpis">
     <div class="kpi"><div class="k">Sorties</div><div class="v" id="k-sorties">—</div></div>
@@ -135,6 +157,37 @@
 
   <div class="section-label">Pages GitHub</div>
   <div class="cards" id="cards-pages"></div>
+  </section>
+
+  <!-- ══ ONGLET ANALYTICS (sans connexion) ══ -->
+  <section id="vue-analytics" role="tabpanel" aria-labelledby="tab-analytics" hidden>
+    <div class="an-toolbar">
+      <select id="an-range" aria-label="Période">
+        <option value="7">7 derniers jours</option>
+        <option value="30" selected>30 derniers jours</option>
+        <option value="90">90 derniers jours</option>
+      </select>
+      <button class="refresh" id="an-refresh" type="button">⟳ Actualiser</button>
+    </div>
+
+    <div id="an-contenu">
+      <div id="an-status" class="an-status" role="status">Chargement…</div>
+      <div class="section-label">Fréquentation anonyme</div>
+      <div class="kpis">
+        <div class="kpi"><div class="k">Visites 24 h</div><div class="v" id="an-v24">—</div><div class="sub">Sessions distinctes</div></div>
+        <div class="kpi"><div class="k">Visites 7 jours</div><div class="v" id="an-v7">—</div><div class="sub">Sessions distinctes</div></div>
+        <div class="kpi"><div class="k">Visites 30 jours</div><div class="v" id="an-v30">—</div><div class="sub">Sessions distinctes</div></div>
+        <div class="kpi"><div class="k">Pages vues</div><div class="v" id="an-pv">—</div><div class="sub">Sur la période</div></div>
+      </div>
+
+      <div class="section-label">Activité quotidienne (visites par jour)</div>
+      <div class="panel"><div class="chart-wrap"><canvas id="activity-chart"></canvas></div></div>
+
+      <div class="section-label">Pages les plus vues</div>
+      <div class="panel"><div id="an-pages"><div class="empty">Chargement…</div></div></div>
+      <div class="an-status" id="an-maj"></div>
+    </div>
+  </section>
 </div>
 <footer>RandoFDR · Tableau de bord activité · La Marmotte Châteaurenard<br>Données en direct depuis Supabase — statuts annulés exclus des totaux — temps de réponse mesurés depuis votre navigateur</footer>
 
@@ -147,6 +200,24 @@ const CAL_LIST = SUPABASE_URL + "/functions/v1/calendar-list";
 const MOIS = ["jan","fév","mar","avr","mai","juin","juil","aoû","sep","oct","nov","déc"];
 const nf = n => (n||0).toLocaleString("fr-FR");
 const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+/* ══ ÉQUIVALENCES CHEMIN → NOM AFFICHÉ (on n'affiche jamais le chemin des pages) ══ */
+const PAGES = {
+  "/randofdr/visusursite_supabase_notif.html": "Planning",
+  "/randofdr/goanim.html":                     "Feuille de route",
+  "/randofdr/index.html":                      "Modèle Feuille de Route",
+  "/randofdr/":                                "Modèle Feuille de Route",
+  "/randofdr":                                 "Modèle Feuille de Route",
+  "/randofdr/planning_gestion.html":           "Administration système",
+  "/randofdr/planningfdr.html":                "Modification Feuille de Route Animateurs/trices",
+  "/randofdr/randonnees-club.html":            "Base de Données",
+};
+function nomPage(p){
+  let s = String(p||"").trim();
+  try { if (/^https?:\/\//i.test(s)) s = new URL(s).pathname; } catch(e){}
+  s = s.split(/[?#]/)[0].toLowerCase();
+  return PAGES[s] || "Autre page";
+}
 
 function saison(){
   const now=new Date(); let y=now.getFullYear();
@@ -185,13 +256,13 @@ const checks = [
     run: async () => { const r=await ping('https://api.open-meteo.com/v1/forecast?latitude=43.9&longitude=5.4&daily=weather_code&timezone=Europe%2FParis&forecast_days=1'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`Erreur ${r.status}` }; } },
   { id:'ibp-proxy', group:'backend', icon:'📊', name:'IBP Proxy (Vercel)', detail:'Calcul indice difficulté',
     run: async () => { const r=await ping('https://ibp-proxy.vercel.app/',{},8000); return { ok:r.ok, ms:r.ms, detail: r.ok?`Actif · ${r.ms}ms`:`Hors ligne · HTTP ${r.status}` }; } },
-  { id:'page-index', group:'pages', icon:'📝', name:'index.html', detail:'Formulaire FDR — GitHub Pages',
+  { id:'page-index', group:'pages', icon:'📝', name:nomPage('/randoFDR/index.html'), detail:'Formulaire FDR — GitHub Pages',
     run: async () => { const r=await ping('https://lamarmotterando.github.io/randoFDR/index.html'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`HTTP ${r.status}` }; } },
-  { id:'page-planning', group:'pages', icon:'📅', name:'planningFDR.html', detail:'Planning public',
+  { id:'page-planning', group:'pages', icon:'📅', name:nomPage('/randoFDR/planningFDR.html'), detail:'Saisie participants — GitHub Pages',
     run: async () => { const r=await ping('https://lamarmotterando.github.io/randoFDR/planningFDR.html'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`HTTP ${r.status}` }; } },
-  { id:'page-gestion', group:'pages', icon:'🔐', name:'planning_gestion.html', detail:'Interface admin — Auth Supabase',
+  { id:'page-gestion', group:'pages', icon:'🔐', name:nomPage('/randoFDR/planning_gestion.html'), detail:'Interface admin — Auth Supabase',
     run: async () => { const r=await ping('https://lamarmotterando.github.io/randoFDR/planning_gestion.html'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`HTTP ${r.status}` }; } },
-  { id:'page-goanim', group:'pages', icon:'🗺', name:'goanim.html', detail:'Fiche prochaine sortie',
+  { id:'page-goanim', group:'pages', icon:'🗺', name:nomPage('/randoFDR/goanim.html'), detail:'Fiche prochaine sortie',
     run: async () => { const r=await ping('https://lamarmotterando.github.io/randoFDR/goanim.html'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`HTTP ${r.status}` }; } },
   { id:'page-randos', group:'pages', icon:'📂', name:'data/randos.json', detail:'Données statiques randonnées',
     run: async () => { const r=await ping('https://lamarmotterando.github.io/randoFDR/data/randos.json'); return { ok:r.ok, ms:r.ms, detail: r.ok?`${r.ms}ms`:`HTTP ${r.status}` }; } },
@@ -317,7 +388,7 @@ async function chargerDonnees(){
     const ann=saisonTout.filter(f=>(f.statut||"").toLowerCase()==="annulée").length;
     document.getElementById("statuts").innerHTML =
       `<span class="statut" style="color:var(--vert-cl)">✅ ${pub} publiées</span>`+
-      `<span class="statut" style="color:var(--amber)">✏️ ${mod} modifiées</span>`+
+      `<span class="statut" style="color:var(--blue)">✏️ ${mod} modifiées</span>`+
       `<span class="statut" style="color:var(--red)">❌ ${ann} annulées</span>`;
   }catch(e){
     document.getElementById("prochaines").innerHTML='<div class="empty" style="color:var(--red)">⚠️ Erreur de chargement : '+esc(e.message)+'</div>';
@@ -336,6 +407,124 @@ async function charger(){
 initCards();
 charger();
 setInterval(() => { if (!document.hidden) charger(); }, 300000); // 5 min, suspendu si onglet caché
+
+/* ══════════════════════════════════════
+   ONGLETS
+══════════════════════════════════════ */
+function ouvrirOnglet(nom){
+  const estAn = nom === "analytics";
+  document.getElementById("tab-activite").setAttribute("aria-selected", String(!estAn));
+  document.getElementById("tab-analytics").setAttribute("aria-selected", String(estAn));
+  document.getElementById("vue-activite").hidden  = estAn;
+  document.getElementById("vue-analytics").hidden = !estAn;
+  document.getElementById("btn").hidden = estAn;
+  document.getElementById("maj").hidden = estAn;
+  if (estAn) anDemarrer();
+}
+document.getElementById("tab-activite").addEventListener("click", () => ouvrirOnglet("activite"));
+document.getElementById("tab-analytics").addEventListener("click", () => ouvrirOnglet("analytics"));
+
+/* ══════════════════════════════════════
+   ANALYTICS — clé publishable uniquement, sans connexion.
+   Lit la fonction publique analytics_public (agrégats anonymes uniquement :
+   visites, pages vues, activité, pages les plus vues — jamais erreurs ni actions).
+══════════════════════════════════════ */
+const $a = id => document.getElementById(id);
+const anClient = window.supabase
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+  : null;
+let anTimer = null, anActivite = [], anDemarre = false;
+
+function anErreur(message){
+  $a("an-status").textContent = message;
+  $a("an-status").className = "an-status error";
+}
+
+async function anDemarrer(){
+  if (!anClient) return anErreur("Bibliothèque Supabase indisponible.");
+  if (anDemarre) { anDessiner(anActivite); return; }
+  anDemarre = true;
+  await anCharger();
+  if (anTimer) clearInterval(anTimer);
+  anTimer = setInterval(() => { if (!document.hidden && !$a("vue-analytics").hidden) anCharger(); }, 300000);
+}
+
+async function anCharger(){
+  $a("an-status").textContent = "Actualisation…";
+  $a("an-status").className = "an-status";
+  const { data, error } = await anClient.rpc("analytics_public", { p_days: Number($a("an-range").value) });
+  if (error || !data) {
+    $a("an-status").textContent = error?.message || "Impossible de charger les statistiques.";
+    $a("an-status").className = "an-status error";
+    return;
+  }
+  anAfficher(data);
+  $a("an-status").textContent = "Données à jour";
+  $a("an-status").className = "an-status success";
+  $a("an-maj").textContent = "Mis à jour à " + new Date(data.generated_at).toLocaleTimeString("fr-FR");
+}
+
+function anAfficher(d){
+  const k = d.kpis || {};
+  $a("an-v24").textContent = nf(k.visits_24h);
+  $a("an-v7").textContent  = nf(k.visits_7d);
+  $a("an-v30").textContent = nf(k.visits_30d);
+  $a("an-pv").textContent  = nf(k.page_views);
+
+  /* Pages les plus vues : chemin remplacé par son nom ; les chemins de même nom sont additionnés */
+  const parNom = {};
+  (d.top_pages || []).forEach(x => { const n = nomPage(x.name); parNom[n] = (parNom[n] || 0) + (Number(x.count) || 0); });
+  const pages = Object.entries(parNom).sort((a, b) => b[1] - a[1]);
+  const maxP = pages.length ? pages[0][1] : 1;
+  $a("an-pages").innerHTML = pages.length
+    ? pages.map(([n, c]) => `<div class="bar-row"><span class="lbl" title="${esc(n)}">${esc(n)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(c / maxP * 100)}%;background:var(--blue);"></div></div><span class="num">${nf(c)}</span></div>`).join("")
+    : '<div class="empty">Aucune page vue.</div>';
+
+  anActivite = d.activity || [];
+  anDessiner(anActivite);
+}
+
+function anDessiner(data){
+  const canvas = $a("activity-chart");
+  if (!canvas || $a("vue-analytics").hidden) return;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.clientWidth || 700, h = canvas.clientHeight || 240;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const pad = { l: 38, r: 12, t: 16, b: 32 };
+  const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+  const max = Math.max(1, ...data.map(r => r.visits));
+  ctx.font = "11px 'DM Mono', monospace"; ctx.fillStyle = "#cbd1d9"; ctx.strokeStyle = "#4a515b"; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + ph * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+    ctx.fillText(String(Math.round(max * (1 - i / 4))), 4, y + 4);
+  }
+  if (!data.length) { ctx.fillText("Pas encore de données", pad.l + 10, pad.t + 30); return; }
+
+  const step = data.length > 1 ? pw / (data.length - 1) : 0;
+  const pt = (r, i) => [pad.l + i * step, pad.t + ph - (r.visits / max) * ph];
+  ctx.strokeStyle = "#58a6ff"; ctx.lineWidth = 2.5; ctx.beginPath();
+  data.forEach((r, i) => { const [x, y] = pt(r, i); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+  ctx.stroke();
+  ctx.fillStyle = "#58a6ff";
+  data.forEach((r, i) => { const [x, y] = pt(r, i); ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); });
+  ctx.fillStyle = "#cbd1d9";
+  const stride = Math.max(1, Math.ceil(data.length / 7));
+  data.forEach((r, i) => {
+    if (i % stride === 0 || i === data.length - 1) {
+      const label = new Date(r.day + "T00:00:00").toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+      ctx.fillText(label, pad.l + i * step - 15, h - 8);
+    }
+  });
+}
+
+$a("an-refresh").addEventListener("click", anCharger);
+$a("an-range").addEventListener("change", anCharger);
+window.addEventListener("resize", () => anDessiner(anActivite));
 
 /* Auto-resize iframe parent (Webnode) */
 function sendHeight(){ try{ window.parent.postMessage({type:"resize",height:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)},"*"); }catch(e){} }
