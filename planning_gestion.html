@@ -1916,17 +1916,23 @@ function analyserImportCSV(txt) {
   const rows = parseCSV(txt);
   let offset = 1;
   if (rows.length && !/^\s*\d{1,2}\/\d{1,2}\/\d{4}\s*$/.test(rows[0][1] || "")) { rows.shift(); offset = 2; } /* en-tête */
-  const nomsAnim = new Set(animateurs.map(a => (a.nom || "").trim().toLowerCase()));
+  /* Clé de nom tolérante : casse, accents, ponctuation et ordre des mots ignorés
+     ("Yves Raoulx" = "RAOULX Yves" = "raoulx, yves") → nom exact de la table animateurs */
+  const cleNom = n => String(n || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-z0-9]+/).filter(Boolean).sort().join(" ");
+  const parCle = new Map(animateurs.filter(a => a.nom).map(a => [cleNom(a.nom), a.nom.trim()]));
   const vus = new Set();
 
   importLignes = rows.map((c, i) => {
     const g = k => (c[k] ?? "").trim();
-    const err = [], warn = [];
+    const err = [], warn = [], info = [];
     const type = normTypeImport(g(0));
     if (!type) err.push("type inconnu");
     else if (type === "sejour") err.push("séjour non importable (pas de date de fin)");
     const iso = dateFRversISO(g(1)); if (!iso) err.push("date invalide");
-    const anim = g(2), nom = g(3);
+    const animBrut = g(2), nom = g(3);
+    const animCanon = animBrut ? parCle.get(cleNom(animBrut)) : null;
+    const anim = animCanon || animBrut;
     const ibp = numImport(g(4)), dist = numImport(g(5)), den = numImport(g(6));
     if (Number.isNaN(ibp))  err.push("IBP non numérique");
     if (Number.isNaN(dist)) err.push("distance non numérique");
@@ -1935,7 +1941,11 @@ function analyserImportCSV(txt) {
     if (!anim) err.push("animateur manquant");
     if (!nom)  err.push("nom manquant");
     if (dist === null) err.push("distance manquante");
-    if (anim && !nomsAnim.has(anim.toLowerCase())) warn.push("animateur inconnu de la liste");
+    if (animBrut) {
+      if (!animateurs.length) warn.push("liste des animateurs non chargée");
+      else if (!animCanon) warn.push("animateur inconnu de la liste");
+      else if (animCanon !== animBrut) info.push("animateur → " + animCanon);
+    }
 
     let statut = err.length ? "erreur" : "ok";
     if (statut === "ok") {
@@ -1953,7 +1963,7 @@ function analyserImportCSV(txt) {
       remarques: type === "autre" ? (nom || null) : null,
       parking_covoit: null, sejour_id: null
     };
-    return { ligne: i + offset, statut, err, warn, fiche, brut: { type: g(0), date: g(1), anim, nom, ibp: g(4), dist: g(5), den: g(6) } };
+    return { ligne: i + offset, statut, err, warn, info, fiche, brut: { type: g(0), date: g(1), anim: animBrut, nom, ibp: g(4), dist: g(5), den: g(6) } };
   });
   renderImport();
   document.getElementById("modal-import").classList.add("open");
@@ -1966,7 +1976,8 @@ function renderImport() {
     const b = l.brut;
     const etat = l.statut === "erreur" ? "<span style='color:#c53030'>❌ " + escHtmlExport(l.err.join(", ")) + "</span>"
                : l.statut === "doublon" ? "<span style='color:#718096'>⏭ doublon</span>"
-               : "✅" + (l.warn.length ? " <span style='color:#c05621'>⚠️ " + escHtmlExport(l.warn.join(", ")) + "</span>" : "");
+               : "✅" + (l.warn.length ? " <span style='color:#c05621'>⚠️ " + escHtmlExport(l.warn.join(", ")) + "</span>" : "")
+                     + (l.info.length ? " <span style='color:#2b6cb0'>ℹ️ " + escHtmlExport(l.info.join(", ")) + "</span>" : "");
     const bg = l.statut === "erreur" ? "#fff5f5" : l.statut === "doublon" ? "#f7fafc" : "";
     return `<tr style="background:${bg}"><td>${l.ligne}</td><td style="white-space:normal">${etat}</td><td>${escHtmlExport(b.type)}</td><td>${escHtmlExport(b.date)}</td><td>${escHtmlExport(b.anim)}</td><td>${escHtmlExport(b.nom)}</td><td>${escHtmlExport(b.ibp)}</td><td>${escHtmlExport(b.dist)}</td><td>${escHtmlExport(b.den)}</td></tr>`;
   }).join("");
