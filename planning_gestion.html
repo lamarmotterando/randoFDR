@@ -1944,7 +1944,7 @@ function analyserImportCSV(txt) {
     if (animBrut) {
       if (!animateurs.length) warn.push("liste des animateurs non chargée");
       else if (!animCanon) warn.push("animateur inconnu de la liste");
-      else if (animCanon !== animBrut) info.push("animateur → " + animCanon);
+      else if (animCanon !== animBrut) info.push("nom ajusté");
     }
 
     let statut = err.length ? "erreur" : "ok";
@@ -1963,7 +1963,7 @@ function analyserImportCSV(txt) {
       remarques: type === "autre" ? (nom || null) : null,
       parking_covoit: null, sejour_id: null
     };
-    return { ligne: i + offset, statut, err, warn, info, fiche, brut: { type: g(0), date: g(1), anim: animBrut, nom, ibp: g(4), dist: g(5), den: g(6) } };
+    return { ligne: i + offset, statut, err, warn, info, fiche, brut: { type: g(0), date: g(1), anim, animCsv: animBrut, nom, ibp: g(4), dist: g(5), den: g(6) } };
   });
   renderImport();
   document.getElementById("modal-import").classList.add("open");
@@ -1979,7 +1979,7 @@ function renderImport() {
                : "✅" + (l.warn.length ? " <span style='color:#c05621'>⚠️ " + escHtmlExport(l.warn.join(", ")) + "</span>" : "")
                      + (l.info.length ? " <span style='color:#2b6cb0'>ℹ️ " + escHtmlExport(l.info.join(", ")) + "</span>" : "");
     const bg = l.statut === "erreur" ? "#fff5f5" : l.statut === "doublon" ? "#f7fafc" : "";
-    return `<tr style="background:${bg}"><td>${l.ligne}</td><td style="white-space:normal">${etat}</td><td>${escHtmlExport(b.type)}</td><td>${escHtmlExport(b.date)}</td><td>${escHtmlExport(b.anim)}</td><td>${escHtmlExport(b.nom)}</td><td>${escHtmlExport(b.ibp)}</td><td>${escHtmlExport(b.dist)}</td><td>${escHtmlExport(b.den)}</td></tr>`;
+    return `<tr style="background:${bg}"><td>${l.ligne}</td><td style="white-space:normal">${etat}</td><td>${escHtmlExport(b.type)}</td><td>${escHtmlExport(b.date)}</td><td${b.animCsv && b.animCsv !== b.anim ? ` title="CSV : ${escHtmlExport(b.animCsv)}"` : ""}>${escHtmlExport(b.anim)}</td><td>${escHtmlExport(b.nom)}</td><td>${escHtmlExport(b.ibp)}</td><td>${escHtmlExport(b.dist)}</td><td>${escHtmlExport(b.den)}</td></tr>`;
   }).join("");
   const nOk = importLignes.filter(l => l.statut === "ok").length;
   const nErr = importLignes.filter(l => l.statut === "erreur").length;
