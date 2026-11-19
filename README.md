@@ -309,7 +309,9 @@ RESEND_API_KEY
 - Intégration Webnode : `<iframe src="https://lamarmotterando.github.io/randoFDR/meteo.html" style="width:100%;height:400px;border:0;" loading="lazy"></iframe>`
 - Manuel d'exploitation et de maintenance passé en v1.3
 **********************
-18 Novembre 2026 — Réconciliation Google Agenda (reconcile-calendar)
+### Réconciliation Google Agenda (reconcile-calendar)
+
+18 Novembre 2026 — 
 Principe
 
 Supabase (fiches) est la référence. Chaque nuit, l'Edge Function reconcile-calendar compare les fiches à venir avec les événements Google Agenda de la même période. Elle remet ensuite l'agenda en conformité avec la base.
