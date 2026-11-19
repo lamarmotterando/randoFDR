@@ -369,3 +369,6 @@ bash
 curl -X POST "https://<PROJECT_REF>.supabase.cofunctions/v1/reconcile-calendar" -H "x-cron-secret: VOTRE_SECRET" -H "Content-Type: application/json" -d '{}'
 
 Contrôle : après un passage réel, une simulation doit renvoyer des listes creations, corrections et suppressions vides.
+### Correction lissage de la pente sur carte.html
+19 Novembre 2026 
+La pente est maintenant recalculée sur 100 m de tracé, centrés sur chaque segment. Le changement vaut pour la tuile « pente », pour les couleurs du tracé sur la carte et pour le profil. Il vaut aussi en sens inversé, puisque la pente est recalculée à partir des distances et des altitudes.
