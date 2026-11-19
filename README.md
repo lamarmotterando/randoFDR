@@ -308,3 +308,65 @@ RESEND_API_KEY
 - Affichage limité à J-4 (horizon fiable ARPEGE/AROME) ; veille et lendemain affichés seulement dans cet horizon ; rien si GPS absent, sortie annulée ou passée
 - Intégration Webnode : `<iframe src="https://lamarmotterando.github.io/randoFDR/meteo.html" style="width:100%;height:400px;border:0;" loading="lazy"></iframe>`
 - Manuel d'exploitation et de maintenance passé en v1.3
+**********************
+18 Novembre 2026 — Réconciliation Google Agenda (reconcile-calendar)
+Principe
+
+Supabase (fiches) est la référence. Chaque nuit, l'Edge Function reconcile-calendar compare les fiches à venir avec les événements Google Agenda de la même période. Elle remet ensuite l'agenda en conformité avec la base.
+
+Lancement : cron-job.org, tous les jours à 3 h 30 (Europe/Paris), POST avec l'en-tête x-cron-secret.
+Hors agenda (normal) : séjours et réunions du CA.
+Événements ajoutés à la main (non étiquetés) : jamais modifiés ni supprimés.
+Étiquette
+
+L'« étiquette » est un marqueur invisible posé sur chaque événement géré par RandoFDR, dans les extendedProperties.private de l'événement Google :
+
+Clé	Valeur
+randofdr	1
+ficheId	id de la fiche Supabase
+
+Côté base, la colonne fiches.gcal_event_id contient l'id de l'événement Google.
+
+L'étiquette relie de façon certaine un événement à sa fiche, sans dépendre du titre ou de l'animateur. Elle ne s'affiche pas dans Google Agenda.
+
+Actions automatiques
+Écart constaté	Action
+Fiche sans événement, ou événement disparu	Création de l'événement + enregistrement de gcal_event_id
+Événement différent de la fiche	Correction de l'événement d'après la fiche
+Plusieurs événements pour une même fiche	Un seul est conservé, les autres sont supprimés
+Événement étiqueté dont la fiche n'existe plus	Suppression
+Événement 🥾 non étiqueté sans fiche correspondante	Aucune action (signalé dans le mail)
+Correspondance incertaine	Aucune action (signalée comme ambiguë)
+Lire le mail récapitulatif
+
+Le mail n'est envoyé que s'il y a des actions, des cas ambigus, des erreurs ou des événements non rattachés. Chaque passage est aussi enregistré dans journal (visible dans journal.html, action reconcile_calendar).
+
+Rubrique	Signification
+❗ Erreurs	Appel Google ou base en échec
+➕ Créés	Événements créés depuis une fiche
+✏️ Corrigés	Événements mis en conformité. La liste après → indique les champs corrigés (titre, début, fin, lieu, étiquette…)
+🗑️ Supprimés	Doublons ou événements dont la fiche a été supprimée
+⚠️ Ambigus	Aucune action : à vérifier à la main
+ℹ️ Événements 🥾 sans fiche	Aucune action
+
+→ étiquette seul : l'événement était déjà conforme, mais il n'était pas étiqueté. Le passage a seulement posé le marqueur, sans changement visible dans l'agenda.
+
+Si cela arrive une fois pour un événement, c'est un rattachement normal.
+Si cela arrive pour chaque nouvelle rando, le circuit de création (envoiRando / dynamic-handler) ne pose pas l'étiquette. La réconciliation compense, mais le code est à corriger.
+Si cela arrive plusieurs nuits de suite pour le même événement, l'étiquette est effacée à chaque modification (PATCH/PUT qui écrase extendedProperties). Le code est à corriger.
+
+Les actions au-delà de la limite d'écritures par passage (MAX_ECRITURES) sont reportées au passage suivant.
+
+Lancement manuel
+
+Simulation (aucune écriture, renvoie le plan d'actions) :
+
+bash
+curl -X POST "https://<PROJECT_REF>.supabase.cofunctions/v1/reconcile-calendar" -H "x-cron-secret: VOTRE_SECRET" -H "Content-Type: application/json" -d '{"simulation":true}'
+
+Passage réel (réponse "lance": true, résultat dans journal.html et par mail) :
+
+bash
+curl -X POST "https://<PROJECT_REF>.supabase.cofunctions/v1/reconcile-calendar" -H "x-cron-secret: VOTRE_SECRET" -H "Content-Type: application/json" -d '{}'
+
+Contrôle : après un passage réel, une simulation doit renvoyer des listes creations, corrections et suppressions vides.
