@@ -309,8 +309,8 @@ RESEND_API_KEY
 - Intégration Webnode : `<iframe src="https://lamarmotterando.github.io/randoFDR/meteo.html" style="width:100%;height:400px;border:0;" loading="lazy"></iframe>`
 - Manuel d'exploitation et de maintenance passé en v1.3
 **********************
-### Réconciliation Google Agenda (reconcile-calendar)
 
+### Réconciliation Google Agenda (reconcile-calendar)
 18 Novembre 2026 — 
 Principe
 
