@@ -287,7 +287,7 @@ Les fonctions publiques appelées sans jeton (ex. `get-animateurs`, `calendar-li
 - **Sauvegarde** : dump quotidien de la base (rôles, schéma, données) par GitHub Actions, dans un dépôt **privé** distinct.
 
 ### Secrets Supabase (non versionnés)
-```
+
 SUPABASE_URL, SUPA_SERVICE_ROLE_KEY_NEW
 CLE_CLUB, CRON_SECRET
 GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_CALENDAR_ID
@@ -296,7 +296,6 @@ RESEND_API_KEY
 *La Marmotte Châteaurenard — [lamarmottechateaurenard.com](https://lamarmottechateaurenard.com)*
 ### Ajout envoi code auto à partir du mail pour remplir les participants
 
-**********************
 05 Novembre 2026 — mise à jour documentation
 - Règle `CACHE_NAME` retirée (sw.js désactivé depuis le 09/10/2026) ; règle `VERSION` de sw-carte.js ajoutée
 - `tools/import_fdr.py` retiré de l'arborescence (absent du dépôt)
@@ -308,11 +307,9 @@ RESEND_API_KEY
 - Affichage limité à J-4 (horizon fiable ARPEGE/AROME) ; veille et lendemain affichés seulement dans cet horizon ; rien si GPS absent, sortie annulée ou passée
 - Intégration Webnode : `<iframe src="https://lamarmotterando.github.io/randoFDR/meteo.html" style="width:100%;height:400px;border:0;" loading="lazy"></iframe>`
 - Manuel d'exploitation et de maintenance passé en v1.3
-**********************
 
 ### Réconciliation Google Agenda (reconcile-calendar)
-18 Novembre 2026 — 
-Principe
+18 Novembre 2026 - Principe
 
 Supabase (fiches) est la référence. Chaque nuit, l'Edge Function reconcile-calendar compare les fiches à venir avec les événements Google Agenda de la même période. Elle remet ensuite l'agenda en conformité avec la base.
 
