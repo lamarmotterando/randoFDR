@@ -169,8 +169,7 @@ async function chercherFicheExistante(date_rando, animateur) {
       return match;
     });
 
-    // 2) Fallback : seule rando du jour, sans ibp (= prévisionnelle sans FDR)
-    if (!found && rows.length === 1 && !rows[0].ibp) found = rows[0];
+    // Pas de fallback : l'animateur vient d'une liste, sans correspondance → nouvelle fiche
 
     return found ? found.id : null;
   } catch(e) {
