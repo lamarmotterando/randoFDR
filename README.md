@@ -377,3 +377,10 @@ La pente est maintenant recalculée sur 100 m de tracé, centrés sur chaque seg
 app.js : démarrage compatible avec un chargement différé
 
 Remplace l'écouteur DOMContentLoaded par une fonction demarrer() lancée tout de suite si le DOM est déjà prêt. Aucun changement de comportement avec l'index.html actuel ; prépare le chargement toujours à jour des scripts (index_test.html).
+
+### planningFDR : boutons de gestion en haut des modales
+
+- Modale détail : Modifier / Resync / Créer dans Calendar placés sous le titre
+- Modale modification : Enregistrer / Annuler la rando en haut, fixés au
+  défilement, affichés uniquement après validation du code
+- Libellé « Annuler » renommé « Annuler la rando »
