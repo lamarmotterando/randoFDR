@@ -143,14 +143,16 @@ async function callHandler(body) {
 async function chercherFicheExistante(date_rando, animateur) {
   if (!date_rando || !animateur) return null;
   try {
-    const rows = await callHandler({
+    let rows = await callHandler({
       action:  "getFiches",
-      select:  "id,nom_rando,animateur,ibp",
+      select:  "id,nom_rando,animateur,ibp,type",
       filters: "date_rando=eq." + date_rando,
       order:   "id.asc"
     });
 
-    if (!rows || !rows.length) return null;
+    if (!rows) return null;
+    rows = rows.filter(r => (r.type || "rando") === "rando");   // ignore « Autres » (CA…) et séjours
+    if (!rows.length) return null;
 
     const normaliser = str => (str || "")
       .toLowerCase()
@@ -167,11 +169,8 @@ async function chercherFicheExistante(date_rando, animateur) {
       return match;
     });
 
-    // 2) Fallback : seule fiche du jour sans ibp (= prévisionnelle sans FDR)
-    if (!found) {
-      const sansFDR = rows.filter(r => !r.ibp);
-      if (sansFDR.length === 1) found = sansFDR[0];
-    }
+    // 2) Fallback : seule rando du jour, sans ibp (= prévisionnelle sans FDR)
+    if (!found && rows.length === 1 && !rows[0].ibp) found = rows[0];
 
     return found ? found.id : null;
   } catch(e) {
