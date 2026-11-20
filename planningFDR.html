@@ -142,6 +142,11 @@
     cursor: pointer; margin-top: 0; transition: all .15s;
   }
   .btn-delete:hover { background: #e53e3e; color: white; }
+  .actions-modif {
+    position: sticky; top: -24px; z-index: 2;
+    background: white; margin: 0 -24px; padding: 10px 24px 12px;
+    border-bottom: 1px solid #e0e8f0;
+  }
   .err-msg { font-size: 13px; color: #c53030; text-align: center; margin-top: 4px; display: none; }
 
   /* ── MOT DE PASSE ── */
@@ -190,13 +195,16 @@
       <div class="modal-titre" id="modalDetailTitre"></div>
       <button class="modal-close" onclick="fermerDetail()">✕ Fermer</button>
     </div>
+    <!-- Boutons de gestion en haut de la modale -->
+    <div style="margin-bottom:14px;">
+      <button class="btn-modifier-detail" onclick="ouvrirModif(idEnCours)">✏️ Modifier cette randonnée</button>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn-resync" style="flex:1;margin-top:0" onclick="resyncCalendar()">🔄 Resync Calendar</button>
+        <button class="btn-create-cal" style="flex:1" onclick="creerCalendar()">➕ Créer dans Calendar</button>
+      </div>
+    </div>
     <img id="modalDetailProfil" src="" alt="Profil" class="modal-profil" style="display:none">
     <pre class="modal-resume" id="modalDetailResume"></pre>
-    <button class="btn-modifier-detail" onclick="ouvrirModif(idEnCours)">✏️ Modifier cette randonnée</button>
-    <div style="display:flex;gap:8px;margin-top:8px;">
-      <button class="btn-resync" style="flex:1" onclick="resyncCalendar()">🔄 Resync Calendar</button>
-      <button class="btn-create-cal" style="flex:1" onclick="creerCalendar()">➕ Créer dans Calendar</button>
-    </div>
   </div>
 </div>
 
@@ -230,6 +238,15 @@
         </div>
         <div id="codeOk" style="display:none;margin-top:10px;font-size:13px;font-weight:600;color:#1a7a3a;">🔓 Accès validé — vous pouvez modifier la fiche.</div>
       </div>
+      <!-- Boutons d'action : en haut, fixés au défilement, affichés après validation du code -->
+      <div id="actionsModif" class="actions-modif" style="display:none;">
+        <div style="display:flex;gap:10px;">
+          <button class="btn-save" style="flex:2;margin-top:0" onclick="sauvegarderModif()">💾 Enregistrer</button>
+          <button class="btn-delete" style="flex:1" onclick="supprimerFiche()">❌ Annuler la rando</button>
+        </div>
+        <div class="err-msg" id="modifErr">Erreur lors de la sauvegarde. Réessayez.</div>
+      </div>
+
       <div class="form-row">
         <div><label>Nom de la randonnée</label><input id="modifNom" type="text"></div>
         <div><label>Date</label><input id="modifDate" type="date"></div>
@@ -298,11 +315,6 @@
         </div>
       </div>
 
-      <div class="err-msg" id="modifErr">Erreur lors de la sauvegarde. Réessayez.</div>
-      <div style="display:flex;gap:10px;margin-top:4px;">
-        <button class="btn-save" style="flex:2" onclick="sauvegarderModif()">💾 Enregistrer</button>
-        <button class="btn-delete" style="flex:1" onclick="supprimerFiche()">❌ Annuler</button>
-      </div>
     </div>
   </div>
 </div>
@@ -632,6 +644,9 @@ function verrouillerForm(verrou) {
   const del  = document.querySelector("#modalModif .btn-delete");
   if (save) save.disabled = verrou;
   if (del)  del.disabled = verrou;
+  /* Boutons d'action visibles uniquement une fois le code validé */
+  const actions = document.getElementById("actionsModif");
+  if (actions) actions.style.display = verrou ? "none" : "block";
 }
 
 async function envoyerMonCode() {
@@ -1036,7 +1051,7 @@ async function supprimerFiche() {
     const code = codeValide;
     if (!code) {
       alert("Validez d'abord votre code de modification pour annuler la rando.");
-      if (btn) { btn.disabled = false; btn.textContent = "❌ Annuler"; }
+      if (btn) { btn.disabled = false; btn.textContent = "❌ Annuler la rando"; }
       return;
     }
     const res = await fetch(CODE_FN_URL, {
@@ -1047,7 +1062,7 @@ async function supprimerFiche() {
 
     if (res.status === 403) {
       alert("Code invalide ou expiré — redemandez un code.");
-      if (btn) { btn.disabled = false; btn.textContent = "❌ Annuler"; }
+      if (btn) { btn.disabled = false; btn.textContent = "❌ Annuler la rando"; }
       return;
     }
     if (!res.ok) throw new Error("HTTP " + res.status);
@@ -1073,7 +1088,7 @@ async function supprimerFiche() {
     const errEl = document.getElementById("modifErr");
     errEl.textContent = "Erreur : " + e.message;
     errEl.style.display = "block";
-    if (btn) { btn.disabled = false; btn.textContent = "🗑 Annuler"; }
+    if (btn) { btn.disabled = false; btn.textContent = "❌ Annuler la rando"; }
   }
 }
 
