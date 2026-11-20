@@ -372,3 +372,8 @@ Contrôle : après un passage réel, une simulation doit renvoyer des listes cre
 ### Correction lissage de la pente sur carte.html
 19 Novembre 2026 
 La pente est maintenant recalculée sur 100 m de tracé, centrés sur chaque segment. Le changement vaut pour la tuile « pente », pour les couleurs du tracé sur la carte et pour le profil. Il vaut aussi en sens inversé, puisque la pente est recalculée à partir des distances et des altitudes.
+
+### Correction versionning app et index
+app.js : démarrage compatible avec un chargement différé
+
+Remplace l'écouteur DOMContentLoaded par une fonction demarrer() lancée tout de suite si le DOM est déjà prêt. Aucun changement de comportement avec l'index.html actuel ; prépare le chargement toujours à jour des scripts (index_test.html).
