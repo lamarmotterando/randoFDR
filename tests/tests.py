@@ -43,7 +43,7 @@ def erreurs_js(page):
 
 ANIMATEURS = [{"nom": "BIZARD Dominique"}, {"nom": "DUPRÉ Roland"}]
 
-def faux_supabase(page, fiches_du_jour, appels):
+def faux_supabase(page, fiches_du_jour, appels, erreur_planning=False):
     def handler(route):
         req = route.request
         url = req.url
@@ -57,6 +57,8 @@ def faux_supabase(page, fiches_du_jour, appels):
         if "dynamic-handler" in url:
             a = body.get("action")
             if a == "getFiches":
+                if erreur_planning:
+                    return route.fulfill(status=500, body="erreur")
                 f = (body.get("filters") or "")
                 return route.fulfill(json=fiches_du_jour if "date_rando=eq." in f else [])
             if a == "saveFiche":
@@ -65,28 +67,50 @@ def faux_supabase(page, fiches_du_jour, appels):
         return route.fulfill(json={"success": True})
     page.route(SUPA, handler)
 
-# ─────────────── Formulaire FDR : choix création / mise à jour ───────────────
-def test_envoi(b, nom, fiches_du_jour, animateur, attendu):
-    page = b.new_page(); errs = erreurs_js(page); appels = []; fin = []
+# ─────────────── Formulaire FDR : rattachement à une fiche du planning ───────────────
+def test_envoi(b, nom, fiches_du_jour, animateur, attendu, choix="defaut", confirmer=True,
+               erreur_planning=False, sans_evenement=False, encadre=None, attente=0):
+    page = b.new_page(); errs = erreurs_js(page); appels = []; fin = []; dialogues = []
     page.on("console", lambda m: fin.append(1) if "[Résultat]" in m.text else None)
-    faux_supabase(page, fiches_du_jour, appels)
+    def dialogue(d):
+        dialogues.append(d.message)
+        d.accept() if confirmer else d.dismiss()
+    page.on("dialog", dialogue)
+    faux_supabase(page, fiches_du_jour, appels, erreur_planning)
     page.goto(f"{BASE}/index.html#k=TEST")
     page.wait_for_function("window._validerFormulaire && document.querySelectorAll('#animateur option').length > 2", timeout=20000)
-    page.evaluate("""([anim]) => {
+    page.evaluate("""([anim, sansEvt]) => {
         window._validerFormulaire = () => true;
         document.getElementById('nomRando').value = 'Rando test';
-        document.getElementById('dateRando').value = '2027-06-13';
-        document.getElementById('animateur').value = anim;
         document.getElementById('resumeRando').textContent = 'Résumé de test';
-    }""", [animateur])
+        const d = document.getElementById('dateRando'), a = document.getElementById('animateur');
+        d.value = '2027-06-13'; a.value = anim;
+        if (!sansEvt) { d.dispatchEvent(new Event('change')); a.dispatchEvent(new Event('change')); }
+    }""", [animateur, sans_evenement])
+    if attente: page.wait_for_timeout(attente)
+    if not sans_evenement or attente:
+        page.wait_for_function("!document.getElementById('rattachementFiche').textContent.includes('Vérification')", timeout=5000)
+    if encadre is not None:
+        t = page.inner_text("#rattachementFiche")
+        verifier(f"Envoi FDR — {nom} — encadré", all(x.lower() in t.lower() for x in encadre), f"encadré = {t!r}")
+    if choix == "nouvelle":
+        page.get_by_text("Nouvelle rando (pas au planning)").click()
+        page.click("#btnEnvoyer")                       # 1er clic : avertissement, rien n'est envoyé
+        page.wait_for_timeout(500)
+        dialogues.append(page.inner_text("#envoi-popup") if page.is_visible("#envoi-popup") else "")
+        if not confirmer:
+            page.wait_for_timeout(1500)
+            verifier(f"Envoi FDR — {nom}", appels == attendu, f"appels = {appels}, attendu = {attendu}")
+            verifier(f"Envoi FDR — {nom} — aucune erreur JS", not errs, errs)
+            page.close(); return dialogues
     page.click("#btnEnvoyer")
-    page.wait_for_function("1", timeout=1000)
-    for _ in range(100):
+    for _ in range(60):
         if fin: break
         page.wait_for_timeout(100)
-    verifier(f"Envoi FDR — {nom}", appels == [attendu], f"appels = {appels}, attendu = [{attendu}]")
+    verifier(f"Envoi FDR — {nom}", appels == attendu, f"appels = {appels}, attendu = {attendu}")
     verifier(f"Envoi FDR — {nom} — aucune erreur JS", not errs, errs)
     page.close()
+    return dialogues
 
 # ─────────────── Formulaire FDR : pré-remplissage #fiche= ───────────────
 def test_prefill(b):
@@ -150,16 +174,33 @@ def main():
     serveur()
     with sync_playwright() as p:
         b = p.chromium.launch(executable_path=os.environ.get("CHROME") or None)
-        test_envoi(b, "aucune fiche ce jour → création", [], "BIZARD Dominique", ("creation", None))
-        test_envoi(b, "fiche du même animateur → mise à jour", 
-                   [{"id": 11, "nom_rando": "X", "animateur": "BIZARD Dominique", "ibp": None, "type": "rando"}],
-                   "BIZARD Dominique", ("update", 11))
-        test_envoi(b, "fiche d'un autre animateur → création (pas d'écrasement)",
-                   [{"id": 10, "nom_rando": "X", "animateur": "DUPRÉ Roland", "ibp": None, "type": "rando"}],
-                   "BIZARD Dominique", ("creation", None))
-        test_envoi(b, "fiche « Autres » (CA) ce jour → création (CA intact)",
-                   [{"id": 12, "nom_rando": "réunion CA", "animateur": None, "ibp": None, "type": "autre"}],
-                   "BIZARD Dominique", ("creation", None))
+        BIZ = {"id": 11, "nom_rando": "Le Beaucet", "animateur": "BIZARD Dominique", "type": "rando"}
+        DUP = {"id": 10, "nom_rando": "Ventoux", "animateur": "DUPRÉ Roland", "type": "rando"}
+        CA  = {"id": 12, "nom_rando": "réunion CA", "animateur": None, "type": "autre"}
+        test_envoi(b, "aucune fiche ce jour → création", [], "BIZARD Dominique",
+                   [("creation", None)], encadre=["Aucune rando prévue"])
+        test_envoi(b, "sa fiche au planning → mise à jour de cette fiche", [DUP, BIZ], "BIZARD Dominique",
+                   [("update", 11)], encadre=["Le Beaucet", "Nouvelle rando"])
+        test_envoi(b, "fiche d'un autre animateur → non proposée, création", [DUP], "BIZARD Dominique",
+                   [("creation", None)], encadre=["Aucune rando prévue"])
+        test_envoi(b, "réunion CA ce jour → non proposée, création", [CA], "BIZARD Dominique",
+                   [("creation", None)], encadre=["Aucune rando prévue"])
+        test_envoi(b, "nom écrit « Prénom NOM » au planning → reconnu",
+                   [{**BIZ, "animateur": "Dominique Bizard"}], "BIZARD Dominique", [("update", 11)])
+        test_envoi(b, "fiche annulée → non proposée", [{**BIZ, "statut": "annulée"}], "BIZARD Dominique",
+                   [("creation", None)])
+        d = test_envoi(b, "« Nouvelle rando » + 2e clic sur Envoyer → création", [BIZ], "BIZARD Dominique",
+                       [("creation", None)], choix="nouvelle", confirmer=True)
+        verifier("Envoi FDR — avertissement avant de créer un doublon", len(d) == 1 and "Le Beaucet" in d[0], d)
+        test_envoi(b, "« Nouvelle rando » + un seul clic → rien envoyé", [BIZ], "BIZARD Dominique",
+                   [], choix="nouvelle", confirmer=False)
+        test_envoi(b, "planning injoignable → envoi bloqué", [BIZ], "BIZARD Dominique",
+                   [], erreur_planning=True, encadre=["Impossible de vérifier"])
+        test_envoi(b, "date/animateur changés sans que l'encadré soit vu → envoi stoppé pour vérification",
+                   [BIZ], "BIZARD Dominique", [], sans_evenement=True)
+        test_envoi(b, "date/animateur remplis par le code (restauration auto) → encadré mis à jour seul",
+                   [BIZ], "BIZARD Dominique", [("update", 11)], sans_evenement=True, attente=2000,
+                   encadre=["Le Beaucet"])
         test_prefill(b)
         test_planning(b)
         b.close()
