@@ -1230,7 +1230,11 @@ async function supprimerSelection(ids) {
   for (const id of ids) {
     try {
       const fiche = allRows.find(r => String(r.id) === String(id));
-      if (fiche && fiche.date_rando && fiche.type !== "autre" && fiche.type !== "sejour") await syncCalendar("calendarDelete", { dateRando: fiche.date_rando, animateur: fiche.animateur || "" });
+      if (fiche && fiche.date_rando && fiche.type !== "autre" && fiche.type !== "sejour") await syncCalendar("calendarDelete", {
+        dateRando: fiche.date_rando, animateur: fiche.animateur || "",
+        /* Titre tel qu'il est dans l'agenda : l'événement est retrouvé par son titre exact avant l'animateur */
+        nomRando: fiche.statut === "annulée" ? `❌ ANNULÉE — ${fiche.nom_rando || ""}` : (fiche.nom_rando || ""),
+      });
       const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-fiche`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
