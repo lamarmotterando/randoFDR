@@ -8,6 +8,12 @@ export function initEnvoi() {
   const btn = document.getElementById("btnEnvoyer");
   if (!btn) { console.warn("Bouton Envoyer introuvable"); return; }
   btn.addEventListener("click", envoyerRando);
+  ["dateRando", "animateur"].forEach(id =>
+    document.getElementById(id)?.addEventListener("change", majRattachement));
+  majRattachement();
+  /* Valeurs changées par le code (restauration auto, pré-remplissage, remise à zéro)
+     sans événement « change » : on resynchronise l'encadré (aucun appel réseau si rien n'a changé) */
+  setInterval(() => { if (cleRattachement() !== rattachement.cle) majRattachement(); }, 1000);
 }
 
 /* ══════════════════════════════════════
@@ -134,48 +140,137 @@ async function callHandler(body) {
 }
 
 /* ══════════════════════════════════════
-   CHERCHER FICHE PRÉVISIONNELLE SUPABASE
-   Cherche par date + animateur pour éviter doublon
-   🔧 CORRIGÉ : l'appel réseau manquait (variable `rows` jamais
-   définie → exception silencieuse → retournait toujours null →
-   créait systématiquement une nouvelle fiche en doublon).
+   RATTACHEMENT À UNE FICHE DU PLANNING
+   L'animateur choisit lui-même la fiche à compléter (par son id) parmi
+   SES randos du jour, ou « Nouvelle rando ». Plus aucune déduction à l'envoi.
 ══════════════════════════════════════ */
-async function chercherFicheExistante(date_rando, animateur) {
-  if (!date_rando || !animateur) return null;
+const rattachement = { cle: "", etat: "vide", fiches: [], idChoisi: null, confirme: "" };
+/* etat : "vide" (date ou animateur manquant) | "chargement" | "ok" | "erreur" */
+
+/* Même animateur = mêmes mots (ordre, accents, casse et ponctuation ignorés) */
+const motsNom = s => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean).sort().join(" ");
+const memeAnimateur = (a, b) => !!motsNom(a) && motsNom(a) === motsNom(b);
+
+const cleRattachement = () =>
+  (document.getElementById("dateRando")?.value || "") + "|" + (document.getElementById("animateur")?.value || "");
+
+async function majRattachement() {
+  const date = document.getElementById("dateRando")?.value || "";
+  const anim = document.getElementById("animateur")?.value || "";
+  const cle  = date + "|" + anim;
+  rattachement.cle = cle;
+  rattachement.fiches = []; rattachement.idChoisi = null; rattachement.confirme = "";
+  if (!date || !anim) { rattachement.etat = "vide"; afficherRattachement(); return; }
+  rattachement.etat = "chargement"; afficherRattachement();
   try {
-    let rows = await callHandler({
-      action:  "getFiches",
-      select:  "id,nom_rando,animateur,ibp,type",
-      filters: "date_rando=eq." + date_rando,
-      order:   "id.asc"
+    const rows = await callHandler({
+      action: "getFiches", select: "id,nom_rando,animateur,type,statut",
+      filters: "date_rando=eq." + date, order: "id.asc",
     });
-
-    if (!rows) return null;
-    rows = rows.filter(r => (r.type || "rando") === "rando");   // ignore « Autres » (CA…) et séjours
-    if (!rows.length) return null;
-
-    const normaliser = str => (str || "")
-      .toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/[-_]/g, " ")
-      .split(/\s+/).filter(m => m.length > 2);
-
-    const motsAnim = normaliser(animateur);
-
-    // 1) Match animateur
-    let found = rows.find(r => {
-      const mots = normaliser(r.animateur);
-      const match = motsAnim.some(m => mots.includes(m));
-      return match;
-    });
-
-    // Pas de fallback : l'animateur vient d'une liste, sans correspondance → nouvelle fiche
-
-    return found ? found.id : null;
+    if (rattachement.cle !== cle) return;                       // réponse périmée
+    if (!Array.isArray(rows)) throw new Error("réponse invalide");
+    rattachement.fiches = rows.filter(r =>
+      (r.type || "rando") === "rando" &&                       // ni « Autres » (CA…) ni séjours
+      (r.statut || "") !== "annulée" &&
+      memeAnimateur(r.animateur, anim));                        // uniquement SES randos
+    rattachement.idChoisi = rattachement.fiches.length ? rattachement.fiches[0].id : null;
+    rattachement.etat = "ok";
   } catch(e) {
-    console.warn("[Supabase] Erreur recherche fiche:", e.message);
-    return null;
+    if (rattachement.cle !== cle) return;
+    console.warn("[Rattachement] planning non vérifié :", e.message);
+    rattachement.etat = "erreur";
   }
+  afficherRattachement();
+}
+
+function afficherRattachement() {
+  const box = document.getElementById("rattachementFiche");
+  if (!box) return;
+  box.replaceChildren();
+  box.className = "rattachement";
+  const ligne = (cls, texte) => { const d = document.createElement("div"); d.className = cls; d.textContent = texte; box.appendChild(d); return d; };
+
+  if (rattachement.etat === "vide") { box.style.display = "none"; return; }
+  box.style.display = "block";
+
+  if (rattachement.etat === "chargement") {
+    box.classList.add("neutre"); ligne("r-info", "⏳ Vérification du planning…"); return;
+  }
+  if (rattachement.etat === "erreur") {
+    box.classList.add("erreur");
+    ligne("r-titre", "⚠️ Impossible de vérifier le planning");
+    ligne("r-info", "L'envoi est bloqué tant que le planning n'a pas pu être vérifié.");
+    const b = document.createElement("button"); b.type = "button"; b.textContent = "🔄 Réessayer";
+    b.addEventListener("click", majRattachement); box.appendChild(b);
+    return;
+  }
+  if (!rattachement.fiches.length) {
+    box.classList.add("neutre");
+    ligne("r-titre", "ℹ️ Aucune rando prévue à votre nom ce jour");
+    ligne("r-info", "Pas d'inquiétude : votre rando sera ajoutée au planning à l'envoi. "
+      + "Si elle devait déjà y figurer, vérifiez la date et votre nom.");
+    return;
+  }
+  ligne("r-titre", "📅 Rando prévue au planning ce jour");
+  ligne("r-info r-expl", "Cette rando est déjà programmée à votre nom. Laissez-la cochée : "
+    + "votre feuille de route complétera sa fiche, sans créer de doublon.");
+  const info = document.createElement("div"); info.className = "r-info";
+  const majInfo = () => info.textContent = rattachement.idChoisi
+    ? "✔ À l'envoi : la fiche du planning sera complétée."
+    : "✔ À l'envoi : une nouvelle rando sera ajoutée au planning.";
+  const option = (id, texte, aide) => {
+    const l = document.createElement("label"); l.className = "r-opt";
+    const r = document.createElement("input"); r.type = "radio"; r.name = "rattachement";
+    r.checked = rattachement.idChoisi === id;
+    r.addEventListener("change", () => { rattachement.idChoisi = id; rattachement.confirme = ""; majInfo(); });
+    const t = document.createElement("span"); t.textContent = texte;
+    if (aide) { const a = document.createElement("small"); a.className = "r-aide"; a.textContent = aide; t.append(document.createElement("br"), a); }
+    l.append(r, t); box.appendChild(l);
+  };
+  rattachement.fiches.forEach(f => option(f.id, f.nom_rando || "(sans nom)"));
+  option(null, "Nouvelle rando (pas au planning)",
+    "Uniquement si cette feuille de route concerne une autre rando que celle ci-dessus.");
+  box.appendChild(info); majInfo();
+}
+
+/* Avant l'envoi : planning vérifié pour la date + l'animateur actuels, et choix confirmé */
+async function verifierRattachement() {
+  if (rattachement.cle !== cleRattachement() || rattachement.etat !== "ok") {
+    await majRattachement();
+    if (rattachement.etat === "ok" && rattachement.fiches.length) {
+      /* Le choix vient d'apparaître : l'animateur doit le voir avant d'envoyer */
+      afficherPopup({ icone: "📅", titre: "Vérifiez la rando choisie",
+        message: "Une rando prévue à votre nom a été trouvée. Vérifiez le choix sous l'animateur, puis cliquez à nouveau sur Envoyer.", bouton: "OK" });
+      document.getElementById("rattachementFiche")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return false;
+    }
+  }
+  if (rattachement.etat !== "ok") {
+    afficherPopup({ icone: "⚠️", titre: "Planning non vérifié",
+      message: "Impossible de vérifier le planning, réessayez.", bouton: "OK" });
+    return false;
+  }
+  if (rattachement.fiches.length && rattachement.idChoisi === null && rattachement.confirme !== rattachement.cle) {
+    /* Confirmation par un 2e clic (pas de confirm() : il peut être bloqué dans l'iframe Webnode) */
+    const noms = rattachement.fiches.map(f => "« " + (f.nom_rando || "sans nom") + " »").join(", ");
+    rattachement.confirme = rattachement.cle;
+    afficherPopup({ icone: "⚠️", titre: "Créer une nouvelle rando ?",
+      message: `Vous avez déjà ${noms} au planning ce jour. Pour la compléter, cochez-la. `
+             + "Pour créer quand même une nouvelle rando, cliquez à nouveau sur Envoyer.", bouton: "OK" });
+    return false;
+  }
+  return true;
+}
+
+/* Après création : retrouver la nouvelle fiche par sa clé unique (date + nom + animateur) */
+async function idFicheCreee(fiche) {
+  const rows = await callHandler({
+    action: "getFiches", select: "id,nom_rando,animateur",
+    filters: "date_rando=eq." + fiche.date_rando, order: "id.desc",
+  });
+  const f = (rows || []).find(r => r.nom_rando === fiche.nom_rando && r.animateur === fiche.animateur);
+  return f ? f.id : null;
 }
 
 /* ══════════════════════════════════════
@@ -183,7 +278,7 @@ async function chercherFicheExistante(date_rando, animateur) {
 ══════════════════════════════════════ */
 async function sauvegarderFiche(fiche) {
   try {
-    const idExistant = await chercherFicheExistante(fiche.date_rando, fiche.animateur);
+    const idExistant = rattachement.idChoisi;   // choisi par l'animateur, null = nouvelle fiche
 
     if (idExistant) {
       /* ✅ PATCH — filtrer les valeurs null pour ne pas écraser
@@ -204,11 +299,13 @@ async function sauvegarderFiche(fiche) {
       });
       if (!resUpd.ok) throw new Error("update-fiche HTTP " + resUpd.status);
       console.log("[Supabase] Fiche prévisionnelle mise à jour ✅ id:", idExistant);
+      fiche._id = idExistant;
       return true;
     } else {
       /* POST — aucune fiche prévisionnelle, création complète */
       await callHandler({ action: "saveFiche", fiche });
       console.log("[Supabase] Nouvelle fiche créée ✅");
+      fiche._id = await idFicheCreee(fiche).catch(() => null);
       return true;
     }
   } catch(e) {
@@ -224,7 +321,7 @@ async function sauvegarderProfilData(fiche) {
   try {
     /* profilExportBase64 est remis à null par la réinitialisation du formulaire : évite d'envoyer un profil périmé */
     if (!window.profilData || !window.profilExportBase64) return;
-    const id = await chercherFicheExistante(fiche.date_rando, fiche.animateur);
+    const id = fiche._id;
     if (!id) { console.warn("[profil] id fiche introuvable — profil interactif non enregistré"); return; }
     const res = await fetch(PROFIL_FN, {
       method:  "POST",
@@ -337,6 +434,8 @@ async function envoyerRando() {
     return;
   }
 
+  if (!(await verifierRattachement())) return;
+
   const btnEnvoyer = document.getElementById("btnEnvoyer");
   if (btnEnvoyer) { btnEnvoyer.disabled = true; btnEnvoyer.textContent = "⏳ Envoi en cours…"; }
 
@@ -366,6 +465,10 @@ async function envoyerRando() {
 
     /* Profil interactif : après la sauvegarde de la fiche (l'id doit exister) */
     if (saveOk) await sauvegarderProfilData(fiche);
+
+    /* La fiche existe désormais : le prochain envoi doit revérifier le planning */
+    rattachement.cle = "";
+    majRattachement();
 
     /* Message selon résultat email + supabase (Google Calendar est best-effort) */
     if (emailOk && saveOk) {
