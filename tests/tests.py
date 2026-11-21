@@ -79,20 +79,22 @@ def test_envoi(b, nom, fiches_du_jour, animateur, attendu, choix="defaut", confi
     faux_supabase(page, fiches_du_jour, appels, erreur_planning)
     page.goto(f"{BASE}/index.html#k=TEST")
     page.wait_for_function("window._validerFormulaire && document.querySelectorAll('#animateur option').length > 2", timeout=20000)
-    page.evaluate("""([anim, sansEvt]) => {
+    page.evaluate("""([anim, sansEvt, cliquerTout]) => {
         window._validerFormulaire = () => true;
         document.getElementById('nomRando').value = 'Rando test';
         document.getElementById('resumeRando').textContent = 'Résumé de test';
         const d = document.getElementById('dateRando'), a = document.getElementById('animateur');
         d.value = '2027-06-13'; a.value = anim;
         if (!sansEvt) { d.dispatchEvent(new Event('change')); a.dispatchEvent(new Event('change')); }
-    }""", [animateur, sans_evenement])
+        else if (cliquerTout) document.getElementById('btnEnvoyer').click();   // même instant : l'encadré n'a pas pu se mettre à jour
+    }""", [animateur, sans_evenement, sans_evenement and not attente])
     if attente: page.wait_for_timeout(attente)
     if not sans_evenement or attente:
         page.wait_for_function("!document.getElementById('rattachementFiche').textContent.includes('Vérification')", timeout=5000)
     if encadre is not None:
         t = page.inner_text("#rattachementFiche")
         verifier(f"Envoi FDR — {nom} — encadré", all(x.lower() in t.lower() for x in encadre), f"encadré = {t!r}")
+    deja_clique = sans_evenement and not attente
     if choix == "nouvelle":
         page.get_by_text("Nouvelle rando (pas au planning)").click()
         page.click("#btnEnvoyer")                       # 1er clic : avertissement, rien n'est envoyé
@@ -103,7 +105,8 @@ def test_envoi(b, nom, fiches_du_jour, animateur, attendu, choix="defaut", confi
             verifier(f"Envoi FDR — {nom}", appels == attendu, f"appels = {appels}, attendu = {attendu}")
             verifier(f"Envoi FDR — {nom} — aucune erreur JS", not errs, errs)
             page.close(); return dialogues
-    page.click("#btnEnvoyer")
+    if not deja_clique:
+        page.click("#btnEnvoyer")
     for _ in range(60):
         if fin: break
         page.wait_for_timeout(100)
