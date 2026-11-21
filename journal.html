@@ -61,6 +61,16 @@
   .rando.suppr { font-style: italic; }
   .vide { padding: 30px; text-align: center; color: #667; }
   .note { font-size: .78rem; color: #6b7a70; margin-top: 10px; }
+  /* Tests automatiques (GitHub Actions) */
+  .tests-auto { background: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.06); border-left: 4px solid #2d6a4f; }
+  .tests-auto.ko { border-left-color: #c53030; }
+  .ta-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 8px; }
+  .ta-head b { font-size: .95rem; }
+  .ta-head .maj { padding: 0; }
+  .ta-head a { font-size: .8rem; color: #185fa5; margin-left: auto; }
+  .tests-auto table { min-width: 560px; }
+  .tests-auto td { font-size: .84rem; padding: 6px 10px; }
+  .ta-msg { font-size: .83rem; color: #6b7a70; padding: 6px 0; }
 </style>
 </head>
 <body>
@@ -87,6 +97,21 @@
     <button class="btn btn-light" id="btn-logout">Déconnexion</button>
   </header>
   <main>
+    <!-- Résultats des tests automatiques, lus directement chez GitHub (dépôt public, aucune clé) -->
+    <div class="tests-auto" id="tests-auto">
+      <div class="ta-head">
+        <b>🧪 Tests automatiques</b>
+        <span class="maj" id="ta-maj"></span>
+        <a href="https://github.com/lamarmotterando/randoFDR/actions" target="_blank" rel="noopener">Tous les passages ↗</a>
+      </div>
+      <div class="table-wrap" style="box-shadow:none">
+        <table>
+          <thead><tr><th>Date</th><th>Déclencheur</th><th>Tests (fausses données)</th><th>Contrôle site réel</th><th>Détail</th></tr></thead>
+          <tbody id="ta-rows"></tbody>
+        </table>
+      </div>
+      <div class="ta-msg" id="ta-msg">⏳ Chargement…</div>
+    </div>
     <div class="filters">
       <div>
         <label for="f-periode">Période</label>
@@ -189,9 +214,56 @@ async function afficherApp(session) {
   $("who").textContent = session.user.email || "";
   $("login").classList.add("hidden");
   $("app").classList.remove("hidden");
+  chargerTests();
   await charger();
   return true;
 }
+
+/* ── Tests automatiques : 5 derniers passages GitHub Actions (API publique) ── */
+const GH = "https://api.github.com/repos/lamarmotterando/randoFDR/actions";
+const ETAPE_FAUSSES = "Tests avec fausses données";
+const ETAPE_REEL    = "Contrôle du site réel (lecture seule)";
+function etatGH(status, conclusion) {
+  if (status && status !== "completed") return "⏳ en cours";
+  return { success: "✅ OK", failure: "❌ échec", cancelled: "⏹ annulé", skipped: "—" }[conclusion] || "—";
+}
+async function chargerTests() {
+  const rows = $("ta-rows"), msg = $("ta-msg"), box = $("tests-auto");
+  try {
+    const r = await fetch(`${GH}/workflows/tests.yml/runs?per_page=5`, { headers: { Accept: "application/vnd.github+json" } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const runs = (await r.json()).workflow_runs || [];
+    const jobs = await Promise.all(runs.map(run =>
+      fetch(run.jobs_url).then(x => x.ok ? x.json() : null).catch(() => null)));
+    rows.replaceChildren();
+    runs.forEach((run, i) => {
+      const steps = jobs[i]?.jobs?.[0]?.steps || [];
+      const etape = nom => { const st = steps.find(x => x.name === nom); return st ? etatGH(st.status, st.conclusion) : "—"; };
+      const decl = run.event === "schedule" ? "Contrôle du lundi"
+                 : run.event === "workflow_dispatch" ? "Lancé à la main"
+                 : "Commit « " + ((run.head_commit?.message || "").split("\n")[0].slice(0, 45)) + " »";
+      const tr = document.createElement("tr");
+      const td = (t, cls) => { const c = document.createElement("td"); if (cls) c.className = cls; c.textContent = t; tr.appendChild(c); return c; };
+      td(new Date(run.created_at).toLocaleString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }), "date");
+      td(decl);
+      td(etape(ETAPE_FAUSSES));
+      td(etape(ETAPE_REEL));
+      const a = document.createElement("a"); a.href = run.html_url; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Voir ↗";
+      td("").appendChild(a);
+      rows.appendChild(tr);
+    });
+    const dernier = runs.find(x => x.status === "completed");
+    box.classList.toggle("ko", !!dernier && dernier.conclusion !== "success");
+    msg.textContent = runs.length ? "" : "Aucun passage pour l'instant.";
+    msg.classList.toggle("hidden", !!runs.length);
+    $("ta-maj").textContent = "mis à jour " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  } catch (e) {
+    rows.replaceChildren();
+    msg.classList.remove("hidden");
+    msg.textContent = "Résultats GitHub indisponibles pour le moment (" + e.message + "). Voir « Tous les passages ».";
+  }
+}
+window.chargerTests = chargerTests;   /* utilisé par les tests automatiques */
 
 $("btn-login").onclick = async () => {
   const err = $("login-err"); err.textContent = "";
@@ -307,6 +379,7 @@ setInterval(async () => {
 /* Déconnexion (jeton non renouvelé après une longue veille) : retour à l'écran de connexion */
 supabase.auth.onAuthStateChange(evt => { if (evt === "SIGNED_OUT" && !$("app").classList.contains("hidden")) location.reload(); });
 $("f-periode").onchange = charger;
+$("btn-refresh").addEventListener("click", chargerTests);
 $("f-fiche").onchange = charger;
 $("f-type").onchange = afficher;
 $("f-err").onchange = afficher;
