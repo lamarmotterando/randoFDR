@@ -391,3 +391,10 @@ L'animateur choisit la fiche à compléter parmi SES randos du jour
 (présélectionnée) ou « Nouvelle rando ». Fin de la recherche devinée
 par date + nom d'animateur. Confirmation avant doublon, envoi bloqué
 si le planning est injoignable. Tests : 10 cas d'envoi.
+
+### journal : encadré « Tests automatiques » (résultats GitHub Actions)
+
+Affiche les 5 derniers passages (date, déclencheur, résultat par étape,
+lien). Lecture de l'API publique GitHub, sans clé ni Edge Function.
+Tests : 4 vérifications ajoutées.
+<img width="868" height="193" alt="image" src="https://github.com/user-attachments/assets/81960776-97e8-4d4f-bfbe-f56f5c627f43" />
