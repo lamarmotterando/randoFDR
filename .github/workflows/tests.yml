@@ -1,0 +1,24 @@
+# Tests automatiques RandoFDR : à chaque commit, ouvre les pages dans Chrome
+# (sans écran, avec de fausses données Supabase) et vérifie leur comportement.
+# Résultat : ✅ / ❌ à côté du commit ; mail de GitHub en cas d'échec.
+name: Tests RandoFDR
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Installer Chrome de test
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Lancer les tests
+        run: python tests/tests.py
