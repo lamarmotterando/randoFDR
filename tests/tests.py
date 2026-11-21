@@ -173,6 +173,43 @@ def test_planning(b):
     verifier("planningFDR — aucune erreur JS", not errs, errs)
     page.close()
 
+# ─────────────── journal.html : encadré « Tests automatiques » ───────────────
+SUPABASE_JS_FAUX = """export function createClient(){ return {
+  auth: { getSession: async () => ({ data: { session: null } }), onAuthStateChange: () => {},
+          signInWithPassword: async () => ({ error: { message: 'test' } }), signOut: async () => {} },
+  from: () => ({}) }; }"""
+
+def test_journal(b):
+    page = b.new_page(); errs = erreurs_js(page)
+    page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
+               lambda r: r.fulfill(body=SUPABASE_JS_FAUX, content_type="application/javascript"))
+    runs = {"workflow_runs": [
+        {"id": 2, "event": "schedule", "status": "completed", "conclusion": "failure", "created_at": "2026-11-23T06:00:00Z",
+         "html_url": "https://github.com/x/2", "jobs_url": "https://api.github.com/jobs/2", "head_commit": {"message": "x"}},
+        {"id": 1, "event": "push", "status": "completed", "conclusion": "success", "created_at": "2026-11-21T13:05:00Z",
+         "html_url": "https://github.com/x/1", "jobs_url": "https://api.github.com/jobs/1",
+         "head_commit": {"message": "Workflow : checkout v5\n\ndétail"}}]}
+    jobs = {"2": {"jobs": [{"steps": [{"name": "Tests avec fausses données", "status": "completed", "conclusion": "success"},
+                                       {"name": "Contrôle du site réel (lecture seule)", "status": "completed", "conclusion": "failure"}]}]},
+            "1": {"jobs": [{"steps": [{"name": "Tests avec fausses données", "status": "completed", "conclusion": "success"},
+                                       {"name": "Contrôle du site réel (lecture seule)", "status": "completed", "conclusion": "success"}]}]}}
+    def gh(route):
+        u = route.request.url
+        if "/runs" in u: return route.fulfill(json=runs)
+        return route.fulfill(json=jobs[u.rsplit("/", 1)[-1]])
+    page.route("https://api.github.com/**", gh)
+    page.goto(f"{BASE}/journal.html")
+    page.wait_for_function("typeof window.chargerTests === 'function'", timeout=10000)
+    page.evaluate("window.chargerTests()")
+    page.wait_for_function("document.querySelectorAll('#ta-rows tr').length === 2", timeout=5000)
+    t = page.inner_text("#ta-rows")
+    verifier("journal — tests automatiques : 2 passages affichés", "Contrôle du lundi" in t and "Commit « Workflow : checkout v5 »" in t, t)
+    verifier("journal — échec du contrôle réel signalé ❌", "❌ échec" in t, t)
+    ko = page.eval_on_selector("#tests-auto", "e => e.classList.contains('ko')")
+    verifier("journal — encadré en rouge si le dernier passage a échoué", ko)
+    verifier("journal — aucune erreur JS", not errs, errs)
+    page.close()
+
 def main():
     serveur()
     with sync_playwright() as p:
@@ -206,6 +243,7 @@ def main():
                    encadre=["Le Beaucet"])
         test_prefill(b)
         test_planning(b)
+        test_journal(b)
         b.close()
     ok = all(resultats)
     print(f"\n{sum(resultats)}/{len(resultats)} vérifications réussies")
