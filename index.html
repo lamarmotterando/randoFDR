@@ -18,6 +18,18 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <link rel="stylesheet" href="css/style.css">
+<style>
+  .rattachement { border: 2px solid var(--amber); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 16px; background: var(--cream); }
+  .rattachement.neutre { border-width: 1px; border-color: #e8d8c4; }
+  .rattachement.erreur { border-color: #e53e3e; background: #fff5f5; }
+  .rattachement .r-titre { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+  .rattachement label.r-opt { text-transform: none; letter-spacing: normal; color: var(--ink); display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 6px 8px; border: 1px solid #e8d8c4; border-radius: var(--radius-sm); margin-bottom: 6px; cursor: pointer; background: white; font-weight: 400; }
+  .rattachement label.r-opt input { width: auto; margin: 0; }
+  .rattachement .r-info { font-size: 13px; color: var(--mid); }
+  .rattachement .r-expl { margin-bottom: 8px; }
+  .rattachement .r-aide { font-size: 12px; font-weight: 400; color: var(--stone); }
+  .rattachement button { margin-top: 6px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+</style>
 </head>
 
 <body>
@@ -85,6 +97,8 @@
       <select id="animateur"></select>
       <input id="nouvelAnimateur" placeholder="Nom animateur" style="display:none;margin-top:8px">
     </div>
+    <!-- Rattachement à une rando du planning (rempli par envoiRando.js) -->
+    <div id="rattachementFiche" class="rattachement" style="display:none" aria-live="polite"></div>
   </section>
 
   <!-- 2. COVOITURAGE -->
