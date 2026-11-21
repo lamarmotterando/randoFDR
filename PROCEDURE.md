@@ -9,10 +9,16 @@ gratuitement, sans abonnement.
 
 | Quand | Quoi | Où voir le résultat |
 |---|---|---|
-| À chaque commit | `tests/tests.py` : 37 vérifications avec de fausses données (aucun effet réel) | Onglet **Actions** du dépôt : ✅ ou ❌ |
+| À chaque commit **et chaque lundi matin** | `tests/tests.py` : 41 vérifications avec de fausses données (aucun effet réel) | Onglet **Actions** du dépôt : ✅ ou ❌ |
 | À chaque commit **et chaque lundi matin** | `tests/controle_site.py` : contrôle du site **réel**, en lecture seule (rien n'est écrit, aucun mail, aucun agenda) | Onglet **Actions** |
 
 En cas de ❌, **GitHub envoie un mail** à l'adresse du compte.
+
+**Voir les résultats sans aller sur GitHub** : `journal.html` (connexion admin) affiche en haut
+l'encadré **🧪 Tests automatiques** — les 5 derniers passages, le résultat de chaque étape
+(tests avec fausses données / contrôle du site réel) et un lien « Voir ↗ » vers le détail.
+La bordure devient **rouge** si le dernier passage a échoué. Bouton **↻ Actualiser** pour recharger.
+L'encadré lit l'API publique de GitHub : aucune clé, rien à configurer.
 
 **Lancer les tests à la main** : onglet Actions → « Tests RandoFDR » → bouton **Run workflow**.
 
@@ -56,9 +62,9 @@ et dans le dépôt privé (pour la sauvegarde).
 
 ---
 
-## 4. Quand GitHub envoie un ❌
+## 4. Quand GitHub envoie un ❌ (ou bordure rouge dans `journal.html`)
 
-1. Onglet **Actions** → cliquer sur la ligne en ❌ → « tests ».
+1. Dans `journal.html`, lien **Voir ↗** du passage en ❌ — ou onglet **Actions** → ligne en ❌ → « tests ».
 2. Ouvrir l'étape en rouge et lire les lignes marquées **❌** : elles disent ce qui ne va pas.
 3. Selon l'étape :
    - **« Tests avec fausses données »** en ❌ → c'est le **dernier commit** qui a cassé quelque chose.
@@ -88,11 +94,22 @@ Le site revient exactement à l'état d'avant. Rien n'est perdu : l'historique g
 
 ---
 
-## 6. Règles qui protègent l'appli
+## 6. Entretien du workflow GitHub
+
+Le fichier `.github/workflows/tests.yml` utilise deux briques fournies par GitHub
+(`actions/checkout@v5`, `actions/setup-python@v6`, prévues pour Node.js 24).
+Si un jour GitHub affiche un avertissement du type « Node.js XX is deprecated » dans un passage,
+ce n'est **pas** une erreur des tests : il suffit de passer ces deux lignes à la version
+majeure suivante indiquée dans le message (ex. `@v6` → `@v7`), puis de vérifier le ✅.
+
+---
+
+## 7. Règles qui protègent l'appli
 
 - Les données importantes sont protégées **par la base** (Supabase), pas seulement par le code :
   `date_rando` et `nom_rando` obligatoires, pas deux fiches avec la même date + nom + animateur.
 - Les bibliothèques externes sont **figées** (Chart.js 4.6.1, Leaflet 1.9.4, html2pdf 0.10.1) :
-  elles ne changent jamais sans un commit.
+  elles ne changent jamais sans un commit. Exception connue : `journal.html` charge
+  `supabase-js@2` sans version précise (page admin seulement) — à figer lors d'une prochaine modification.
 - Chaque bug corrigé reçoit **son test** dans `tests/tests.py`, pour qu'il ne revienne pas sans être vu.
 - Une fiche FDR est rattachée au planning **par son identifiant**, choisi par l'animateur — jamais devinée.
