@@ -1,11 +1,14 @@
-# Tests automatiques RandoFDR : à chaque commit, ouvre les pages dans Chrome
-# (sans écran, avec de fausses données Supabase) et vérifie leur comportement.
-# Résultat : ✅ / ❌ à côté du commit ; mail de GitHub en cas d'échec.
+# Tests automatiques RandoFDR — à chaque commit ET chaque lundi à 7h (heure de Paris) :
+#  1. tests.py          : pages ouvertes dans Chrome avec de fausses données Supabase
+#  2. controle_site.py  : contrôle du site RÉEL en lecture seule (rien n'est écrit)
+# Résultat : ✅ / ❌ dans l'onglet Actions ; mail de GitHub en cas d'échec.
 name: Tests RandoFDR
 
 on:
   push:
   workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"   # lundi 6h UTC = 7h (hiver) / 8h (été) à Paris
 
 jobs:
   tests:
@@ -20,5 +23,8 @@ jobs:
         run: |
           pip install playwright
           python -m playwright install --with-deps chromium
-      - name: Lancer les tests
+      - name: Tests avec fausses données
         run: python tests/tests.py
+      - name: Contrôle du site réel (lecture seule)
+        if: always()
+        run: python tests/controle_site.py
