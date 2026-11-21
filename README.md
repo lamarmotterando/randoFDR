@@ -384,3 +384,10 @@ Remplace l'écouteur DOMContentLoaded par une fonction demarrer() lancée tout d
 - Modale modification : Enregistrer / Annuler la rando en haut, fixés au
   défilement, affichés uniquement après validation du code
 - Libellé « Annuler » renommé « Annuler la rando »
+
+### FDR : rattachement explicite à la fiche du planning (par id)
+
+L'animateur choisit la fiche à compléter parmi SES randos du jour
+(présélectionnée) ou « Nouvelle rando ». Fin de la recherche devinée
+par date + nom d'animateur. Confirmation avant doublon, envoi bloqué
+si le planning est injoignable. Tests : 10 cas d'envoi.
