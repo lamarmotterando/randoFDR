@@ -1007,7 +1007,9 @@ function initAutocomplete() {
   setupAutocomplete("edit-animateur",    "edit-animateur-list",   () => animateurs.map(a => a.nom));
   setupAutocomplete("edit-nom",          "edit-nom-list",         () => randos);
   setupAutocomplete("edit-parking",      "edit-parking-list",     () => parkings);
-  setupAutocomplete("edit-parking-depart", "edit-parking-depart-list", () => parkings);
+  /* Parking rando : valeurs déjà saisies dans les fiches (parkings.js = covoiturage uniquement) */
+  setupAutocomplete("edit-parking-depart", "edit-parking-depart-list",
+    () => [...new Set(allRows.map(r => (r.parking_depart || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr")));
   setupAutocomplete("sejour-animateur",  "sejour-animateur-list", () => animateurs.map(a => a.nom));
 
   /* Affichage email/téléphone sous les 3 champs animateur */
