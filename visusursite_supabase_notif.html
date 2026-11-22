@@ -707,8 +707,11 @@ function applyFilter() {
     /* Titre de séjour : reste affiché tant que sa date de fin n'est pas passée */
     if (tr.dataset.sejour === "1") {
       if (!filterEnabled) { tr.style.display = ""; return; }
-      const end = parseInt(tr.dataset.endValue, 10);
-      tr.style.display = (isNaN(end) || end >= todayMs) ? "" : "none";
+      const end   = parseInt(tr.dataset.endValue, 10);
+      const start = parseInt(tr.dataset.dateValue, 10);
+      const pasTermine  = isNaN(end) || end >= todayMs;
+      const dansFenetre = maxDisplay === null || isNaN(start) || start <= maxDisplay;
+      tr.style.display = (pasTermine && dansFenetre) ? "" : "none";
       return;
     }
 
