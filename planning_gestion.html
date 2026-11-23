@@ -605,8 +605,12 @@ console.log("[PKCE] code dans URL:", window._attendRecovery, window.location.sea
           </div>
         </div>
         <div class="form-group"><label>Lieu de départ</label><input type="text" id="edit-lieu" placeholder="Ex : Aureille" oninput="onEditFieldChange()"></div>
-        <div class="form-group"><label>GPS</label><input type="text" id="edit-gps" placeholder="Ex : 43.7071, 4.9452" oninput="onEditFieldChange()"></div>
+        <div class="form-group">
+          <label>GPS <a id="edit-gps-carte" href="#" target="_blank" rel="noopener" style="display:none;font-weight:400;font-size:.74rem;color:#2d6a4f;margin-left:6px">📍 Voir sur la carte</a></label>
+          <input type="text" id="edit-gps" placeholder="Ex : 43.7071, 4.9452" oninput="onEditFieldChange(); majLienCarteGPS()">
+        </div>
         <div class="form-group full"><label>Coûts</label><input type="text" id="edit-couts" placeholder="Ex : 4 € / passager" oninput="onEditFieldChange()"></div>
+        <p class="form-group full" style="font-size:.76rem;color:#9c4221;background:#fffaf0;border:1px solid #fbd38d;border-radius:7px;padding:6px 10px;margin:0">⚠️ Changer le parking rando ou le GPS ne recalcule pas les coûts : à corriger à la main si besoin.</p>
       </div>
     </div>
 
@@ -1009,7 +1013,9 @@ function initAutocomplete() {
   setupAutocomplete("edit-parking",      "edit-parking-list",     () => parkings);
   /* Parking rando : valeurs déjà saisies dans les fiches (parkings.js = covoiturage uniquement) */
   setupAutocomplete("edit-parking-depart", "edit-parking-depart-list",
-    () => [...new Set(allRows.map(r => (r.parking_depart || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr")));
+    () => [...new Set(allRows.map(r => (r.parking_depart || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr")),
+    gpsDepuisParking);
+  document.getElementById("edit-parking-depart").addEventListener("change", gpsDepuisParking);
   setupAutocomplete("sejour-animateur",  "sejour-animateur-list", () => animateurs.map(a => a.nom));
 
   /* Affichage email/téléphone sous les 3 champs animateur */
@@ -1026,7 +1032,7 @@ function initAutocomplete() {
     inp.addEventListener("blur", () => setTimeout(() => afficherContactAnimateur(inp.value, targetId), 160));
   });
 }
-function setupAutocomplete(inputId, listId, getItems) {
+function setupAutocomplete(inputId, listId, getItems, onSelect) {
   const input = document.getElementById(inputId);
   const list  = document.getElementById(listId);
   let hi = -1;
@@ -1039,7 +1045,7 @@ function setupAutocomplete(inputId, listId, getItems) {
     matches.forEach(item => {
       const div = document.createElement("div");
       div.className = "autocomplete-item"; div.textContent = item;
-      div.addEventListener("mousedown", () => { input.value = item; list.classList.remove("open"); onEditFieldChange(); });
+      div.addEventListener("mousedown", () => { input.value = item; list.classList.remove("open"); onEditFieldChange(); if (onSelect) onSelect(); });
       list.appendChild(div);
     });
     list.classList.add("open");
@@ -1049,7 +1055,7 @@ function setupAutocomplete(inputId, listId, getItems) {
     if (!items.length) return;
     if      (e.key === "ArrowDown") { e.preventDefault(); hi = Math.min(hi+1, items.length-1); }
     else if (e.key === "ArrowUp")   { e.preventDefault(); hi = Math.max(hi-1, 0); }
-    else if (e.key === "Enter" && hi >= 0) { e.preventDefault(); input.value = items[hi].textContent; list.classList.remove("open"); hi = -1; onEditFieldChange(); return; }
+    else if (e.key === "Enter" && hi >= 0) { e.preventDefault(); input.value = items[hi].textContent; list.classList.remove("open"); hi = -1; onEditFieldChange(); if (onSelect) onSelect(); return; }
     items.forEach((el, i) => el.classList.toggle("highlighted", i === hi));
   });
   input.addEventListener("blur", () => setTimeout(() => list.classList.remove("open"), 150));
@@ -1519,6 +1525,7 @@ function openEdit(ev) {
   document.getElementById("edit-parking-depart").value = ev.parking_depart || "";
   document.getElementById("edit-lieu").value      = ev.lieu            || "";
   document.getElementById("edit-gps").value       = ev.gps             || "";
+  majLienCarteGPS();
   document.getElementById("edit-couts").value     = ev.couts           || "";
   document.getElementById("edit-ibp").value       = ev.ibp             || "";
   document.getElementById("edit-duree").value     = ev.duree           || "";
@@ -1561,6 +1568,32 @@ function openEdit(ev) {
   btnRelancer.disabled = false; btnRelancer.textContent = "📧 Relancer l'animateur";
 
   document.getElementById("modal-edit").classList.add("open");
+}
+
+/* Lien OpenStreetMap à partir du champ GPS ("lat, lon") — masqué si format invalide */
+function majLienCarteGPS() {
+  const lien = document.getElementById("edit-gps-carte");
+  const m = document.getElementById("edit-gps").value.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*[,; ]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
+  const lat = m ? parseFloat(m[1]) : NaN, lon = m ? parseFloat(m[2]) : NaN;
+  if (!m || Math.abs(lat) > 90 || Math.abs(lon) > 180) { lien.style.display = "none"; lien.removeAttribute("href"); return; }
+  lien.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
+  lien.style.display = "inline";
+}
+
+/* Parking rando choisi → GPS repris de la fiche la plus récente ayant ce parking */
+function gpsDepuisParking() {
+  const nom = document.getElementById("edit-parking-depart").value.trim().toLowerCase();
+  if (!nom) return;
+  const idCourant = document.getElementById("edit-rowIndex").value;
+  const source = allRows
+    .filter(r => String(r.id) !== idCourant && (r.parking_depart || "").trim().toLowerCase() === nom && (r.gps || "").trim())
+    .sort((a, b) => (b.date_rando || "").localeCompare(a.date_rando || ""))[0];
+  if (!source) return;
+  const champ = document.getElementById("edit-gps");
+  if (champ.value.trim() === source.gps.trim()) return;
+  champ.value = source.gps.trim();
+  majLienCarteGPS(); onEditFieldChange();
+  showToast(`📍 GPS repris de la fiche du ${toDisplay(source.date_rando)} — à vérifier`);
 }
 
 function switchEditTab(tab) {
@@ -1837,6 +1870,7 @@ window.openEdit                  = openEdit;
 window.saveEdit                  = saveEdit;
 window.syncNbParticipantsGestion = syncNbParticipantsGestion;
 window.switchEditTab             = switchEditTab;
+window.majLienCarteGPS           = majLienCarteGPS;
 window.confirmDelete             = confirmDelete;
 window.deleteEvent               = deleteEvent;
 window.toggleCal                 = toggleCal;
