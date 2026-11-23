@@ -418,6 +418,8 @@ Rendre modifiables depuis l'admin les champs logistiques d'une fiche (parkings, 
 
 Le parking covoiturage passe de Général à Logistique.
 
+<img width="1632" height="1372" alt="image" src="https://github.com/user-attachments/assets/10e20ece-e06e-4955-8e96-1ff47a744478" />
+
 ## Correspondance champs ↔ colonnes `fiches`
 
 | Champ | id HTML | Colonne |
