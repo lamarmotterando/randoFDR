@@ -465,3 +465,128 @@ Champ vide → `null` à l'enregistrement.
 4. Enregistrer, puis vérifier la ligne dans Supabase (`fiches`) et l'événement dans Google Calendar.
 5. Ouvrir un séjour et un « Autres » : l'onglet Logistique est absent.
 6. Ouvrir une rando passée non annulée : l'onglet Participants est présent et l'enregistrement des noms fonctionne.
+
+# planning_gestion.html — onglets du modal et allègement du chargement
+
+Date : 23/11/2026
+Fichier modifié : `planning_gestion.html`
+Base de données : aucune modification SQL, table `fiches` inchangée.
+
+---
+
+## 1. Modal « Modifier l'événement » en onglets
+
+### Objectif
+
+Rendre modifiables depuis l'admin les champs logistiques d'une fiche (parkings, lieu de départ, GPS, coûts), regroupés dans un onglet dédié.
+
+### Structure
+
+| Onglet | Contenu | Visible |
+|---|---|---|
+| 📝 Général | Date, animateur, nom, heure RV, durée, IBP, distance, dénivelé, statut, remarques | Toujours |
+| 🚗 Logistique | Parking covoiturage, parking rando (départ), lieu de départ, GPS, coûts | Randonnées uniquement |
+| 👥 Participants | Nombre, noms, bouton « Relancer l'animateur » | Rando passée et non annulée |
+
+Le parking covoiturage passe de l'onglet Général à l'onglet Logistique.
+
+### Correspondance champs ↔ colonnes `fiches`
+
+| Champ | id HTML | Colonne |
+|---|---|---|
+| Parking covoiturage | `edit-parking` | `parking_covoit` |
+| Parking rando (départ) | `edit-parking-depart` | `parking_depart` |
+| Lieu de départ | `edit-lieu` | `lieu` |
+| GPS | `edit-gps` | `gps` |
+| Coûts | `edit-couts` | `couts` |
+
+Champ vide → `null` à l'enregistrement.
+
+### Comportements
+
+- **Autocomplétion**
+  - Parking covoiturage : liste `data/parkings.js` (parkings de covoiturage uniquement, sans coordonnées).
+  - Parking rando : valeurs `parking_depart` déjà présentes dans les fiches.
+- **GPS rempli automatiquement** : quand un parking rando existant est choisi, le GPS est repris de la fiche la plus récente ayant ce parking. La comparaison ignore la casse et les espaces en trop, et exclut la fiche en cours. Un message « GPS repris de la fiche du JJ/MM/AAAA — à vérifier » s'affiche. Un parking nouveau ne modifie pas le GPS.
+- **Lien « 📍 Voir sur la carte »** : ouvre OpenStreetMap aux coordonnées du champ GPS (format `lat, lon` ou `lat,lon`). Masqué si le format est invalide. Aucune modification de la Content-Security-Policy.
+- **Statut** : toute modification d'une fiche « publiée » la passe en « modifiée », comme avant.
+- **Google Calendar** : `calendarUpdate` reçoit désormais les valeurs saisies pour `parkingDepart`, `gps` et `couts`. Avant, il recevait les anciennes valeurs de la fiche.
+
+### Limites connues
+
+- Changer le parking rando ou le GPS **ne recalcule pas les coûts** ni la distance aller-retour. Ces calculs (OSRM + `covoiturage.js`) n'existent que dans le formulaire avec la carte (`carteParking.js`). Un avertissement est affiché dans l'onglet Logistique.
+- Le GPS correspond au marqueur du parking rando posé sur la carte du formulaire. Changer le lieu de départ ne modifie pas le GPS : les deux champs sont indépendants.
+- `parking_depart` n'est pas exposé dans la vue `fiches_public`. Les pages publiques ne voient donc pas cette valeur.
+- Le profil de dénivelé reste modifiable uniquement depuis le formulaire du site.
+- Pas de colonne pour les km de trajet en covoiturage : décision de ne pas en créer.
+
+---
+
+## 2. Allègement de `loadEvents()` (egress Supabase)
+
+### Constat
+
+| Colonne | Volume total (320 fiches) |
+|---|---|
+| `profil_png` | 2 246 Ko (images en base64 dans la table) |
+| `profil_data` | 62 Ko |
+| `remarques` | 11 Ko |
+| Total table | 2 383 Ko |
+
+`profil_png` représente environ 94 % du volume. `loadEvents()` faisait `select=*` à chaque chargement de la page et après chaque création, modification ou suppression, alors que la page n'utilise pas cette colonne.
+
+### Modification
+
+`select=*` est remplacé par la liste des 26 colonnes lues par la page :
+
+```
+id, created_at, updated_at, type, statut, date_rando, date_fin_sejour, sejour_id,
+nom_rando, animateur, heure_rv, parking_covoit, parking_depart, lieu, gps,
+distance, denivele, duree, ibp, effort, technicite, risque, couts, remarques,
+nb_participants, noms_participants
+```
+
+Colonnes exclues : `profil_png`, `profil_data`, `itineraire`, `rappel_envoye`, `confirmation_envoyee_at`, `gcal_event_id`.
+
+⚠️ Une future fonctionnalité qui lit une autre colonne doit l'ajouter à `COLS` dans `loadEvents()`. Sinon la valeur arrive vide, sans message d'erreur.
+
+### Test réalisé (23/11/2026, console, session admin)
+
+| Requête | Statut | Taille | Fiches |
+|---|---|---|---|
+| `select=*` | 200 | 2 602 Ko | 320 |
+| `select=COLS` | 200 | 198 Ko | 320 |
+
+Résultat : chargement **13 fois plus léger**, même nombre de fiches, toutes les colonnes valides.
+
+### Piste suivante
+
+`profil_png` est aussi exposé par la vue `fiches_public`. Une page publique qui lit cette vue avec `select=*` télécharge environ 2,2 Mo à chaque visite.
+- Solution simple : sélectionner seulement les colonnes affichées dans chaque page publique.
+- Solution de fond : stocker les images dans Supabase Storage et ne garder que l'URL dans `profil_png`. Cela demande de modifier le formulaire et de migrer les fiches existantes.
+
+---
+
+## 3. Détail technique
+
+- Nouvelles fonctions : `switchEditTab(tab)`, `majLienCarteGPS()`, `gpsDepuisParking()`.
+- `setupAutocomplete(inputId, listId, getItems, onSelect)` : 4e paramètre optionnel, appelé à la sélection d'une suggestion.
+- L'affichage des participants n'est plus déduit du `display` de la section mais de `edit-sectionParticipants.dataset.actif` (`"1"` / `"0"`), utilisé par `saveEdit`.
+- Si `sw.js` met cette page en cache : incrémenter `CACHE_NAME`.
+
+---
+
+## 4. Mise en production
+
+1. Publier le fichier sous le nom `planning_gestion_test.html` dans le repo `randoFDR`.
+2. Ouvrir `https://lamarmotterando.github.io/randoFDR/planning_gestion_test.html` et se connecter en admin.
+3. Recette, sur une rando fictive « TEST onglets » à une date lointaine, car la base et Google Calendar sont les vrais :
+   - [ ] Dans l'onglet Réseau (F12), la requête `fiches?select=id,...` pèse environ 200 Ko et répond 200.
+   - [ ] Le tableau, le calendrier, la recherche et les séjours dépliables s'affichent comme avant.
+   - [ ] Onglet Logistique : choisir un parking rando déjà utilisé remplit le GPS et affiche le message.
+   - [ ] Le lien « Voir sur la carte » ouvre le bon endroit.
+   - [ ] L'enregistrement est visible dans Supabase (`fiches`) et dans Google Calendar.
+   - [ ] Séjour et « Autres » : l'onglet Logistique est absent.
+   - [ ] Rando passée non annulée : l'onglet Participants est présent et l'enregistrement des noms fonctionne.
+   - [ ] Supprimer la rando de test (case à cocher) : la fiche et l'événement Calendar sont supprimés.
+4. Remplacer `planning_gestion.html` par la version testée, puis supprimer `planning_gestion_test.html`.
