@@ -398,3 +398,68 @@ Affiche les 5 derniers passages (date, déclencheur, résultat par étape,
 lien). Lecture de l'API publique GitHub, sans clé ni Edge Function.
 Tests : 4 vérifications ajoutées.
 <img width="868" height="193" alt="image" src="https://github.com/user-attachments/assets/81960776-97e8-4d4f-bfbe-f56f5c627f43" />
+
+# planning_gestion.html — modal de modification en onglets
+
+Date : 23/11/2026
+Fichier modifié : `planning_gestion.html` (aucune modification SQL, table `fiches` inchangée)
+
+## Objectif
+
+Rendre modifiables depuis l'admin les champs logistiques d'une fiche (parkings, lieu de départ, GPS, coûts), regroupés dans un onglet dédié du modal « Modifier l'événement ».
+
+## Structure du modal
+
+| Onglet | Contenu | Visible |
+|---|---|---|
+| 📝 Général | Date, animateur, nom, heure RV, durée, IBP, distance, dénivelé, statut, remarques | Toujours |
+| 🚗 Logistique | Parking covoiturage, parking rando (départ), lieu de départ, GPS, coûts | Randonnées uniquement |
+| 👥 Participants | Nombre, noms, bouton « Relancer l'animateur » | Rando passée et non annulée |
+
+Le parking covoiturage passe de Général à Logistique.
+
+## Correspondance champs ↔ colonnes `fiches`
+
+| Champ | id HTML | Colonne |
+|---|---|---|
+| Parking covoiturage | `edit-parking` | `parking_covoit` |
+| Parking rando (départ) | `edit-parking-depart` | `parking_depart` |
+| Lieu de départ | `edit-lieu` | `lieu` |
+| GPS | `edit-gps` | `gps` |
+| Coûts | `edit-couts` | `couts` |
+
+Champ vide → `null` à l'enregistrement.
+
+## Comportements
+
+- **Autocomplétion**
+  - Parking covoiturage : liste `data/parkings.js` (parkings de covoiturage uniquement).
+  - Parking rando : valeurs `parking_depart` déjà présentes dans les fiches.
+- **GPS rempli automatiquement** : quand un parking rando existant est choisi, le GPS est repris de la fiche la plus récente ayant ce parking. La comparaison ignore la casse et les espaces en trop, et exclut la fiche en cours. Un message « GPS repris de la fiche du JJ/MM/AAAA — à vérifier » s'affiche. Un parking nouveau ne modifie pas le GPS.
+- **Lien « 📍 Voir sur la carte »** : ouvre OpenStreetMap aux coordonnées du champ GPS (format `lat, lon` ou `lat,lon`). Masqué si le format est invalide.
+- **Statut** : toute modification d'une fiche « publiée » la passe en « modifiée », comme avant.
+- **Google Calendar** : `calendarUpdate` reçoit désormais les valeurs saisies pour `parkingDepart`, `gps` et `couts`. Avant, il recevait les anciennes valeurs de la fiche.
+
+## Limites connues
+
+- Changer le parking rando ou le GPS **ne recalcule pas les coûts** ni la distance aller-retour. Ces calculs (OSRM + `covoiturage.js`) n'existent que dans le formulaire avec la carte (`carteParking.js`). Un avertissement est affiché dans l'onglet Logistique.
+- Changer le lieu de départ ne modifie pas le GPS. Les deux champs sont indépendants.
+- `parking_depart` n'est pas exposé dans la vue `fiches_public`. Les pages publiques ne voient donc pas cette valeur.
+- Le profil de dénivelé reste modifiable uniquement depuis le formulaire du site.
+- Pas de colonne pour les km de trajet en covoiturage : décision de ne pas en créer.
+
+## Détail technique
+
+- Nouvelles fonctions : `switchEditTab(tab)`, `majLienCarteGPS()`, `gpsDepuisParking()`.
+- `setupAutocomplete(inputId, listId, getItems, onSelect)` : 4e paramètre optionnel, appelé à la sélection d'une suggestion.
+- L'affichage des participants n'est plus déduit du `display` de la section mais de `edit-sectionParticipants.dataset.actif` (`"1"` / `"0"`), utilisé par `saveEdit`.
+- Si `sw.js` met cette page en cache : incrémenter `CACHE_NAME`.
+
+## Recette
+
+1. Ouvrir une rando à venir → onglet Logistique.
+2. Choisir un parking rando déjà utilisé : le GPS se remplit et le message s'affiche.
+3. Cliquer sur « Voir sur la carte » : le repère est au bon endroit.
+4. Enregistrer, puis vérifier la ligne dans Supabase (`fiches`) et l'événement dans Google Calendar.
+5. Ouvrir un séjour et un « Autres » : l'onglet Logistique est absent.
+6. Ouvrir une rando passée non annulée : l'onglet Participants est présent et l'enregistrement des noms fonctionne.
