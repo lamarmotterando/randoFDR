@@ -590,3 +590,8 @@ Résultat : chargement **13 fois plus léger**, même nombre de fiches, toutes l
    - [ ] Rando passée non annulée : l'onglet Participants est présent et l'enregistrement des noms fonctionne.
    - [ ] Supprimer la rando de test (case à cocher) : la fiche et l'événement Calendar sont supprimés.
 4. Remplacer `planning_gestion.html` par la version testée, puis supprimer `planning_gestion_test.html`.
+
+### Modification index.html (24/11/26)
+Reset : la fenêtre de confirmation s'ouvre en haut, juste sous la barre du bouton, et non plus au milieu de la page. Annuler la ferme correctement.
+
+Champs manquants : le message s'affiche juste sous le bloc Envoi, dans le flux de la page et non plus centré. « OK, je complète » le fait disparaître. Il se replace au même endroit à chaque nouvel envoi.
