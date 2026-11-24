@@ -121,83 +121,149 @@ Le cycle de vie d'une randonnée :
 ---
 
 ## Arborescence
+Les fichiers old_* (archives) ne sont pas décrits.
 
-```
 randoFDR/
-├── index.html                      # Formulaire de saisie FDR
-├── planningFDR.html                # Planning + synchro Google Calendar
-├── planning_gestion.html           # Interface admin (auth Supabase)
-├── goanim.html                     # Feuille de route affichée (prochaine sortie)
-├── meteo.html                      # Météo au départ (jour J, veille, lendemain) pour iframe Webnode
-├── randonnees-club.html            # Archive des randonnées (vue publique)
-├── carteRandos.html                # Carte des randonnées (Leaflet)
-├── visusursite_supabase_notif.html # Visualisation / notifications
-├── status_system.html              # Page de statut système (admin)
-├── verifcalendar.html              # Outil de contrôle Google Calendar
-├── manifest.json                   # Manifest PWA
-├── sw.js                           # Service Worker de DÉSACTIVATION (purge les caches randofdr-v…, puis se désinscrit)
-├── sw-carte.js                     # Service Worker de la carte de suivi (portée : carte.html uniquement)
-├── css/                            # Feuilles de style
-├── icons/                          # Icônes PWA
-├── data/                           # Données statiques (randos, coords, parkings)
-└── js/                             # Modules applicatifs (voir plus bas)
+├── .github/workflows/tests.yml          # Tests automatiques (GitHub Actions) à chaque commit
+├── tests/
+│   ├── tests.py                         # Tests de l'application
+│   └── controle_site.py                 # Contrôle du site en ligne
+├── README.md                            # Ce document
+├── PROCEDURE.md                         # Procédures d'exploitation / maintenance
+│
+├── index.html                           # Formulaire de saisie FDR
+├── planningFDR.html                     # Planning des sorties, modification par code, participants
+├── planning_gestion.html                # Interface admin (auth Supabase)
+├── goanim.html                          # Feuille de route de la prochaine sortie
+├── meteo.html                           # Météo au départ (veille, jour J, lendemain)
+├── randonnees-club.html                 # Archive des randonnées
+├── recherche_rando.html                 # Recherche d'une sortie (nom / animateur)
+├── profil.html                          # Profil altimétrique interactif d'une fiche (?id=)
+├── carte.html                           # Carte de suivi GPS sur le terrain (tracé GPX, IGN)
+├── carteRandos.html                     # Carte des randonnées
+├── carte_saison.html                    # Carte des sorties de la saison (1/09 → 31/08)
+├── dashboard.html                       # Tableau de bord de la saison
+├── journal.html                         # Journal des actions + résultats des tests (admin)
+├── status_system.html                   # Statut des services (admin)
+├── verifcalendar.html                   # Contrôle fiches ↔ Google Calendar (lecture seule)
+├── visusursite_supabase_notif.html      # Visualisation / notifications
+├── pres_fdr.html                        # Présentation de l'application
+├── diaporama.html                       # Diaporama
+├── test_geocodage.html                  # Test du géocodage IGN des fiches sans GPS (lecture seule)
+├── randoFDR/carte_saison.html           # ⚠️ Doublon probable de carte_saison.html (à vérifier)
+│
+├── manifest.json                        # Manifest PWA
+├── sw.js                                # Service Worker de DÉSACTIVATION (purge les caches randofdr-v…, puis se désinscrit)
+├── sw-carte.js                          # Service Worker de carte.html uniquement
+├── rando-analytics.js                   # Statistiques de fréquentation anonymes
+│
+├── css/
+│   ├── style.css                        # Styles du formulaire et des pages
+│   └── carteRandos.css                  # Styles de carteRandos.html
+├── icons/
+│   ├── icon-192.png
+│   └── icon-512.png
+├── data/
+│   ├── randos.js                        # Liste des randonnées (autocomplétion)
+│   ├── randos.json
+│   ├── randosCoords.js                  # Coordonnées des randonnées
+│   └── parkings.js                      # Parkings de covoiturage
+└── js/
+    ├── app.js                           # Orchestrateur du formulaire
+    ├── envoiRando.js
+    ├── formManager.js
+    ├── menuAnimateurs.js
+    ├── menuParkings.js
+    ├── carteParking.js
+    ├── covoiturage.js
+    ├── gpxAnalyse.js
+    ├── gpxManuel.js
+    ├── profilAltitude.js
+    ├── meteoRando.js
+    ├── rechercheRandos.js
+    ├── resumeRando.js
+    ├── horairesRando.js
+    ├── carteRandos.js
+    ├── Randoscoordsglobal.js            # Non référencé (voir Maintenance)
+    └── lib/leaflet/                     # Leaflet local (leaflet.js, leaflet.css) pour carte.html
+## Pages
+Page	Rôle	Accès
+index.html	Saisie et envoi d'une feuille de route	Membres (Webnode, clé club)
+planningFDR.html	Planning des sorties, boutons « Créer / Resync Calendar », modification et participants par code e-mail	Membres (Webnode)
+planning_gestion.html	Administration des fiches (création, modification, suppression, séjours)	Auth Supabase (admin)
+goanim.html	Feuille de route de la prochaine sortie, boutons Appel/SMS de l'animateur	Membres (Webnode)
+meteo.html	Météo au lieu de départ de la prochaine sortie (ou ?rando=<nom>) : veille, jour J, lendemain. Affichée à partir de J-4 (HORIZON_J), jamais sans GPS	Public (Webnode)
+randonnees-club.html	Archive des randonnées passées	Membres (Webnode, clé club)
+recherche_rando.html	Recherche dans le planning public par nom de rando ou animateur (getFiches)	Public
+profil.html	Profil altimétrique d'une fiche (?id=), coloré selon la pente, ou image PNG à défaut	Public
+carte.html	Carte de suivi sur le terrain : tracé GPX sur fond IGN, position GPS, distances, altitude, temps estimés	Membres (clé club)
+carteRandos.html	Carte interactive des randonnées	Public
+carte_saison.html	Carte des sorties de la saison, avec liste, fiches et niveaux IBP	Public
+dashboard.html	Tableau de bord : sorties, km, dénivelé, participants, IBP, état des services, fréquentation	Public (clé publishable)
+journal.html	Historique des actions sur les fiches + 5 derniers passages des tests GitHub Actions	Auth Supabase (admin)
+status_system.html	Supervision : santé des services, métriques, cohérence Google Calendar	Auth Supabase (admin)
+verifcalendar.html	Comparaison fiches ↔ événements Google Calendar (lecture seule)	Membres (Webnode)
+visusursite_supabase_notif.html	Visualisation / notifications	Membres (Webnode)
+pres_fdr.html	Présentation de l'application	Public
+diaporama.html	Diaporama	Public
+test_geocodage.html	Test du géocodage par commune (API IGN) des fiches sans GPS, sans écriture en base	Outil
+Modules JavaScript
+
+js/app.js orchestre le formulaire et importe les modules. Il démarre via demarrer(), lancée tout de suite si le DOM est déjà prêt.
+
+index.html vérifie la version de chaque script (fetch en no-cache) avant d'importer app.js : le formulaire intégré dans Webnode charge toujours la dernière version. Tout nouveau fichier js/ ou data/ importé par app.js doit être ajouté à la liste FICHIERS d'index.html.
+
+## Module	Responsabilité
+envoiRando.js	Collecte, rattachement à la fiche du planning (par id), envoi (email + Calendar + Supabase), messages d'envoi
+formManager.js	Sauvegarde auto (localStorage), indicateurs de complétude, validation des champs obligatoires
+menuAnimateurs.js	Liste des animateurs (Edge Function get-animateurs)
+menuParkings.js / carteParking.js	Sélection et géolocalisation des parkings, carte (dont couche satellite), distance A/R
+covoiturage.js	Calcul des coûts de covoiturage
+gpxAnalyse.js / gpxManuel.js	Analyse de trace GPX ou saisie manuelle (distance, dénivelé, durée, effort)
+profilAltitude.js	Profil altimétrique (graphique + PNG)
+meteoRando.js	Météo de la sortie (Open-Meteo)
+rechercheRandos.js	Autocomplétion des noms de randos
+resumeRando.js / horairesRando.js	Résumé texte et calcul des horaires
+carteRandos.js	Carte des randonnées (Leaflet, Thunderforest)
+rando-analytics.js (racine)	Suivi anonyme : vues, événements, temps de chargement, erreurs JS (RPC analytics_track), sans cookie, désactivé si « ne pas suivre » ou hors HTTPS
+Backend Supabase
+
+## Base de données (schéma public) :
+
+fiches — feuilles de route (date, nom, animateur, parkings, GPS, stats, IBP, statut, profil, participants, gcal_event_id…).
+animateurs — annuaire (nom, email, téléphone).
+fiches_public — vue filtrée de fiches (colonnes publiques uniquement, sans données personnelles).
+codes_validation — codes e-mail de modification.
+journal — historique des actions (lu par journal.html).
+
+## Edge Functions (Deno) :
+
+## Fonction	Rôle
+dynamic-handler	Point d'entrée multi-actions : getFiches, saveFiche, calendarCreate / calendarUpdate / calendarDelete, emailRappel…
+get-animateurs	Liste des animateurs (noms) pour les menus
+get-animateurs-admin	Annuaire complet des animateurs (admin)
+send-email	Email de confirmation d'une FDR (adresse résolue côté serveur), dépôt du profil PNG
+update-fiche	Mise à jour d'une fiche (champs animateur)
+delete-fiche	Suppression d'une fiche (admin)
+update-participants	Saisie du nombre de participants
+rappel-participants	Relance email des animateurs (cron quotidien) ; relance manuelle depuis planning_gestion (admin)
+confirmation-participants	E-mail de confirmation après saisie des participants (si nombre ou noms changés)
+code-modif	Modification d'une fiche par code e-mail : envoyerCode, verifierCode, modifierAvecCode (dont annulation)
+profil	Lecture / enregistrement du profil altimétrique interactif (profil_data)
+calendar-list	Lecture seule des événements Google Calendar
+reconcile-calendar	Réconciliation nocturne fiches → Google Agenda
+
+Le code des Edge Functions et le schéma SQL sont sauvegardés dans un dépôt GitHub privé distinct (Supabase reste la version exécutée). Copie : supabase functions download <nom-de-la-fonction>.
+
+L'accès à Google Calendar se fait via un Service Account (JWT RS256) côté serveur.
+
+## Règles de l'agenda Google
+Figurent dans l'agenda : les randonnées et les événements « Autres », sauf les réunions du CA.
+N'y figurent pas : les séjours et les CA (visibles uniquement sur le planning du site).
+Une fiche « Autres » est un CA si son libellé contient « CA » (mot isolé, majuscules) ou « conseil d'administration ».
 ```
 
-## Pages
-
-| Page | Rôle | Accès |
-|---|---|---|
-| `index.html` | Saisie et envoi d'une feuille de route | Membres (Webnode) |
-| `planningFDR.html` | Planning des sorties + boutons « Créer / Resync Calendar » | Membres (Webnode) |
-| `planning_gestion.html` | Administration des fiches (création, modification, suppression, séjours) | **Auth Supabase (admin)** |
-| `goanim.html` | Feuille de route de la prochaine sortie, avec boutons Appel/SMS de l'animateur | Membres (Webnode) |
-| `meteo.html` | Météo au lieu de départ de la prochaine sortie (ou `?rando=<nom>`) : jour J, veille et lendemain. Affichée à partir de J-4 (constante `HORIZON_J`), jamais sans GPS. Même requête Open-Meteo que `goanim.html` | Public (Webnode) |
-| `randonnees-club.html` | Archive des randonnées passées | Membres (Webnode) |
-| `carteRandos.html` | Carte interactive des randonnées | Public |
-| `status_system.html` | Supervision : santé des services, métriques, cohérence Google Calendar | **Auth Supabase (admin)** |
-| `verifcalendar.html` | Comparaison fiches ↔ événements Google Calendar (lecture seule) | Membres (Webnode) |
-
-## Modules JavaScript
-
-`js/app.js` orchestre le formulaire et importe les modules :
-
-| Module | Responsabilité |
-|---|---|
-| `envoiRando.js` | Collecte, envoi (email + Calendar + Supabase), gestion des doublons |
-| `formManager.js` | Sauvegarde auto (localStorage), indicateurs de complétude, validation |
-| `menuAnimateurs.js` | Liste déroulante des animateurs (via Edge Function `get-animateurs`) |
-| `menuParkings.js` / `carteParking.js` | Sélection et géolocalisation des parkings |
-| `covoiturage.js` | Calcul des coûts de covoiturage |
-| `gpxAnalyse.js` / `gpxManuel.js` | Analyse de traces GPX (distance, dénivelé) |
-| `profilAltitude.js` | Génération du profil altimétrique (PNG) |
-| `meteoRando.js` | Météo de la sortie (Open-Meteo) |
-| `rechercheRandos.js` | Autocomplétion des noms de randos (Supabase) |
-| `resumeRando.js` / `horairesRando.js` | Résumé texte et calcul des horaires |
-| `carteRandos.js` / `Randoscoordsglobal.js` | Carte des randonnées (Leaflet) |
-
-## Backend Supabase
-
-**Base de données** (schéma `public`) :
-- `fiches` — les feuilles de route (date, nom, animateur, parkings, GPS, stats, IBP, statut, profil, participants…).
-- `animateurs` — annuaire des animateurs (nom, email, téléphone).
-- `fiches_public` — **vue filtrée** de `fiches`, exposant uniquement les colonnes destinées à l'affichage public (sans données personnelles).
-
-**Edge Functions** (Deno) :
-
-| Fonction | Rôle |
-|---|---|
-| `dynamic-handler` | Point d'entrée multi-actions : `getFiches`, `saveFiche`, synchro Google Calendar (`calendarCreate` / `calendarUpdate` / `calendarDelete`), `emailRappel`… |
-| `get-animateurs` | Liste des animateurs (noms) pour les menus |
-| `send-email` | Email de confirmation d'une FDR (adresse animateur résolue côté serveur) |
-| `update-fiche` | Mise à jour d'une fiche (champs animateur) |
-| `delete-fiche` | Suppression d'une fiche (**réservée admin**) |
-| `update-participants` | Saisie du nombre de participants |
-| `calendar-list` | Lecture seule des événements Google Calendar (pour l'outil de contrôle) |
-| `rappel-participants` | Tâche planifiée : relance email des animateurs (cron quotidien) ; relance manuelle depuis `planning_gestion` (session admin) |
-| `code-modif` | Modification d'une fiche par code e-mail : `envoyerCode`, `verifierCode`, `modifierAvecCode` (dont annulation) |
-| `confirmation-participants` | E-mail de confirmation après saisie des participants (si nombre ou noms changés) |
-| `profil` | Lecture / enregistrement du profil altimétrique interactif (`profil_data`) |
-| `get-animateurs-admin` | Annuaire complet des animateurs pour l'administration (**réservée admin**) |
+```
 
 > **Code serveur non versionné dans ce dépôt** : le code des Edge Functions et le schéma SQL résident dans le projet Supabase. Pour en récupérer une copie : `supabase functions download <nom-de-la-fonction>` (Supabase CLI, projet lié). À conserver dans un dépôt **privé** distinct (ex. `supabase/functions/` + migrations SQL), sans aucun secret.
 
