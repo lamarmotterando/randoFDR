@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-MlHPzVRrj5uZ04ClElCsJjhplys941VDh2H8La6xUac='; style-src 'sha256-B/sok4WjIfC9b266RqeHdrhTmKXGHLH2QoXbbZW4U6o='; connect-src https://whlxbfnmyqdflmxosfse.supabase.co; img-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ohHxu7MLYSvcwwKcFZd30RPVLyebcdOCQBDOJf+0Lao='; style-src 'sha256-B/sok4WjIfC9b266RqeHdrhTmKXGHLH2QoXbbZW4U6o='; connect-src https://whlxbfnmyqdflmxosfse.supabase.co; img-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Randonnées du mois</title>
 <!--
   randos_mois.html — Randonnées d'un mois : date, nom, IBP.
@@ -22,6 +22,7 @@
    • Minimisation : seulement date, nom, IBP, type et statut
   Couleurs IBP (code officiel IBP index) : 0-25 vert · 26-50 bleu · 51-75 jaune · 76-100 rouge · >100 noir
   Randos passées : couleurs pastel.
+  Navigation limitée à la saison en cours et à la saison précédente (1er septembre → 31 août).
 -->
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -90,6 +91,17 @@
   let an = auj.getFullYear(), mois = auj.getMonth(); /* mois 0-11 */
   const p = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(new URLSearchParams(location.search).get("m") || "");
   if (p && +p[1] >= 2000 && +p[1] <= 2100) { an = +p[1]; mois = +p[2] - 1; }
+
+  /* ── Saisons (1er septembre → 31 août) : en cours + précédente uniquement ── */
+  const debSaison = auj.getMonth() >= 8 ? auj.getFullYear() : auj.getFullYear() - 1;
+  const IDX_MIN = (debSaison - 1) * 12 + 8;  /* septembre de la saison précédente */
+  const IDX_MAX = (debSaison + 1) * 12 + 7;  /* août de la saison en cours */
+  const idx = () => an * 12 + mois;
+  if (idx() < IDX_MIN || idx() > IDX_MAX) { an = auj.getFullYear(); mois = auj.getMonth(); }
+  function majBoutons() {
+    bPrev.disabled = idx() <= IDX_MIN;
+    bNext.disabled = idx() >= IDX_MAX;
+  }
 
   const pad = n => String(n).padStart(2, "0");
   const isoJour = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
@@ -184,11 +196,13 @@
       if (e.name === "AbortError") return;
       afficherEtat("Planning momentanément indisponible. Réessayez plus tard.", true);
     } finally {
-      bPrev.disabled = bNext.disabled = false;
+      majBoutons();
     }
   }
 
   function changer(delta) {
+    const cible = idx() + delta;
+    if (cible < IDX_MIN || cible > IDX_MAX) return;
     const d = new Date(an, mois + delta, 1);
     an = d.getFullYear(); mois = d.getMonth();
     dernier = 0;
