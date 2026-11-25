@@ -661,3 +661,6 @@ Résultat : chargement **13 fois plus léger**, même nombre de fiches, toutes l
 Reset : la fenêtre de confirmation s'ouvre en haut, juste sous la barre du bouton, et non plus au milieu de la page. Annuler la ferme correctement.
 
 Champs manquants : le message s'affiche juste sous le bloc Envoi, dans le flux de la page et non plus centré. « OK, je complète » le fait disparaître. Il se replace au même endroit à chaque nouvel envoi.
+
+## Ajout Affichage informatif des sorties /mois
+<img width="1320" height="1016" alt="Screenshot 2026-11-25 at 10-21-41 LA MARMOTTE DE CHATEAURENARD" src="https://github.com/user-attachments/assets/743323d1-1cb4-42e3-ba90-60beb5ec21da" />
