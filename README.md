@@ -664,3 +664,6 @@ Champs manquants : le message s'affiche juste sous le bloc Envoi, dans le flux d
 
 ## Ajout Affichage informatif des sorties /mois
 <img width="1320" height="1016" alt="Screenshot 2026-11-25 at 10-21-41 LA MARMOTTE DE CHATEAURENARD" src="https://github.com/user-attachments/assets/743323d1-1cb4-42e3-ba90-60beb5ec21da" />
+
+## nouvelle Edge notifier-annulation
+Cette Edge envoie un mail aux membres du club pour notifier une annulation de sortie
