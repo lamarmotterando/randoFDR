@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-MlHPzVRrj5uZ04ClElCsJjhplys941VDh2H8La6xUac='; style-src 'sha256-B/sok4WjIfC9b266RqeHdrhTmKXGHLH2QoXbbZW4U6o='; connect-src https://whlxbfnmyqdflmxosfse.supabase.co; img-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Randonnées du mois</title>
+<!--
+  randos_mois.html — Randonnées d'un mois : date, nom, IBP.
+  Paramètre facultatif : ?m=AAAA-MM (sinon mois en cours). À intégrer en iframe sur Webnode.
+
+  Sécurité :
+   • Aucune clé dans la page : lecture via l'Edge Function dynamic-handler (action getFiches)
+   • Paramètre ?m validé par expression régulière (pas d'injection dans les filtres PostgREST)
+   • Affichage 100 % textContent (aucune donnée insérée en HTML) → pas de XSS
+   • CSP stricte par empreintes (hash) : aucun script ni style externe
+   • Requête précédente annulée, anti-rafale, nombre de résultats plafonné
+  RGPD :
+   • Aucun cookie, aucun stockage local, aucun traceur, aucune police externe
+   • Minimisation : seulement date, nom, IBP, type et statut
+  Couleurs IBP (code officiel IBP index) : 0-25 vert · 26-50 bleu · 51-75 jaune · 76-100 rouge · >100 noir
+  Randos passées : couleurs pastel.
+-->
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #13233a; color: #fff; padding: 10px; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  .nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .nav h1 { font-size: 18px; font-weight: 700; text-transform: capitalize; text-align: center; flex: 1; }
+  .nav button { background: #3a78b5; color: #fff; border: 0; border-radius: 8px; padding: 8px 14px; font-size: 16px; cursor: pointer; min-width: 44px; min-height: 40px; }
+  .nav button:disabled { opacity: .5; cursor: wait; }
+  .nav button:focus-visible { outline: 2px solid #ffd60a; outline-offset: 2px; }
+  .etat { font-size: 13px; color: #c9d6cf; min-height: 1.2em; margin-bottom: 8px; text-align: center; }
+  .etat.err { color: #ffb4a8; }
+  ul { list-style: none; }
+  li { display: grid; grid-template-columns: 7.5em 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; background: #1e3a5f; margin-bottom: 6px; }
+  li:nth-child(even) { background: #3a78b5; }
+  .date { color: #ffd60a; font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .nom { color: #ffffff; font-size: 15px; overflow-wrap: anywhere; }
+  .ibp { font-weight: 700; font-size: 13px; padding: 3px 9px; border-radius: 999px; color: #fff; white-space: nowrap; }
+  .ibp-n1 { background: #88c035; }
+  .ibp-n2 { background: #0094d1; }
+  .ibp-n3 { background: #fbb401; }
+  .ibp-n4 { background: #ec2416; }
+  .ibp-n5 { background: #2d2a56; border: 1px solid #8f8bc0; }
+  .ibp-na { background: #5f6b65; }
+  /* Randos passées : pastel */
+  li.passee { background: #c3d8ee; }
+  li.passee:nth-child(even) { background: #e1edf8; }
+  li.passee .date { color: #a8841c; }
+  li.passee .nom { color: #5b6b7c; }
+  li.passee .ibp { color: #4a4a4a; border: 0; }
+  li.passee .ibp-n1 { background: #d4ebb5; }
+  li.passee .ibp-n2 { background: #b3dff2; }
+  li.passee .ibp-n3 { background: #fde6a6; }
+  li.passee .ibp-n4 { background: #f8bdb8; }
+  li.passee .ibp-n5 { background: #c9c7dd; }
+  li.passee .ibp-na { background: #d9dedb; }
+  @media (max-width: 420px) { li { grid-template-columns: 6.2em 1fr auto; gap: 8px; padding: 8px; } .nom { font-size: 14px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <button type="button" id="prev" aria-label="Mois précédent">◀</button>
+    <h1 id="titre" aria-live="polite"></h1>
+    <button type="button" id="next" aria-label="Mois suivant">▶</button>
+  </div>
+  <p class="etat" id="etat" role="status"></p>
+  <ul id="liste"></ul>
+</div>
+<script>
+(() => {
+  "use strict";
+  const HANDLER       = "https://whlxbfnmyqdflmxosfse.supabase.co/functions/v1/dynamic-handler";
+  const SELECT        = "id,date_rando,nom_rando,ibp,type,statut";
+  const LIMITE        = 100;
+  const DELAI_MIN_MS  = 600;   /* anti-rafale */
+  const MAX_NOM       = 120;
+
+  const $ = id => document.getElementById(id);
+  const titre = $("titre"), etat = $("etat"), liste = $("liste");
+  const bPrev = $("prev"), bNext = $("next");
+  let ctrl = null, dernier = 0;
+
+  /* ── Mois affiché : ?m=AAAA-MM validé, sinon mois en cours ── */
+  const auj = new Date();
+  let an = auj.getFullYear(), mois = auj.getMonth(); /* mois 0-11 */
+  const p = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(new URLSearchParams(location.search).get("m") || "");
+  if (p && +p[1] >= 2000 && +p[1] <= 2100) { an = +p[1]; mois = +p[2] - 1; }
+
+  const pad = n => String(n).padStart(2, "0");
+  const isoJour = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  const aujISO = isoJour(auj);
+
+  function dateFR(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+    if (!m) return "";
+    return new Date(+m[1], +m[2] - 1, +m[3])
+      .toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  }
+
+  /* ── IBP : code couleur officiel ── */
+  function niveauIBP(v) {
+    const n = parseFloat(String(v ?? "").trim().replace(",", "."));
+    if (!isFinite(n) || n < 0) return null;
+    const c = n <= 25 ? 1 : n <= 50 ? 2 : n <= 75 ? 3 : n <= 100 ? 4 : 5;
+    return { n: Math.round(n), cls: "ibp-n" + c };
+  }
+
+  function el(tag, cls, txt) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt != null) e.textContent = String(txt);
+    return e;
+  }
+
+  function ligne(f) {
+    const li = el("li", String(f.date_rando).slice(0, 10) < aujISO ? "passee" : "");
+    li.appendChild(el("span", "date", dateFR(f.date_rando)));
+    li.appendChild(el("span", "nom", String(f.nom_rando || "Sans nom").slice(0, MAX_NOM)));
+    const niv = niveauIBP(f.ibp);
+    const b = el("span", "ibp " + (niv ? niv.cls : "ibp-na"), niv ? "IBP " + niv.n : "IBP —");
+    b.title = niv ? "Indice IBP " + niv.n : "IBP non renseigné";
+    li.appendChild(b);
+    return li;
+  }
+
+  function afficherEtat(txt, err) {
+    etat.textContent = txt;
+    etat.className = "etat" + (err ? " err" : "");
+  }
+
+  async function charger() {
+    const t = Date.now();
+    if (t - dernier < DELAI_MIN_MS) return;
+    dernier = t;
+    if (ctrl) ctrl.abort();
+    ctrl = new AbortController();
+
+    const debut = an + "-" + pad(mois + 1) + "-01";
+    const fin = isoJour(new Date(an, mois + 1, 1));
+    titre.textContent = new Date(an, mois, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    liste.replaceChildren();
+    afficherEtat("Chargement…");
+    bPrev.disabled = bNext.disabled = true;
+
+    try {
+      const r = await fetch(HANDLER, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "getFiches", select: SELECT,
+          filters: "date_rando=gte." + debut + "&date_rando=lt." + fin,
+          order: "date_rando.asc", limit: LIMITE,
+        }),
+        signal: ctrl.signal,
+        credentials: "omit",
+        referrerPolicy: "no-referrer",
+        cache: "no-store",
+      });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const brut = await r.json();
+      if (!Array.isArray(brut)) throw new Error("Réponse inattendue");
+
+      /* Contrôle côté page : bon mois, randonnées seulement, annulées exclues */
+      const data = brut.filter(f => {
+        const d = String(f && f.date_rando || "").slice(0, 10);
+        const type = String(f.type || "").toLowerCase();
+        const statut = String(f.statut || "").toLowerCase();
+        return d >= debut && d < fin
+          && (type === "" || type.startsWith("rando"))
+          && !statut.startsWith("annul");
+      }).sort((a, b) => String(a.date_rando).localeCompare(String(b.date_rando)));
+
+      if (!data.length) { afficherEtat("Aucune randonnée ce mois-ci."); return; }
+      const frag = document.createDocumentFragment();
+      data.forEach(f => frag.appendChild(ligne(f)));
+      liste.appendChild(frag);
+      afficherEtat(data.length + " randonnée" + (data.length > 1 ? "s" : ""));
+    } catch (e) {
+      if (e.name === "AbortError") return;
+      afficherEtat("Planning momentanément indisponible. Réessayez plus tard.", true);
+    } finally {
+      bPrev.disabled = bNext.disabled = false;
+    }
+  }
+
+  function changer(delta) {
+    const d = new Date(an, mois + delta, 1);
+    an = d.getFullYear(); mois = d.getMonth();
+    dernier = 0;
+    charger();
+  }
+  bPrev.addEventListener("click", () => changer(-1));
+  bNext.addEventListener("click", () => changer(1));
+  charger();
+})();
+</script>
+</body>
+</html>
