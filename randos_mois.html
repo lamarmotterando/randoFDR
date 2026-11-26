@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-fJ1nhIwJwcmlKs7QJNsmyikQRAyeNQEeoZNaN+/SP/U='; style-src 'sha256-p7aVZa2X7xFc/o8ugpSqLu8ZdKBVCmP0zxRB54ro2vg='; connect-src https://whlxbfnmyqdflmxosfse.supabase.co; img-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ouWgF1RB/5EmIZkr4lOP+Xnt0n8ZHOe8sSOdL8qK2HI='; style-src 'sha256-lGk/gg/WwGl/CN1PpFMvNH6h+Qy6uFAeBmCqhnxBQzI='; connect-src https://whlxbfnmyqdflmxosfse.supabase.co; img-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Randonnées du mois</title>
 <!--
   randos_mois.html — Randonnées d'un mois : date, nom, IBP.
@@ -23,6 +23,7 @@
   Randos annulées : affichées avec la mention ANNULÉE.
   Couleurs IBP (code officiel IBP index) : 0-25 vert · 26-50 bleu · 51-75 jaune · 76-100 rouge · >100 noir
   Randos passées : couleurs pastel.
+  Bouton « Aujourd'hui » : retour au mois en cours (désactivé si déjà affiché).
   Navigation limitée à la saison en cours et à la saison précédente (1er septembre → 31 août).
 -->
 <style>
@@ -33,6 +34,8 @@
   .nav h1 { font-size: 18px; font-weight: 700; text-transform: capitalize; text-align: center; flex: 1; }
   .nav button { background: #3a78b5; color: #fff; border: 0; border-radius: 8px; padding: 8px 14px; font-size: 16px; cursor: pointer; min-width: 44px; min-height: 40px; }
   .nav button:disabled { opacity: .5; cursor: wait; }
+  .nav #auj { font-size: 14px; padding: 8px 10px; }
+  .nav #auj:disabled { cursor: default; }
   .nav button:focus-visible { outline: 2px solid #ffd60a; outline-offset: 2px; }
   .etat { font-size: 13px; color: #c9d6cf; min-height: 1.2em; margin-bottom: 8px; text-align: center; }
   .etat.err { color: #ffb4a8; }
@@ -70,6 +73,7 @@
   <div class="nav">
     <button type="button" id="prev" aria-label="Mois précédent">◀</button>
     <h1 id="titre" aria-live="polite"></h1>
+    <button type="button" id="auj" aria-label="Revenir au mois en cours">Aujourd'hui</button>
     <button type="button" id="next" aria-label="Mois suivant">▶</button>
   </div>
   <p class="etat" id="etat" role="status"></p>
@@ -86,7 +90,7 @@
 
   const $ = id => document.getElementById(id);
   const titre = $("titre"), etat = $("etat"), liste = $("liste");
-  const bPrev = $("prev"), bNext = $("next");
+  const bPrev = $("prev"), bNext = $("next"), bAuj = $("auj");
   let ctrl = null, dernier = 0;
 
   /* ── Mois affiché : ?m=AAAA-MM validé, sinon mois en cours ── */
@@ -104,6 +108,7 @@
   function majBoutons() {
     bPrev.disabled = idx() <= IDX_MIN;
     bNext.disabled = idx() >= IDX_MAX;
+    bAuj.disabled = idx() === auj.getFullYear() * 12 + auj.getMonth();
   }
 
   const pad = n => String(n).padStart(2, "0");
@@ -162,7 +167,7 @@
     titre.textContent = new Date(an, mois, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
     liste.replaceChildren();
     afficherEtat("Chargement…");
-    bPrev.disabled = bNext.disabled = true;
+    bPrev.disabled = bNext.disabled = bAuj.disabled = true;
 
     try {
       const r = await fetch(HANDLER, {
@@ -213,6 +218,11 @@
   }
   bPrev.addEventListener("click", () => changer(-1));
   bNext.addEventListener("click", () => changer(1));
+  bAuj.addEventListener("click", () => {
+    an = auj.getFullYear(); mois = auj.getMonth();
+    dernier = 0;
+    charger();
+  });
   charger();
 })();
 </script>
